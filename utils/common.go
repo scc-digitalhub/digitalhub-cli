@@ -245,6 +245,17 @@ func TranslateEndpoint(resource string) string {
 	return ""
 }
 
+func GetFirstIfList(m map[string]interface{}) (map[string]interface{}, error) {
+	if content, ok := m["content"]; ok && reflect.ValueOf(content).Kind() == reflect.Slice {
+		contentSlice := content.([]interface{})
+		if len(contentSlice) >= 1 {
+			return contentSlice[0].(map[string]interface{}), nil
+		}
+		return nil, errors.New("Resource not found")
+	}
+	return m, nil
+}
+
 func WaitForConfirmation(msg string) {
 	for {
 		buf := bufio.NewReader(os.Stdin)

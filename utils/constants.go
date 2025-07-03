@@ -19,22 +19,24 @@ const (
 	MinApiLevel = 10
 
 	// API level required for individual commands; 0 means no restriction
-	LoginMin      = 10
-	LoginMax      = 0
-	CreateMin     = 10
-	CreateMax     = 0
-	ListMin       = 10
-	ListMax       = 0
-	GetMin        = 10
-	GetMax        = 0
-	UpdateMin     = 10
-	UpdateMax     = 0
-	DeleteMin     = 10
-	DeleteMax     = 0
-	OperateRunMin = 10
-	OperateRunMax = 0
-	RunLogsMin    = 10
-	RunLogsMax    = 0
+	LoginMin  = 10
+	LoginMax  = 0
+	CreateMin = 10
+	CreateMax = 0
+	ListMin   = 10
+	ListMax   = 0
+	GetMin    = 10
+	GetMax    = 0
+	UpdateMin = 10
+	UpdateMax = 0
+	DeleteMin = 10
+	DeleteMax = 0
+	StopMin   = 10
+	StopMax   = 0
+	ResumeMin = 10
+	ResumeMax = 0
+	LogMin    = 10
+	LogMax    = 0
 )
 
 var OpenIdFields = []string{"authorization_endpoint", "token_endpoint", "issuer", "scopes_supported", "access_token", "refresh_token"}
