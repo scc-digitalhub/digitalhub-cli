@@ -4,10 +4,10 @@
 
 package models
 
-type Artifact struct {
+type Entity struct {
 	Spec Spec `json:"spec"`
 }
 
-func (a Artifact) GetSpec() Spec {
+func (a Entity) GetSpec() Spec {
 	return a.Spec
 }

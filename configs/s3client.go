@@ -68,6 +68,7 @@ type S3File struct {
 }
 
 // ListFiles lists all objects under a given prefix (like a folder)
+// TODO add Continuation Token
 func (c *Client) ListFiles(ctx context.Context, bucket string, prefix string, maxKeys *int32) ([]S3File, error) {
 	input := &s3.ListObjectsV2Input{
 		Bucket:  aws.String(bucket),
