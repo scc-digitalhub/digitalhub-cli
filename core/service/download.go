@@ -43,7 +43,7 @@ func DownloadHandler(env string, output string, project string, name string, res
 		return fmt.Errorf("error reading response: %w", err)
 	}
 
-	var resp models.Response[models.Artifact]
+	var resp models.Response[models.Entity]
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return fmt.Errorf("error unmarshalling JSON: %w", err)
 	}
@@ -55,7 +55,7 @@ func DownloadHandler(env string, output string, project string, name string, res
 	var s3Client *s3client.Client
 
 	for i, artifact := range resp.Content {
-		fmt.Printf("Artifact #%d - Path: %s\n", i+1, artifact.Spec.Path)
+		fmt.Printf("Entity #%d - Path: %s\n", i+1, artifact.Spec.Path)
 
 		parsedPath, err := utils.ParsePath(artifact.Spec.Path)
 		if err != nil {

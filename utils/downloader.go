@@ -46,6 +46,7 @@ func DownloadS3FileOrDir(s3Client *s3client.Client, ctx context.Context,
 
 	// If folder
 	if strings.HasSuffix(path, "/") {
+
 		files, err := s3Client.ListFiles(ctx, bucket, path, aws.Int32(200)) //TODO remove maxKeys???
 		if err != nil {
 			return fmt.Errorf("failed to list S3 folder: %w", err)
@@ -53,6 +54,7 @@ func DownloadS3FileOrDir(s3Client *s3client.Client, ctx context.Context,
 
 		for _, file := range files {
 			// Build path
+			// TODO strip prefix and keep all the folder structure
 			relativePath := strings.TrimPrefix(file.Path, path)
 			targetPath := filepath.Join(localPath, relativePath)
 

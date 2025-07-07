@@ -36,7 +36,9 @@ func init() {
 	flags.AddCommonFlags(uploadCmd, "env", "project", "name")
 
 	uploadCmd.Flags().StringVarP(&uploadFlag.InputFlag, "input", "i", "", "input filename or directory")
-	uploadCmd.Flags().BoolVarP(&uploadFlag.CreateFlag, "create", "c", false, "if set, also create resource on core")
+	//uploadCmd.Flags().BoolVarP(&uploadFlag.CreateFlag, "create", "c", false, "if set, also create resource on core")
 
 	core.RegisterCommand(uploadCmd)
 }
+
+//TODO usiamo id di un artefatto gia esistente. ... Stati : UPLOADING, READY, ERROR, controllo che l'artefatto sia in CREATED per poter caricare il file.

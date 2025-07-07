@@ -5,7 +5,9 @@
 package core
 
 import (
+	"context"
 	"fmt"
+	"github.com/charmbracelet/fang"
 	"github.com/spf13/cobra"
 	"os"
 )
@@ -17,13 +19,22 @@ var dhcli = &cobra.Command{
 }
 
 func Execute() {
-	if err := dhcli.Execute(); err != nil {
+
+	if err := fang.Execute(context.Background(), dhcli); err != nil {
 		_, err := fmt.Fprintln(os.Stderr, err)
 		if err != nil {
 			return
 		}
 		os.Exit(1)
 	}
+
+	//if err := dhcli.Execute(); err != nil {
+	//	_, err := fmt.Fprintln(os.Stderr, err)
+	//	if err != nil {
+	//		return
+	//	}
+	//	os.Exit(1)
+	//}
 }
 
 func RegisterCommand(cmd *cobra.Command) {
