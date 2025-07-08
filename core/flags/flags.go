@@ -20,6 +20,7 @@ type SpecificCommandFlag struct {
 	ListKind     string
 	ListState    string
 	EnvFlag      string
+	IdFlag       string
 }
 
 type commonCommandFlag struct {

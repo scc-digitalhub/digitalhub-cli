@@ -2,13 +2,11 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-// service/download.go
 package service
 
 import (
 	"context"
 	s3client "dhcli/configs"
-	"dhcli/models"
 	"dhcli/utils"
 	"encoding/json"
 	"errors"
@@ -35,29 +33,46 @@ func DownloadHandler(env string, output string, project string, name string, res
 	}
 
 	_, section := utils.LoadIniConfig([]string{env})
-	method := "GET"
 	url := utils.BuildCoreUrl(section, project, endpoint, id, params)
-	req := utils.PrepareRequest(method, url, nil, section.Key("access_token").String())
+
+	req := utils.PrepareRequest("GET", url, nil, section.Key("access_token").String())
 	body, err := utils.DoRequest(req)
 	if err != nil {
 		return fmt.Errorf("error reading response: %w", err)
 	}
 
-	var resp models.Response[models.Entity]
-	if err := json.Unmarshal(body, &resp); err != nil {
+	// Parse as raw map instead of typed response
+	var raw map[string]interface{}
+	if err := json.Unmarshal(body, &raw); err != nil {
 		return fmt.Errorf("error unmarshalling JSON: %w", err)
 	}
-	if len(resp.Content) == 0 {
+
+	contentList, ok := raw["content"].([]interface{})
+	if !ok || len(contentList) == 0 {
 		return fmt.Errorf("no artifact was found in Content response")
 	}
 
 	ctx := context.Background()
 	var s3Client *s3client.Client
 
-	for i, artifact := range resp.Content {
-		fmt.Printf("Entity #%d - Path: %s\n", i+1, artifact.Spec.Path)
+	for i, item := range contentList {
+		artifactMap, ok := item.(map[string]interface{})
+		if !ok {
+			log.Printf("Skipping invalid artifact at index %d", i)
+			continue
+		}
 
-		parsedPath, err := utils.ParsePath(artifact.Spec.Path)
+		// Extract spec.path
+		spec, ok := artifactMap["spec"].(map[string]interface{})
+		if !ok {
+			log.Printf("Skipping artifact with missing spec field at index %d", i)
+			continue
+		}
+
+		pathStr, _ := spec["path"].(string)
+		fmt.Printf("Entity #%d - Path: %s\n", i+1, pathStr)
+
+		parsedPath, err := utils.ParsePath(pathStr)
 		if err != nil {
 			return fmt.Errorf("failed to parse path: %w", err)
 		}
@@ -102,7 +117,7 @@ func DownloadHandler(env string, output string, project string, name string, res
 			}
 
 		case "other", "":
-			fmt.Printf("Skipping other.....: %s\n", parsedPath.Path)
+			fmt.Printf("Skipping unsupported scheme.....: %s\n", parsedPath.Path)
 
 		default:
 			return fmt.Errorf("unsupported scheme: %s", parsedPath.Scheme)
