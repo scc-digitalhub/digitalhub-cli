@@ -9,21 +9,18 @@ import (
 )
 
 type SpecificCommandFlag struct {
-	OutputFlag       string
-	CreateFlag       bool
-	InputFlag        string
-	FilePathFlag     string
-	ResetIdFlag      bool
-	ConfirmFlag      bool
-	CascadeFlag      bool
-	PreFlag          bool
-	ListKind         string
-	ListState        string
-	EnvFlag          string
-	FunctionNameFlag string
-	FunctionIdFlag   string
-	ContainerFlag    string
-	FollowFlag       bool
+	OutputFlag   string
+	CreateFlag   bool
+	InputFlag    string
+	FilePathFlag string
+	ResetIdFlag  bool
+	ConfirmFlag  bool
+	CascadeFlag  bool
+	PreFlag      bool
+	ListKind     string
+	ListState    string
+	EnvFlag      string
+	IdFlag       string
 }
 
 type commonCommandFlag struct {

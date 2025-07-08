@@ -126,3 +126,19 @@ func (c *Client) DownloadFile(ctx context.Context, bucket, key, localPath string
 
 	return nil
 }
+
+// UploadFile uploads a file to the specified S3 bucket and key
+func (c *Client) UploadFile(ctx context.Context, bucket, key string, body io.Reader) (*s3.PutObjectOutput, error) {
+	fmt.Printf("Uploading to S3 path: s3://%s/%s\n", bucket, key)
+
+	output, err := c.s3.PutObject(ctx, &s3.PutObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+		Body:   body,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to upload file to S3: %w", err)
+	}
+
+	return output, nil
+}
