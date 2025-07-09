@@ -245,6 +245,17 @@ func TranslateEndpoint(resource string) string {
 	return ""
 }
 
+func GetFirstIfList(m map[string]interface{}) (map[string]interface{}, error) {
+	if content, ok := m["content"]; ok && reflect.ValueOf(content).Kind() == reflect.Slice {
+		contentSlice := content.([]interface{})
+		if len(contentSlice) >= 1 {
+			return contentSlice[0].(map[string]interface{}), nil
+		}
+		return nil, errors.New("Resource not found")
+	}
+	return m, nil
+}
+
 func WaitForConfirmation(msg string) {
 	for {
 		buf := bufio.NewReader(os.Stdin)
@@ -341,4 +352,22 @@ func FetchConfig(configURL string) (map[string]interface{}, error) {
 	}
 
 	return config, nil
+}
+
+func PrintResponseState(resp []byte) error {
+	// Parse response to check new state
+	var m map[string]interface{}
+	if err := json.Unmarshal(resp, &m); err != nil {
+		return err
+	}
+	if status, ok := m["status"]; ok {
+		statusMap := status.(map[string]interface{})
+		if state, ok := statusMap["state"]; ok {
+			log.Printf("Core response successful, new state: %v\n", state.(string))
+			return nil
+		}
+	}
+
+	log.Println("WARNING: core response successful, but unable to confirm new state.")
+	return nil
 }

@@ -13,16 +13,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var operateRunCmd = &cobra.Command{
-	Use:   "operate-run <project> <id> <operation>",
-	Short: "Perform an operation on a run",
-	Args:  cobra.ExactArgs(3),
+var stopCmd = &cobra.Command{
+	Use:   "stop <resource> <id>",
+	Short: "Stop a resource",
+	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		err := service.OperateRunHandler(
+		err := service.StopHandler(
 			flags.CommonFlag.EnvFlag,
+			flags.CommonFlag.ProjectFlag,
 			args[0],
-			args[1],
-			args[2])
+			args[1])
 
 		if err != nil {
 			log.Fatalf("Failed: %v", err)
@@ -31,7 +31,7 @@ var operateRunCmd = &cobra.Command{
 }
 
 func init() {
-	flags.AddCommonFlags(operateRunCmd, "env")
+	flags.AddCommonFlags(stopCmd, "env", "project")
 
-	core.RegisterCommand(operateRunCmd)
+	core.RegisterCommand(stopCmd)
 }

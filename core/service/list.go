@@ -14,7 +14,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/olekukonko/tablewriter"
 	"gopkg.in/ini.v1"
 
 	"sigs.k8s.io/yaml"
@@ -106,14 +105,13 @@ func fetchAllPages(section *ini.Section, project, endpoint string, params map[st
 }
 
 func printShortList(resources []interface{}) {
-	table := tablewriter.NewWriter(os.Stdout)
-	table.Header([]string{"NAME", "ID", "KIND", "UPDATED", "STATE", "LABELS"})
+	printShortLineList("NAME", "ID", "KIND", "UPDATED", "STATE", "LABELS")
 
 	for _, ri := range resources {
 		m := ri.(map[string]interface{})
-		name := m["name"].(string)
-		id := m["id"].(string)
-		kind := m["kind"].(string)
+		name := fmt.Sprintf("%v", m["name"])
+		id := fmt.Sprintf("%v", m["id"])
+		kind := fmt.Sprintf("%v", m["kind"])
 
 		updated := ""
 		labels := ""
@@ -121,7 +119,7 @@ func printShortList(resources []interface{}) {
 			if u, ok := md["updated"].(string); ok {
 				updated = u
 			}
-			if lb, ok2 := md["labels"].([]interface{}); ok2 {
+			if lb, ok := md["labels"].([]interface{}); ok {
 				strs := []string{}
 				for _, v := range lb {
 					strs = append(strs, fmt.Sprint(v))
@@ -137,10 +135,12 @@ func printShortList(resources []interface{}) {
 			}
 		}
 
-		table.Append([]string{name, id, kind, updated, state, labels})
+		printShortLineList(name, id, kind, updated, state, labels)
 	}
+}
 
-	table.Render()
+func printShortLineList(rName string, rId string, rKind string, rUpdated string, rState string, rLabels string) {
+	fmt.Printf("%-24s%-36s%-24s%-30s%-12s%s\n", rName, rId, rKind, rUpdated, rState, rLabels)
 }
 
 func printJSONList(resources []interface{}) {

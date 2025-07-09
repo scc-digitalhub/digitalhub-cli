@@ -9,9 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
-	"os"
-	"reflect"
 
 	"sigs.k8s.io/yaml"
 
@@ -62,11 +59,15 @@ func GetHandler(env string, output string, project string, name string, resource
 }
 
 func printShort(src []byte) error {
-	var obj map[string]interface{}
-	if err := json.Unmarshal(src, &obj); err != nil {
+	var m map[string]interface{}
+	if err := json.Unmarshal(src, &m); err != nil {
 		return err
 	}
-	m := getFirstIfList(obj)
+
+	m, err := utils.GetFirstIfList(m)
+	if err != nil {
+		return err
+	}
 
 	fmt.Printf("%-12s %v\n", "Name:", m["name"])
 
@@ -95,11 +96,17 @@ func printJson(id string, src []byte) error {
 		if err := json.Unmarshal(src, &m); err != nil {
 			return err
 		}
-		first := getFirstIfList(m)
+
+		first, err := utils.GetFirstIfList(m)
+		if err != nil {
+			return err
+		}
+
 		out, err := json.Marshal(first)
 		if err != nil {
 			return err
 		}
+
 		jsonData = out
 	}
 
@@ -119,11 +126,17 @@ func printYaml(id string, src []byte) error {
 		if err := json.Unmarshal(src, &m); err != nil {
 			return err
 		}
-		first := getFirstIfList(m)
+
+		first, err := utils.GetFirstIfList(m)
+		if err != nil {
+			return err
+		}
+
 		out, err := yaml.Marshal(first)
 		if err != nil {
 			return err
 		}
+
 		yamlData = out
 	} else {
 		out, err := yaml.JSONToYAML(src)
@@ -135,16 +148,4 @@ func printYaml(id string, src []byte) error {
 
 	fmt.Println(string(yamlData))
 	return nil
-}
-
-func getFirstIfList(m map[string]interface{}) map[string]interface{} {
-	if content, ok := m["content"]; ok && reflect.ValueOf(content).Kind() == reflect.Slice {
-		contentSlice := content.([]interface{})
-		if len(contentSlice) >= 1 {
-			return contentSlice[0].(map[string]interface{})
-		}
-		log.Println("Error: resource not found")
-		os.Exit(1)
-	}
-	return m
 }

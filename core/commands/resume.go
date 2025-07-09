@@ -13,13 +13,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var runLogsCmd = &cobra.Command{
-	Use:   "run-logs <project> <id>",
-	Short: "Read run logs",
+var resumeCmd = &cobra.Command{
+	Use:   "resume <resource> <id>",
+	Short: "Resume a resource",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		err := service.RunLogsHandler(
+		err := service.ResumeHandler(
 			flags.CommonFlag.EnvFlag,
+			flags.CommonFlag.ProjectFlag,
 			args[0],
 			args[1])
 
@@ -30,7 +31,7 @@ var runLogsCmd = &cobra.Command{
 }
 
 func init() {
-	flags.AddCommonFlags(runLogsCmd, "env")
+	flags.AddCommonFlags(resumeCmd, "env", "project")
 
-	core.RegisterCommand(runLogsCmd)
+	core.RegisterCommand(resumeCmd)
 }
