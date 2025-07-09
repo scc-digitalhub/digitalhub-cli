@@ -7,12 +7,12 @@ package main
 import (
 	"dhcli/core"
 	_ "dhcli/core/commands"
-	"log"
-
 	"gopkg.in/ini.v1"
+	"log"
 )
 
 func main() {
+
 	log.SetFlags(0)
 	ini.DefaultHeader = true
 	core.Execute()

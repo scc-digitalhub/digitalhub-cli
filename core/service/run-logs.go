@@ -8,6 +8,7 @@ import (
 	"dhcli/utils"
 	"encoding/json"
 	"fmt"
+	"github.com/spf13/viper"
 )
 
 func RunLogsHandler(env string, project string, id string) error {
@@ -15,14 +16,13 @@ func RunLogsHandler(env string, project string, id string) error {
 	endpoint := utils.TranslateEndpoint("runs")
 
 	// Load environment and check API level requirements
-	cfg, section := utils.LoadIniConfig([]string{env})
-	utils.CheckUpdateEnvironment(cfg, section)
-	utils.CheckApiLevel(section, utils.RunLogsMin, utils.RunLogsMax)
+	utils.CheckUpdateEnvironment()
+	utils.CheckApiLevel(utils.ApiLevelKey, utils.RunLogsMin, utils.RunLogsMax)
 
 	// Request
 	method := "GET"
-	url := utils.BuildCoreUrl(section, project, endpoint, id, nil) + "/logs"
-	req := utils.PrepareRequest(method, url, nil, section.Key("access_token").String())
+	url := utils.BuildCoreUrl(project, endpoint, id, nil) + "/logs"
+	req := utils.PrepareRequest(method, url, nil, viper.GetString("access_token"))
 
 	body, err := utils.DoRequest(req)
 	if err != nil {
