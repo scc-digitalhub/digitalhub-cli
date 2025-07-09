@@ -6,7 +6,6 @@ package service
 
 import (
 	"dhcli/utils"
-	"log"
 )
 
 func ResumeHandler(env string, project string, resource string, id string) error {
@@ -26,7 +25,12 @@ func ResumeHandler(env string, project string, resource string, id string) error
 	if err != nil {
 		return err
 	}
-	log.Println("Resume successful.")
 
-	return nil
+	resp, err := utils.DoRequest(req)
+	if err != nil {
+		return err
+	}
+
+	// Parse response to check new state
+	return utils.PrintResponseState(resp)
 }

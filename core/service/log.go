@@ -9,6 +9,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"os"
+	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -83,5 +86,13 @@ func LogHandler(env string, project string, container string, follow bool, resou
 		}
 
 		time.Sleep(5 * time.Second)
+		var cmd *exec.Cmd
+		if runtime.GOOS == "windows" {
+			cmd = exec.Command("cmd", "/c", "cls")
+		} else {
+			cmd = exec.Command("clear")
+		}
+		cmd.Stdout = os.Stdout
+		cmd.Run()
 	}
 }

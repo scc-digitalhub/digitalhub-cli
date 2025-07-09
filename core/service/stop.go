@@ -6,7 +6,6 @@ package service
 
 import (
 	"dhcli/utils"
-	"log"
 )
 
 func StopHandler(env string, project string, resource string, id string) error {
@@ -22,11 +21,11 @@ func StopHandler(env string, project string, resource string, id string) error {
 	url := utils.BuildCoreUrl(section, project, endpoint, id, nil) + "/stop"
 	req := utils.PrepareRequest(method, url, nil, section.Key("access_token").String())
 
-	_, err := utils.DoRequest(req)
+	resp, err := utils.DoRequest(req)
 	if err != nil {
 		return err
 	}
-	log.Println("Stop successful.")
 
-	return nil
+	// Parse response to check new state
+	return utils.PrintResponseState(resp)
 }

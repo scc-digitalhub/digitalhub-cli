@@ -353,3 +353,21 @@ func FetchConfig(configURL string) (map[string]interface{}, error) {
 
 	return config, nil
 }
+
+func PrintResponseState(resp []byte) error {
+	// Parse response to check new state
+	var m map[string]interface{}
+	if err := json.Unmarshal(resp, &m); err != nil {
+		return err
+	}
+	if status, ok := m["status"]; ok {
+		statusMap := status.(map[string]interface{})
+		if state, ok := statusMap["state"]; ok {
+			log.Printf("Core response successful, new state: %v\n", state.(string))
+			return nil
+		}
+	}
+
+	log.Println("WARNING: core response successful, but unable to confirm new state.")
+	return nil
+}

@@ -31,14 +31,12 @@ func RunHandler(env string, project string, functionName string, functionId stri
 
 	// Get function kind and key
 	functionKind, functionKey, err := getFunctionKey(section, project, functionId, functionName)
-	log.Printf("FUNCTION: %v\n", functionKey)
 	if err != nil {
 		return err
 	}
 
 	// Get or create task
 	taskKey, err := getTaskKey(section, project, functionKey, task)
-	log.Printf("TASK: %v\n", taskKey)
 	if err != nil {
 		var err error
 		taskKey, err = createTask(section, project, functionKey, task)
