@@ -7,17 +7,16 @@ package service
 import (
 	"bufio"
 	"fmt"
+	"github.com/spf13/viper"
 	"log"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
-
-	"dhcli/utils"
 )
 
 // Installs Python packages
-func InitEnvironmentHandler(env string, includePre bool) error {
+func InitEnvironmentHandler(includePre bool) error {
 	// Check Python version
 	out, err := exec.Command("python3", "--version").Output()
 	if err != nil {
@@ -27,11 +26,8 @@ func InitEnvironmentHandler(env string, includePre bool) error {
 		return fmt.Errorf("versione Python non supportata (serve 3.9–3.12): %s", strings.TrimSpace(string(out)))
 	}
 
-	// Read ini configuration
-	_, section := utils.LoadIniConfig([]string{env})
-
 	// Get minor version
-	apiVer := section.Key("dhcore_version").String()
+	apiVer := viper.GetString("dhcore_version")
 	parts := strings.SplitN(apiVer, ".", 3)
 	if len(parts) > 2 {
 		apiVer = parts[0] + "." + parts[1]

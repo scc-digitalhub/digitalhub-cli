@@ -37,8 +37,7 @@ var downloadCmd = &cobra.Command{
 			flags.CommonFlag.ProjectFlag,
 			flags.CommonFlag.NameFlag,
 			args[0],
-			id,
-			args[1:]); err != nil {
+			id); err != nil {
 			log.Fatalf("Download failed: %v", err)
 		}
 	},

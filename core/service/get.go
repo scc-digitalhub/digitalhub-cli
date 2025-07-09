@@ -9,6 +9,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/spf13/viper"
+	"log"
+	"os"
+	"reflect"
 
 	"sigs.k8s.io/yaml"
 
@@ -19,9 +23,8 @@ func GetHandler(env string, output string, project string, name string, resource
 
 	endpoint := utils.TranslateEndpoint(resource)
 
-	cfg, section := utils.LoadIniConfig([]string{env})
-	utils.CheckUpdateEnvironment(cfg, section)
-	utils.CheckApiLevel(section, utils.GetMin, utils.GetMax)
+	utils.CheckUpdateEnvironment()
+	utils.CheckApiLevel(utils.ApiLevelKey, utils.GetMin, utils.GetMax)
 
 	format := utils.TranslateFormat(output)
 
@@ -38,8 +41,8 @@ func GetHandler(env string, output string, project string, name string, resource
 		params["versions"] = "latest"
 	}
 
-	url := utils.BuildCoreUrl(section, project, endpoint, id, params)
-	req := utils.PrepareRequest("GET", url, nil, section.Key("access_token").String())
+	url := utils.BuildCoreUrl(project, endpoint, id, params)
+	req := utils.PrepareRequest("GET", url, nil, viper.GetString("access_token"))
 	body, err := utils.DoRequest(req)
 	if err != nil {
 		return fmt.Errorf("error in request: %w", err)
@@ -51,7 +54,7 @@ func GetHandler(env string, output string, project string, name string, resource
 	case "json":
 		return printJson(id, body)
 	case "yaml":
-		utils.PrintCommentForYaml(section, env, resource, output, project, name, id)
+		utils.PrintCommentForYaml(env, resource, output, project, name, id)
 		return printYaml(id, body)
 	default:
 		return fmt.Errorf("unknown format: %s", format)

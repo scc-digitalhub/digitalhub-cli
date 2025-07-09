@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/spf13/viper"
 	"log"
 	"os"
 	"reflect"
@@ -24,9 +25,8 @@ import (
 func ListResourcesHandler(env string, output string, project string, name string, kind string, state string, resource string) error {
 	endpoint := utils.TranslateEndpoint(resource)
 
-	cfg, section := utils.LoadIniConfig([]string{env})
-	utils.CheckUpdateEnvironment(cfg, section)
-	utils.CheckApiLevel(section, utils.ListMin, utils.ListMax)
+	utils.CheckUpdateEnvironment()
+	utils.CheckApiLevel(utils.ApiLevelKey, utils.ListMin, utils.ListMax)
 
 	format := utils.TranslateFormat(output)
 
@@ -47,7 +47,7 @@ func ListResourcesHandler(env string, output string, project string, name string
 	}
 
 	// Fetch first page
-	elements, _, err := fetchAllPages(section, project, endpoint, params)
+	elements, _, err := fetchAllPages(project, endpoint, params)
 	if err != nil {
 		return fmt.Errorf("failed to fetch list: %w", err)
 	}
@@ -59,7 +59,7 @@ func ListResourcesHandler(env string, output string, project string, name string
 	case "json":
 		printJSONList(elements)
 	case "yaml":
-		utils.PrintCommentForYaml(section, env, resource, output, project, name, kind, state)
+		utils.PrintCommentForYaml(env, resource, output, project, name, kind, state)
 		printYAMLList(elements)
 	default:
 		return fmt.Errorf("unknown format: %s", format)
@@ -68,7 +68,7 @@ func ListResourcesHandler(env string, output string, project string, name string
 	return nil
 }
 
-func fetchAllPages(section *ini.Section, project, endpoint string, params map[string]string) ([]interface{}, int, error) {
+func fetchAllPages(project, endpoint string, params map[string]string) ([]interface{}, int, error) {
 	var (
 		elements   []interface{}
 		currentPg  int
@@ -76,8 +76,8 @@ func fetchAllPages(section *ini.Section, project, endpoint string, params map[st
 	)
 
 	for {
-		url := utils.BuildCoreUrl(section, project, endpoint, "", params)
-		req := utils.PrepareRequest("GET", url, nil, section.Key("access_token").String())
+		url := utils.BuildCoreUrl(project, endpoint, "", params)
+		req := utils.PrepareRequest("GET", url, nil, viper.GetString("access_token"))
 		body, err := utils.DoRequest(req)
 		if err != nil {
 			return nil, 0, err

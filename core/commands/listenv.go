@@ -15,7 +15,6 @@ var listEnvCmd = &cobra.Command{
 	Use:   "list-env",
 	Short: "List available environments",
 	Run: func(cmd *cobra.Command, args []string) {
-
 		service.ListEnvHandler()
 	},
 }

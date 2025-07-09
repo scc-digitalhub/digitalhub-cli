@@ -6,20 +6,22 @@ package service
 
 import (
 	"dhcli/utils"
+	"encoding/json"
+	"fmt"
+	"github.com/spf13/viper"
 )
 
 func ResumeHandler(env string, project string, resource string, id string) error {
 	endpoint := utils.TranslateEndpoint(resource)
 
 	// Load environment and check API level requirements
-	cfg, section := utils.LoadIniConfig([]string{env})
-	utils.CheckUpdateEnvironment(cfg, section)
-	utils.CheckApiLevel(section, utils.ResumeMin, utils.ResumeMax)
+	utils.CheckUpdateEnvironment()
+	utils.CheckApiLevel(utils.ApiLevelKey, utils.RunLogsMin, utils.RunLogsMax)
 
 	// Request
 	method := "POST"
-	url := utils.BuildCoreUrl(section, project, endpoint, id, nil) + "/resume"
-	req := utils.PrepareRequest(method, url, nil, section.Key("access_token").String())
+	url := utils.BuildCoreUrl(project, endpoint, id, nil) + "/resume"
+	req := utils.PrepareRequest(method, url, nil, viper.GetString("access_token"))
 
 	_, err := utils.DoRequest(req)
 	if err != nil {

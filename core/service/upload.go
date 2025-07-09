@@ -11,13 +11,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/spf13/viper"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-func UploadHandler(env, input, project, id, resource string, name string) error {
+func UploadHandler(env, input, project, resource string, id string, name string) error {
 	if input == "" {
 		return errors.New("missing required input file or directory: --input/-i")
 	}
@@ -26,8 +27,6 @@ func UploadHandler(env, input, project, id, resource string, name string) error 
 	if endpoint != "projects" && project == "" {
 		return errors.New("project is mandatory for non-project resources")
 	}
-
-	_, section := utils.LoadIniConfig([]string{env})
 
 	// If no ID is provided, generate a new one and then create the artifact
 	if id == "" {
@@ -62,9 +61,9 @@ func UploadHandler(env, input, project, id, resource string, name string) error 
 		if err != nil {
 			return fmt.Errorf("failed to marshal artifact creation payload: %w", err)
 		}
-		url := utils.BuildCoreUrl(section, project, endpoint, "", nil)
+		url := utils.BuildCoreUrl(project, endpoint, "", nil)
 		log.Printf("Creating artifact at URL: %s", url)
-		req := utils.PrepareRequest("POST", url, payload, section.Key("access_token").String())
+		req := utils.PrepareRequest("POST", url, payload, viper.GetString("access_token"))
 		_, err = utils.DoRequest(req)
 		if err != nil {
 			return fmt.Errorf("failed to create artifact: %w", err)
@@ -74,10 +73,10 @@ func UploadHandler(env, input, project, id, resource string, name string) error 
 	}
 
 	// From here on, we assume the artifact already exists and we are uploading to it
-	url := utils.BuildCoreUrl(section, project, endpoint, id, nil)
+	url := utils.BuildCoreUrl(project, endpoint, id, nil)
 	log.Printf("Requesting artifact info from URL: %s", url)
 
-	req := utils.PrepareRequest("GET", url, nil, section.Key("access_token").String())
+	req := utils.PrepareRequest("GET", url, nil, viper.GetString("access_token"))
 	body, err := utils.DoRequest(req)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve artifact info: %w", err)
@@ -115,11 +114,11 @@ func UploadHandler(env, input, project, id, resource string, name string) error 
 
 	// Build S3 client
 	cfg := s3client.Config{
-		AccessKey:   section.Key("aws_access_key_id").String(),
-		SecretKey:   section.Key("aws_secret_access_key").String(),
-		AccessToken: section.Key("aws_session_token").String(),
-		Region:      section.Key("aws_region").String(),
-		EndpointURL: section.Key("aws_endpoint_url").String(),
+		AccessKey:   viper.GetString("aws_access_key_id"),
+		SecretKey:   viper.GetString("aws_secret_access_key"),
+		AccessToken: viper.GetString("aws_session_token"),
+		Region:      viper.GetString("aws_region"),
+		EndpointURL: viper.GetString("aws_endpoint_url"),
 	}
 	ctx := context.Background()
 	client, err := s3client.NewClient(ctx, cfg)
@@ -134,8 +133,8 @@ func UploadHandler(env, input, project, id, resource string, name string) error 
 		if err != nil {
 			return fmt.Errorf("failed to marshal updated artifact: %w", err)
 		}
-		updateURL := utils.BuildCoreUrl(section, project, endpoint, id, nil)
-		req := utils.PrepareRequest("PUT", updateURL, payload, section.Key("access_token").String())
+		updateURL := utils.BuildCoreUrl(project, endpoint, id, nil)
+		req := utils.PrepareRequest("PUT", updateURL, payload, viper.GetString("access_token"))
 		_, err = utils.DoRequest(req)
 		if err != nil {
 			return fmt.Errorf("failed to update artifact status to %s: %w", newState, err)

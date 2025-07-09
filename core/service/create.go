@@ -7,6 +7,7 @@ package service
 import (
 	"dhcli/utils"
 	"encoding/json"
+	"github.com/spf13/viper"
 	"log"
 	"os"
 
@@ -18,9 +19,8 @@ func CreateHandler(env string, project string, name string, filePath string, res
 	endpoint := utils.TranslateEndpoint(resource)
 
 	// Load environment and check API level requirements
-	cfg, section := utils.LoadIniConfig([]string{env})
-	utils.CheckUpdateEnvironment(cfg, section)
-	utils.CheckApiLevel(section, utils.CreateMin, utils.CreateMax)
+	utils.CheckUpdateEnvironment()
+	utils.CheckApiLevel(utils.ApiLevelKey, utils.CreateMin, utils.CreateMax)
 
 	// Validate parameters
 	if endpoint != "projects" {
@@ -81,8 +81,8 @@ func CreateHandler(env string, project string, name string, filePath string, res
 
 	// Request
 	method := "POST"
-	url := utils.BuildCoreUrl(section, project, endpoint, "", nil)
-	req := utils.PrepareRequest(method, url, jsonBody, section.Key("access_token").String())
+	url := utils.BuildCoreUrl(project, endpoint, "", nil)
+	req := utils.PrepareRequest(method, url, jsonBody, viper.GetString("access_token"))
 	_, err = utils.DoRequest(req)
 	if err != nil {
 		return err

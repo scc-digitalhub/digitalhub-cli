@@ -8,6 +8,27 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// TODO change the structure of flags create something like
+//
+//	type struct FlagStruct{
+//		name string
+//		short string
+//
+//		long string
+//		description string
+//		defaultValue string
+//		optional bool
+//		hidden bool
+//		aliases []string
+//		validation func(string) error
+//	}
+//
+// and add to common flags type like
+//
+//	type FlagValue struct {
+//		Value string|bool|int|float64
+//		 Type FlagStruct
+//	}
 type SpecificCommandFlag struct {
 	OutputFlag   string
 	CreateFlag   bool

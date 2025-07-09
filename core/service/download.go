@@ -11,12 +11,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/spf13/viper"
 	"log"
 	"os"
 	"path/filepath"
 )
 
-func DownloadHandler(env string, output string, project string, name string, resource string, id string, originalArgs []string) error {
+func DownloadHandler(env string, output string, project string, name string, resource string, id string) error {
 	endpoint := utils.TranslateEndpoint(resource)
 
 	if endpoint != "projects" && project == "" {
@@ -32,10 +33,9 @@ func DownloadHandler(env string, output string, project string, name string, res
 		params["versions"] = "latest"
 	}
 
-	_, section := utils.LoadIniConfig([]string{env})
-	url := utils.BuildCoreUrl(section, project, endpoint, id, params)
+	url := utils.BuildCoreUrl(project, endpoint, id, params)
 
-	req := utils.PrepareRequest("GET", url, nil, section.Key("access_token").String())
+	req := utils.PrepareRequest("GET", url, nil, viper.GetString("access_token"))
 	body, err := utils.DoRequest(req)
 	if err != nil {
 		return fmt.Errorf("error reading response: %w", err)
@@ -79,11 +79,25 @@ func DownloadHandler(env string, output string, project string, name string, res
 
 		localFilename := parsedPath.Filename
 		localPath := localFilename
+
+		// if output is specified, use it as the base directory if it exists or create it
 		if output != "" {
 			info, err := os.Stat(output)
 			if err != nil {
-				return fmt.Errorf("output path does not exist: %s", output)
+				if os.IsNotExist(err) {
+					if err := os.MkdirAll(output, 0755); err != nil {
+						return fmt.Errorf("failed to create output directory: %w", err)
+					}
+					info, err = os.Stat(output)
+					if err != nil {
+						return fmt.Errorf("failed to stat created directory: %w", err)
+					}
+				} else {
+					// Some other error (e.g., permission)
+					return fmt.Errorf("error accessing output path: %w", err)
+				}
 			}
+
 			if info.IsDir() {
 				localPath = filepath.Join(output, localFilename)
 			} else {
@@ -95,11 +109,11 @@ func DownloadHandler(env string, output string, project string, name string, res
 		case "s3":
 			if s3Client == nil {
 				cfg := s3client.Config{
-					AccessKey:   section.Key("aws_access_key_id").String(),
-					SecretKey:   section.Key("aws_secret_access_key").String(),
-					AccessToken: section.Key("aws_session_token").String(),
-					Region:      section.Key("aws_region").String(),
-					EndpointURL: section.Key("aws_endpoint_url").String(),
+					AccessKey:   viper.GetString("aws_access_key_id"),
+					SecretKey:   viper.GetString("aws_secret_access_key"),
+					AccessToken: viper.GetString("aws_session_token"),
+					Region:      viper.GetString("aws_region"),
+					EndpointURL: viper.GetString("aws_endpoint_url"),
 				}
 				client, err := s3client.NewClient(ctx, cfg)
 				if err != nil {
