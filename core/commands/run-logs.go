@@ -13,24 +13,30 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var runLogsCmd = &cobra.Command{
-	Use:   "run-logs <project> <id>",
-	Short: "Read run logs",
-	Args:  cobra.ExactArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
-		err := service.RunLogsHandler(
-			flags.CommonFlag.EnvFlag,
-			args[0],
-			args[1])
+var runLogsCmd = func() *cobra.Command {
+	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 
-		if err != nil {
-			log.Fatalf("Failed: %v", err)
-		}
-	},
-}
+	cmd := &cobra.Command{
+		Use:   "run-logs <project> <id>",
+		Short: "Read run logs",
+		Args:  cobra.ExactArgs(2),
+		Run: func(cmd *cobra.Command, args []string) {
+			err := service.RunLogsHandler(
+				*envFlag.Value,
+				args[0],
+				args[1],
+			)
+			if err != nil {
+				log.Fatalf("Failed: %v", err)
+			}
+		},
+	}
+
+	flags.AddFlag(cmd, &envFlag)
+
+	return cmd
+}()
 
 func init() {
-	flags.AddCommonFlags(runLogsCmd, "env")
-
 	core.RegisterCommand(runLogsCmd)
 }

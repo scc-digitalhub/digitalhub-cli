@@ -13,33 +13,48 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var listFlag = flags.SpecificCommandFlag{}
+var listCmd = func() *cobra.Command {
+	// Declare local flags using generic constructors
+	envFlag := flags.NewStringFlag("env", "e", "environment", "")
+	outFlag := flags.NewStringFlag("out", "o", "output format (short, json, yaml)", "short")
+	projectFlag := flags.NewStringFlag("project", "p", "project", "")
+	nameFlag := flags.NewStringFlag("name", "n", "name", "")
 
-var listCmd = &cobra.Command{
-	Use:   "list <resource>",
-	Short: "List resources",
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		if err := service.ListResourcesHandler(
-			flags.CommonFlag.EnvFlag,
-			flags.CommonFlag.OutFlag,
-			flags.CommonFlag.ProjectFlag,
-			flags.CommonFlag.NameFlag,
-			listFlag.ListKind,
-			listFlag.ListState,
-			args[0],
-		); err != nil {
-			log.Fatalf("List failed: %v", err)
-		}
-	},
-}
+	kindFlag := flags.NewStringFlag("kind", "k", "kind", "")
+	stateFlag := flags.NewStringFlag("state", "s", "state", "")
+
+	cmd := &cobra.Command{
+		Use:   "list <resource>",
+		Short: "List resources",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			if err := service.ListResourcesHandler(
+				*envFlag.Value,
+				*outFlag.Value,
+				*projectFlag.Value,
+				*nameFlag.Value,
+				*kindFlag.Value,
+				*stateFlag.Value,
+				args[0],
+			); err != nil {
+				log.Fatalf("List failed: %v", err)
+			}
+		},
+	}
+
+	// Add common flags
+	flags.AddFlag(cmd, &envFlag)
+	flags.AddFlag(cmd, &outFlag)
+	flags.AddFlag(cmd, &projectFlag)
+	flags.AddFlag(cmd, &nameFlag)
+
+	// Add specific flags
+	flags.AddFlag(cmd, &kindFlag)
+	flags.AddFlag(cmd, &stateFlag)
+
+	return cmd
+}()
 
 func init() {
-	flags.AddCommonFlags(listCmd)
-
-	// Add specific command flags
-	listCmd.Flags().StringVarP(&listFlag.ListKind, "kind", "k", "", "kind")
-	listCmd.Flags().StringVarP(&listFlag.ListState, "state", "s", "", "state")
-
 	core.RegisterCommand(listCmd)
 }

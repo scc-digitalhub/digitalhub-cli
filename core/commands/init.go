@@ -13,21 +13,28 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var initFlag = flags.SpecificCommandFlag{}
+var initCmd = func() *cobra.Command {
+	// Local flag declarations
+	envFlag := flags.NewStringFlag("env", "e", "environment", "")
+	preFlag := flags.NewBoolFlag("pre", "", "Include pre-release versions when installing", false)
 
-var initCmd = &cobra.Command{
-	Use:   "init",
-	Short: "Install python packages for an environment",
-	Args:  cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		if err := service.InitEnvironmentHandler(initFlag.PreFlag); err != nil {
-			log.Fatalf("Init failed: %v", err)
-		}
-	},
-}
+	cmd := &cobra.Command{
+		Use:   "init",
+		Short: "Install python packages for an environment",
+		Args:  cobra.MaximumNArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			if err := service.InitEnvironmentHandler(*preFlag.Value); err != nil {
+				log.Fatalf("Init failed: %v", err)
+			}
+		},
+	}
+
+	flags.AddFlag(cmd, &envFlag)
+	flags.AddFlag(cmd, &preFlag)
+
+	return cmd
+}()
 
 func init() {
-	flags.AddCommonFlags(initCmd, "env")
-	initCmd.Flags().BoolVar(&initFlag.PreFlag, "pre", false, "Include pre-release versions when installing")
 	core.RegisterCommand(initCmd)
 }

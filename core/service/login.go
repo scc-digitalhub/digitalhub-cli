@@ -125,8 +125,12 @@ func startAuthCodeServer(verifier string) {
 		fmt.Fprintln(w, "</div>")
 
 		var m map[string]interface{}
+
 		json.Unmarshal(tkn, &m)
+
 		for k, v := range m {
+			fmt.Printf("Response: Key: %s, Value: %v\n", k, v)
+			viper.Set(k, fmt.Sprint(v))
 			if !slices.Contains([]string{"client_id", "token_type", "id_token"}, k) {
 				viper.Set(k, fmt.Sprint(v))
 			}
