@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/viper"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -38,7 +37,18 @@ func UploadHandler(env, input, project, resource string, id string, name string)
 		id = utils.UUIDv4NoDash()
 		log.Printf("No ID provided, generating new artifact ID: %s", id)
 
-		path := fmt.Sprintf("s3://%s/%s/%s/%s/%s", "datalake", project, resource, id, filepath.Base(input))
+		fileInfo, err := os.Stat(input)
+		if err != nil {
+			return fmt.Errorf("cannot access input: %w", err)
+		}
+
+		var path string
+		if fileInfo.IsDir() {
+			path = fmt.Sprintf("s3://%s/%s/%s/%s/", "datalake", project, resource, id)
+		} else {
+			path = fmt.Sprintf("s3://%s/%s/%s/%s/%s", "datalake", project, resource, id, fileInfo.Name())
+		}
+
 		log.Printf("Generated S3 path for new artifact: %s", path)
 
 		spec := map[string]interface{}{
