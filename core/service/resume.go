@@ -6,8 +6,6 @@ package service
 
 import (
 	"dhcli/utils"
-	"encoding/json"
-	"fmt"
 	"github.com/spf13/viper"
 )
 
@@ -16,7 +14,7 @@ func ResumeHandler(env string, project string, resource string, id string) error
 
 	// Load environment and check API level requirements
 	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(utils.ApiLevelKey, utils.RunLogsMin, utils.RunLogsMax)
+	utils.CheckApiLevel(utils.ApiLevelKey, utils.LogMin, utils.LogMax)
 
 	// Request
 	method := "POST"

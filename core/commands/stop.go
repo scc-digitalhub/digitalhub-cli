@@ -22,7 +22,7 @@ var stopCmd = func() *cobra.Command {
 		Short: "Stop a resource",
 		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
-			err := service.RunLogsHandler(
+			err := service.StopHandler(
 				*envFlag.Value,
 				*projectFlag.Value,
 				args[0],

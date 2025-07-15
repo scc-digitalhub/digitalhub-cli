@@ -10,9 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/spf13/viper"
-	"log"
-	"os"
-	"reflect"
 
 	"sigs.k8s.io/yaml"
 

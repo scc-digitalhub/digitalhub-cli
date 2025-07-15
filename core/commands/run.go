@@ -13,33 +13,41 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var runFlag = flags.SpecificCommandFlag{}
+var runCmd = func() *cobra.Command {
+	envFlag := flags.NewStringFlag("env", "e", "environment", "")
+	projectFlag := flags.NewStringFlag("project", "p", "project", "")
+	fnNameFlag := flags.NewStringFlag("fn-name", "n", "name of the function to run", "")
+	fnIDFlag := flags.NewStringFlag("fn-id", "i", "ID of the function to run", "")
+	filePathFlag := flags.NewStringFlag("file", "f", "path to a YAML file containing the resource definition", "")
 
-var runCmd = &cobra.Command{
-	Use:   "run <task>",
-	Short: "Runs a function",
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		err := service.RunHandler(
-			flags.CommonFlag.EnvFlag,
-			flags.CommonFlag.ProjectFlag,
-			runFlag.FunctionNameFlag,
-			runFlag.FunctionIdFlag,
-			runFlag.FilePathFlag,
-			args[0])
-		if err != nil {
-			log.Fatalf("Run failed: %v", err)
-		}
-	},
-}
+	cmd := &cobra.Command{
+		Use:   "run <task>",
+		Short: "Runs a function",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			err := service.RunHandler(
+				*envFlag.Value,
+				*projectFlag.Value,
+				*fnNameFlag.Value,
+				*fnIDFlag.Value,
+				*filePathFlag.Value,
+				args[0],
+			)
+			if err != nil {
+				log.Fatalf("Run failed: %v", err)
+			}
+		},
+	}
+
+	flags.AddFlag(cmd, &envFlag)
+	flags.AddFlag(cmd, &projectFlag)
+	flags.AddFlag(cmd, &fnNameFlag)
+	flags.AddFlag(cmd, &fnIDFlag)
+	flags.AddFlag(cmd, &filePathFlag)
+
+	return cmd
+}()
 
 func init() {
-	flags.AddCommonFlags(runCmd, "env", "project")
-
-	// Additional flags
-	runCmd.Flags().StringVarP(&runFlag.FunctionNameFlag, "fn-name", "n", "", "name of the function to run")
-	runCmd.Flags().StringVarP(&runFlag.FunctionIdFlag, "fn-id", "i", "", "ID of the function to run")
-	runCmd.Flags().StringVarP(&runFlag.FilePathFlag, "file", "f", "", "path to a YAML file containing the resource definition")
-
 	core.RegisterCommand(runCmd)
 }

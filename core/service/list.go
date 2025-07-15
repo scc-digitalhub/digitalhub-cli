@@ -15,8 +15,6 @@ import (
 	"strconv"
 	"strings"
 
-	"gopkg.in/ini.v1"
-
 	"sigs.k8s.io/yaml"
 
 	"dhcli/utils"

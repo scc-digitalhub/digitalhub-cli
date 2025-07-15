@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/spf13/viper"
 	"os"
 	"os/exec"
 	"runtime"
@@ -20,15 +21,14 @@ func LogHandler(env string, project string, container string, follow bool, resou
 	endpoint := utils.TranslateEndpoint(resource)
 
 	// Load environment and check API level requirements
-	cfg, section := utils.LoadIniConfig([]string{env})
-	utils.CheckUpdateEnvironment(cfg, section)
-	utils.CheckApiLevel(section, utils.LogMin, utils.LogMax)
+	utils.CheckUpdateEnvironment()
+	utils.CheckApiLevel(utils.ApiLevelKey, utils.LogMin, utils.LogMax)
 
 	// Loop requests if following
 	for {
 		method := "GET"
-		url := utils.BuildCoreUrl(section, project, endpoint, id, nil) + "/logs"
-		req := utils.PrepareRequest(method, url, nil, section.Key("access_token").String())
+		url := utils.BuildCoreUrl(project, endpoint, id, nil) + "/logs"
+		req := utils.PrepareRequest(method, url, nil, viper.GetString("access_token"))
 
 		body, err := utils.DoRequest(req)
 		if err != nil {
@@ -45,8 +45,8 @@ func LogHandler(env string, project string, container string, follow bool, resou
 			// If container is not specified, print main container's logs
 			// Get resource to figure out the main container's name
 			method := "GET"
-			url := utils.BuildCoreUrl(section, project, endpoint, id, nil)
-			req := utils.PrepareRequest(method, url, nil, section.Key("access_token").String())
+			url := utils.BuildCoreUrl(project, endpoint, id, nil)
+			req := utils.PrepareRequest(method, url, nil, viper.GetString("access_token"))
 			body, err := utils.DoRequest(req)
 			if err != nil {
 				return err

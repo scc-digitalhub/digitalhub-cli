@@ -9,11 +9,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/spf13/viper"
 	"log"
 	"os"
 	"reflect"
 
-	"gopkg.in/ini.v1"
 	"sigs.k8s.io/yaml"
 )
 
@@ -21,25 +21,24 @@ func RunHandler(env string, project string, functionName string, functionId stri
 	endpoint := utils.TranslateEndpoint("run")
 
 	// Load environment and check API level requirements
-	cfg, section := utils.LoadIniConfig([]string{env})
-	utils.CheckUpdateEnvironment(cfg, section)
-	utils.CheckApiLevel(section, utils.CreateMin, utils.CreateMax)
+	utils.CheckUpdateEnvironment()
+	utils.CheckApiLevel(utils.ApiLevelKey, utils.CreateMin, utils.CreateMax)
 
 	if project == "" {
 		return errors.New("Project not specified.")
 	}
 
 	// Get function kind and key
-	functionKind, functionKey, err := getFunctionKey(section, project, functionId, functionName)
+	functionKind, functionKey, err := getFunctionKey(project, functionId, functionName)
 	if err != nil {
 		return err
 	}
 
 	// Get or create task
-	taskKey, err := getTaskKey(section, project, functionKey, task)
+	taskKey, err := getTaskKey(project, functionKey, task)
 	if err != nil {
 		var err error
-		taskKey, err = createTask(section, project, functionKey, task)
+		taskKey, err = createTask(project, functionKey, task)
 		if err != nil {
 			return err
 		}
@@ -86,8 +85,8 @@ func RunHandler(env string, project string, functionName string, functionId stri
 
 	// Request
 	method := "POST"
-	url := utils.BuildCoreUrl(section, project, endpoint, "", nil)
-	req := utils.PrepareRequest(method, url, jsonBody, section.Key("access_token").String())
+	url := utils.BuildCoreUrl(project, endpoint, "", nil)
+	req := utils.PrepareRequest(method, url, jsonBody, viper.GetString("access_token"))
 	_, err = utils.DoRequest(req)
 	if err != nil {
 		return err
@@ -97,13 +96,13 @@ func RunHandler(env string, project string, functionName string, functionId stri
 	return nil
 }
 
-func getFunctionKey(section *ini.Section, project string, id string, name string) (string, string, error) {
+func getFunctionKey(project string, id string, name string) (string, string, error) {
 	var function map[string]interface{}
 	if id != "" {
 		// Get function by ID
 		method := "GET"
-		url := utils.BuildCoreUrl(section, project, "functions", id, nil)
-		req := utils.PrepareRequest(method, url, nil, section.Key("access_token").String())
+		url := utils.BuildCoreUrl(project, "functions", id, nil)
+		req := utils.PrepareRequest(method, url, nil, viper.GetString("access_token"))
 		resp, err := utils.DoRequest(req)
 		if err != nil {
 			return "", "", err
@@ -114,8 +113,8 @@ func getFunctionKey(section *ini.Section, project string, id string, name string
 	} else if name != "" {
 		// Get latest function by name
 		method := "GET"
-		url := utils.BuildCoreUrl(section, project, "functions", "", map[string]string{"name": name})
-		req := utils.PrepareRequest(method, url, nil, section.Key("access_token").String())
+		url := utils.BuildCoreUrl(project, "functions", "", map[string]string{"name": name})
+		req := utils.PrepareRequest(method, url, nil, viper.GetString("access_token"))
 		resp, err := utils.DoRequest(req)
 		if err != nil {
 			return "", "", err
@@ -144,12 +143,12 @@ func getFunctionKey(section *ini.Section, project string, id string, name string
 	return "", "", errors.New("Unable to obtain function key.")
 }
 
-func getTaskKey(section *ini.Section, project string, functionKey string, task string) (string, error) {
+func getTaskKey(project string, functionKey string, task string) (string, error) {
 	// Perform request
 	method := "GET"
 	params := map[string]string{"function": functionKey}
-	url := utils.BuildCoreUrl(section, project, "tasks", "", params)
-	req := utils.PrepareRequest(method, url, nil, section.Key("access_token").String())
+	url := utils.BuildCoreUrl(project, "tasks", "", params)
+	req := utils.PrepareRequest(method, url, nil, viper.GetString("access_token"))
 
 	resp, err := utils.DoRequest(req)
 	if err != nil {
@@ -175,9 +174,9 @@ func getTaskKey(section *ini.Section, project string, functionKey string, task s
 	return "", errors.New("Unable to obtain task key.")
 }
 
-func createTask(section *ini.Section, project string, function string, task string) (string, error) {
+func createTask(project string, function string, task string) (string, error) {
 	method := "POST"
-	url := utils.BuildCoreUrl(section, project, "tasks", "", nil)
+	url := utils.BuildCoreUrl(project, "tasks", "", nil)
 
 	// Body
 	reqBody := map[string]interface{}{}
@@ -194,7 +193,7 @@ func createTask(section *ini.Section, project string, function string, task stri
 	}
 
 	// Perform request
-	req := utils.PrepareRequest(method, url, jsonBody, section.Key("access_token").String())
+	req := utils.PrepareRequest(method, url, jsonBody, viper.GetString("access_token"))
 	resp, err := utils.DoRequest(req)
 	if err != nil {
 		return "", err
