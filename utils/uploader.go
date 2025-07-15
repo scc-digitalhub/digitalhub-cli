@@ -9,8 +9,7 @@ import (
 	"path/filepath"
 )
 
-// UploadS3File uploads a single file to a specified S3 bucket and key.
-// It returns the S3 PutObjectOutput containing metadata like ETag.
+// UploadS3File uploads a single file
 func UploadS3File(client *s3client.Client, ctx context.Context, bucket, key, localPath string) (*s3.PutObjectOutput, error) {
 	file, err := os.Open(localPath)
 	if err != nil {
@@ -26,8 +25,7 @@ func UploadS3File(client *s3client.Client, ctx context.Context, bucket, key, loc
 	return output, nil
 }
 
-// UploadS3Dir uploads all files inside a local directory to an S3 path.
-// It preserves the folder structure relative to the root of localPath.
+// UploadS3Dir uploads all files inside a directory
 func UploadS3Dir(client *s3client.Client, ctx context.Context, parsedPath *ParsedPath, localPath string) ([]*s3.PutObjectOutput, error) {
 	bucket := parsedPath.Host
 	prefix := parsedPath.Path

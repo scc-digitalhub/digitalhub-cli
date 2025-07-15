@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strings"
 
@@ -127,14 +128,38 @@ func (c *Client) DownloadFile(ctx context.Context, bucket, key, localPath string
 	return nil
 }
 
-// UploadFile uploads a file to the specified S3 bucket and key
-func (c *Client) UploadFile(ctx context.Context, bucket, key string, body io.Reader) (*s3.PutObjectOutput, error) {
+func (c *Client) UploadFile(ctx context.Context, bucket, key string, file *os.File) (*s3.PutObjectOutput, error) {
+	// Stat to get the size
+	stat, err := file.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("failed to stat file: %w", err)
+	}
+	size := stat.Size()
+
+	// Read the first 512 bytes to detect MIME type
+	header := make([]byte, 512)
+	n, err := file.Read(header)
+	if err != nil && err != io.EOF {
+		return nil, fmt.Errorf("failed to read file header: %w", err)
+	}
+
+	// Detect MIME type
+	mimeType := http.DetectContentType(header[:n])
+
+	// Reset the file to the beginning
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		return nil, fmt.Errorf("failed to rewind file: %w", err)
+	}
+
 	fmt.Printf("Uploading to S3 path: s3://%s/%s\n", bucket, key)
+	fmt.Printf("Detected MIME type: %s\n", mimeType)
 
 	output, err := c.s3.PutObject(ctx, &s3.PutObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-		Body:   body,
+		Bucket:        aws.String(bucket),
+		Key:           aws.String(key),
+		Body:          file,
+		ContentLength: &size,
+		ContentType:   aws.String(mimeType),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to upload file to S3: %w", err)

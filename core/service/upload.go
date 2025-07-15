@@ -164,6 +164,20 @@ func UploadHandler(env, input, project, resource string, id string, name string)
 		return fmt.Errorf("cannot access input: %w", err)
 	}
 
+	//TODO oltre allo status va aggiornata la lista dei files ....
+
+	//	"status": {
+	//		"files": [
+	//{
+	//"path": "test.txt",
+	//"name": "test.txt",
+	//"content_type": "text/plain",
+	//"last_modified": "Tue, 03 Jun 2025 09:26:20 GMT",
+	//"size": 13
+	//}
+	//],
+	//"state": "READY"
+
 	if fileInfo.IsDir() {
 		_, err = utils.UploadS3Dir(client, ctx, parsedPath, input)
 	} else {
