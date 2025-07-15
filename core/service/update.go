@@ -7,6 +7,7 @@ package service
 import (
 	"dhcli/utils"
 	"encoding/json"
+	"github.com/spf13/viper"
 	"log"
 	"os"
 
@@ -18,9 +19,8 @@ func UpdateHandler(env string, project string, filePath string, resource string,
 	endpoint := utils.TranslateEndpoint(resource)
 
 	// Load environment and check API level requirements
-	cfg, section := utils.LoadIniConfig([]string{env})
-	utils.CheckUpdateEnvironment(cfg, section)
-	utils.CheckApiLevel(section, utils.UpdateMin, utils.UpdateMax)
+	utils.CheckUpdateEnvironment()
+	utils.CheckApiLevel(utils.ApiLevelKey, utils.UpdateMin, utils.UpdateMax)
 
 	if filePath == "" {
 		log.Println("Input file not specified.")
@@ -70,8 +70,8 @@ func UpdateHandler(env string, project string, filePath string, resource string,
 
 	// Request
 	method := "PUT"
-	url := utils.BuildCoreUrl(section, project, endpoint, id, nil)
-	req := utils.PrepareRequest(method, url, jsonBody, section.Key("access_token").String())
+	url := utils.BuildCoreUrl(project, endpoint, id, nil)
+	req := utils.PrepareRequest(method, url, jsonBody, viper.GetString("access_token"))
 
 	_, err = utils.DoRequest(req)
 	if err != nil {

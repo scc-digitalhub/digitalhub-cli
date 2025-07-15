@@ -7,6 +7,7 @@ package service
 import (
 	"dhcli/utils"
 	"fmt"
+	"github.com/spf13/viper"
 	"log"
 	"os"
 )
@@ -16,9 +17,8 @@ func DeleteHandler(env string, project string, name string, confirm bool, cascad
 	endpoint := utils.TranslateEndpoint(resource)
 
 	// Load environment and check API level requirements
-	cfg, section := utils.LoadIniConfig([]string{env})
-	utils.CheckUpdateEnvironment(cfg, section)
-	utils.CheckApiLevel(section, utils.DeleteMin, utils.DeleteMax)
+	utils.CheckUpdateEnvironment()
+	utils.CheckApiLevel(utils.ApiLevelKey, utils.DeleteMin, utils.DeleteMax)
 
 	if endpoint == "projects" && cascade != true {
 		log.Println("WARNING: You are deleting a project without the cascade (-c) flag. Resources belonging to the project will not be deleted.")
@@ -56,8 +56,8 @@ func DeleteHandler(env string, project string, name string, confirm bool, cascad
 	}
 
 	method := "DELETE"
-	url := utils.BuildCoreUrl(section, project, endpoint, id, params)
-	req := utils.PrepareRequest(method, url, nil, section.Key("access_token").String())
+	url := utils.BuildCoreUrl(project, endpoint, id, params)
+	req := utils.PrepareRequest(method, url, nil, viper.GetString("access_token"))
 	_, err := utils.DoRequest(req)
 	if err != nil {
 		return err

@@ -2,23 +2,22 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-// service/download.go
 package service
 
 import (
 	"context"
 	s3client "dhcli/configs"
-	"dhcli/models"
 	"dhcli/utils"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/spf13/viper"
 	"log"
 	"os"
 	"path/filepath"
 )
 
-func DownloadHandler(env string, output string, project string, name string, resource string, id string, originalArgs []string) error {
+func DownloadHandler(env string, output string, project string, name string, resource string, id string) error {
 	endpoint := utils.TranslateEndpoint(resource)
 
 	if endpoint != "projects" && project == "" {
@@ -34,41 +33,71 @@ func DownloadHandler(env string, output string, project string, name string, res
 		params["versions"] = "latest"
 	}
 
-	_, section := utils.LoadIniConfig([]string{env})
-	method := "GET"
-	url := utils.BuildCoreUrl(section, project, endpoint, id, params)
-	req := utils.PrepareRequest(method, url, nil, section.Key("access_token").String())
+	url := utils.BuildCoreUrl(project, endpoint, id, params)
+
+	req := utils.PrepareRequest("GET", url, nil, viper.GetString("access_token"))
 	body, err := utils.DoRequest(req)
 	if err != nil {
 		return fmt.Errorf("error reading response: %w", err)
 	}
 
-	var resp models.Response[models.Artifact]
-	if err := json.Unmarshal(body, &resp); err != nil {
+	// Parse as raw map instead of typed response
+	var raw map[string]interface{}
+	if err := json.Unmarshal(body, &raw); err != nil {
 		return fmt.Errorf("error unmarshalling JSON: %w", err)
 	}
-	if len(resp.Content) == 0 {
+
+	contentList, ok := raw["content"].([]interface{})
+	if !ok || len(contentList) == 0 {
 		return fmt.Errorf("no artifact was found in Content response")
 	}
 
 	ctx := context.Background()
 	var s3Client *s3client.Client
 
-	for i, artifact := range resp.Content {
-		fmt.Printf("Artifact #%d - Path: %s\n", i+1, artifact.Spec.Path)
+	for i, item := range contentList {
+		artifactMap, ok := item.(map[string]interface{})
+		if !ok {
+			log.Printf("Skipping invalid artifact at index %d", i)
+			continue
+		}
 
-		parsedPath, err := utils.ParsePath(artifact.Spec.Path)
+		// Extract spec.path
+		spec, ok := artifactMap["spec"].(map[string]interface{})
+		if !ok {
+			log.Printf("Skipping artifact with missing spec field at index %d", i)
+			continue
+		}
+
+		pathStr, _ := spec["path"].(string)
+		fmt.Printf("Entity #%d - Path: %s\n", i+1, pathStr)
+
+		parsedPath, err := utils.ParsePath(pathStr)
 		if err != nil {
 			return fmt.Errorf("failed to parse path: %w", err)
 		}
 
 		localFilename := parsedPath.Filename
 		localPath := localFilename
+
+		// if output is specified, use it as the base directory if it exists or create it
 		if output != "" {
 			info, err := os.Stat(output)
 			if err != nil {
-				return fmt.Errorf("output path does not exist: %s", output)
+				if os.IsNotExist(err) {
+					if err := os.MkdirAll(output, 0755); err != nil {
+						return fmt.Errorf("failed to create output directory: %w", err)
+					}
+					info, err = os.Stat(output)
+					if err != nil {
+						return fmt.Errorf("failed to stat created directory: %w", err)
+					}
+				} else {
+					// Some other error (e.g., permission)
+					return fmt.Errorf("error accessing output path: %w", err)
+				}
 			}
+
 			if info.IsDir() {
 				localPath = filepath.Join(output, localFilename)
 			} else {
@@ -80,11 +109,11 @@ func DownloadHandler(env string, output string, project string, name string, res
 		case "s3":
 			if s3Client == nil {
 				cfg := s3client.Config{
-					AccessKey:   section.Key("aws_access_key_id").String(),
-					SecretKey:   section.Key("aws_secret_access_key").String(),
-					AccessToken: section.Key("aws_session_token").String(),
-					Region:      section.Key("aws_region").String(),
-					EndpointURL: section.Key("aws_endpoint_url").String(),
+					AccessKey:   viper.GetString("aws_access_key_id"),
+					SecretKey:   viper.GetString("aws_secret_access_key"),
+					AccessToken: viper.GetString("aws_session_token"),
+					Region:      viper.GetString("aws_region"),
+					EndpointURL: viper.GetString("aws_endpoint_url"),
 				}
 				client, err := s3client.NewClient(ctx, cfg)
 				if err != nil {
@@ -102,7 +131,7 @@ func DownloadHandler(env string, output string, project string, name string, res
 			}
 
 		case "other", "":
-			fmt.Printf("Skipping other.....: %s\n", parsedPath.Path)
+			fmt.Printf("Skipping unsupported scheme.....: %s\n", parsedPath.Path)
 
 		default:
 			return fmt.Errorf("unsupported scheme: %s", parsedPath.Scheme)

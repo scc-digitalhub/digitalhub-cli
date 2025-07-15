@@ -12,6 +12,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/spf13/viper"
 	"io"
 	"log"
 	"net/http"
@@ -22,8 +23,6 @@ import (
 	"slices"
 	"strings"
 
-	"gopkg.in/ini.v1"
-
 	"dhcli/utils"
 )
 
@@ -32,18 +31,18 @@ const redirectURI = "http://localhost:4000/callback"
 var generatedState string
 
 // Runs PKCE flow for authentication
-func LoginHandler(env string) error {
-	cfg, section := loadIniCfg(env)
+func LoginHandler() error {
+	//cfg, section := loadIniCfg(env)
 
-	utils.CheckUpdateEnvironment(cfg, section)
-	utils.CheckApiLevel(section, utils.LoginMin, utils.LoginMax)
+	utils.CheckUpdateEnvironment()
+	utils.CheckApiLevel(utils.ApiLevelKey, utils.LoginMin, utils.LoginMax)
 
 	cv, cc := generatePKCE()
 	generatedState = randomString(32)
 
-	startAuthCodeServer(cfg, section, cv)
+	startAuthCodeServer(cv)
 
-	authURL := buildAuthURL(section, cc, generatedState)
+	authURL := buildAuthURL(cc, generatedState)
 
 	fmt.Println("─────────────────────────────────────────────────────────────────────")
 	fmt.Println("🔐  The following URL will be opened in your browser to authenticate:")
@@ -63,10 +62,6 @@ func LoginHandler(env string) error {
 	}
 
 	select {} // lock the program to wait for user interaction
-}
-
-func loadIniCfg(env string) (*ini.File, *ini.Section) {
-	return utils.LoadIniConfig([]string{env})
 }
 
 func generatePKCE() (verifier, challenge string) {
@@ -90,7 +85,7 @@ func randomStringCharset(n int, cs string) string {
 	return string(b)
 }
 
-func startAuthCodeServer(cfg *ini.File, section *ini.Section, verifier string) {
+func startAuthCodeServer(verifier string) {
 	http.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
 		authCode := r.URL.Query().Get("code")
 		state := r.URL.Query().Get("state")
@@ -105,8 +100,8 @@ func startAuthCodeServer(cfg *ini.File, section *ini.Section, verifier string) {
 		}
 
 		tkn := exchangeAuthCode(
-			section.Key("token_endpoint").String(),
-			section.Key("client_id").String(),
+			viper.GetString("token_endpoint"),
+			viper.GetString("client_id"),
 			verifier,
 			authCode,
 		)
@@ -126,26 +121,39 @@ func startAuthCodeServer(cfg *ini.File, section *ini.Section, verifier string) {
 		fmt.Fprintln(w, "<h3>You may now close this window.</h3>")
 		fmt.Fprintln(w, "<h3>Token response:</h3>")
 		fmt.Fprintln(w, "<button style=\"position: absolute;left: 810px;padding: 10px;opacity: 0.90;cursor: pointer;\" onclick=\"navigator.clipboard.writeText(document.getElementById('resp').innerHTML)\">Copy</button>")
-		fmt.Fprintf(w, "<pre id=\"resp\" style=\"background:#f6f8fa;border:1px solid #ccc;padding:16px;width:800px;overflow:auto;\">%s</pre>", prettyJSON.String())
+		fmt.Fprintf(w, "<pre id=\"resp\" style=\"background:#f6f8fa;border:1px solid #ccc;padding:16px;width:800px;min-height:400px;overflow:auto;\">%s</pre>", prettyJSON.String())
 		fmt.Fprintln(w, "</div>")
 
 		var m map[string]interface{}
+
 		json.Unmarshal(tkn, &m)
+
 		for k, v := range m {
+			fmt.Printf("Response: Key: %s, Value: %v\n", k, v)
+			viper.Set(k, fmt.Sprint(v))
 			if !slices.Contains([]string{"client_id", "token_type", "id_token"}, k) {
-				utils.UpdateKey(section, k, fmt.Sprint(v))
+				viper.Set(k, fmt.Sprint(v))
 			}
 		}
-		utils.UpdateKey(section, "access_token", fmt.Sprint(m["access_token"]))
+		viper.Set("access_token", fmt.Sprint(m["access_token"]))
 		if rt, ok := m["refresh_token"]; ok {
-			utils.UpdateKey(section, "refresh_token", fmt.Sprint(rt))
+			viper.Set("refresh_token", fmt.Sprint(rt))
 		}
-		utils.SaveIni(cfg)
+
+		err := utils.UpdateIniSectionFromViper(viper.AllKeys())
+		if err != nil {
+			return
+		}
 
 		log.Println("Login successful.")
 		go os.Exit(0)
 	})
-	go http.ListenAndServe(":4000", nil)
+	go func() {
+		err := http.ListenAndServe(":4000", nil)
+		if err != nil {
+
+		}
+	}()
 }
 
 func exchangeAuthCode(tokenURL, clientID, verifier, code string) []byte {
@@ -171,17 +179,17 @@ func exchangeAuthCode(tokenURL, clientID, verifier, code string) []byte {
 	return tkn
 }
 
-func buildAuthURL(section *ini.Section, chal, state string) string {
+func buildAuthURL(chal, state string) string {
 	v := url.Values{
 		"response_type":         {"code"},
-		"client_id":             {section.Key("client_id").String()},
+		"client_id":             {viper.GetString("client_id")},
 		"redirect_uri":          {redirectURI},
 		"code_challenge":        {chal},
 		"code_challenge_method": {"S256"},
 		"state":                 {state},
 	}
-	scope := strings.ReplaceAll(section.Key("scopes_supported").String(), ",", "%20")
-	return section.Key("authorization_endpoint").String() + "?" + v.Encode() + "&scope=" + scope
+	scope := strings.ReplaceAll(viper.GetString("scopes_supported"), ",", "%20")
+	return viper.GetString("authorization_endpoint") + "?" + v.Encode() + "&scope=" + scope
 }
 
 func openBrowser(u string) error {

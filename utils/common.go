@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/spf13/viper"
 	"io"
 	"log"
 	"net/http"
@@ -82,8 +83,8 @@ func ReflectValue(v interface{}) string {
 	}
 }
 
-func BuildCoreUrl(section *ini.Section, project string, resource string, id string, params map[string]string) string {
-	base := section.Key(DhCoreEndpoint).String() + "/api/" + section.Key("dhcore_api_version").String()
+func BuildCoreUrl(project string, resource string, id string, params map[string]string) string {
+	base := viper.GetString(DhCoreEndpoint) + "/api/" + viper.GetString("dhcore_api_version")
 	endpoint := ""
 	paramsString := ""
 	if resource != "projects" && project != "" {
@@ -277,10 +278,10 @@ func WaitForConfirmation(msg string) {
 	}
 }
 
-func PrintCommentForYaml(section *ini.Section, args ...string) {
+func PrintCommentForYaml(args ...string) {
 	fmt.Printf("# Generated on: %v\n", time.Now().Round(0))
-	fmt.Printf("#   from environment: %v (core version %v)\n", section.Key("dhcore_name").String(), section.Key("dhcore_version").String())
-	fmt.Printf("#   found at: %v\n", section.Key(DhCoreEndpoint).String())
+	fmt.Printf("#   from environment: %v (core version %v)\n", viper.GetString("dhcore_name"), viper.GetString("dhcore_version"))
+	fmt.Printf("#   found at: %v\n", viper.GetString(DhCoreEndpoint))
 	argsString := ""
 	for _, s := range args {
 		if s != "" {
@@ -292,16 +293,21 @@ func PrintCommentForYaml(section *ini.Section, args ...string) {
 	}
 }
 
-func CheckApiLevel(section *ini.Section, min int, max int) {
-	if !section.HasKey(ApiLevelKey) {
+func CheckApiLevel(apiLevelKey string, min int, max int) {
+
+	//print api level key
+	fmt.Printf("Checking API level for %v command...\n", viper.GetString(apiLevelKey))
+
+	apiLevelKeyString := viper.GetString(apiLevelKey)
+
+	if apiLevelKeyString == "" {
 		log.Println("ERROR: Unable to check compatibility, environment does not specify API level.")
 		os.Exit(1)
 	}
 
-	apiLevelString := section.Key(ApiLevelKey).Value()
-	apiLevel, err := strconv.Atoi(apiLevelString)
+	apiLevel, err := strconv.Atoi(apiLevelKeyString)
 	if err != nil {
-		log.Printf("ERROR: Unable to check compatibility, as API level %v could not be read as integer.\n", apiLevelString)
+		log.Printf("ERROR: Unable to check compatibility, as API level %v could not be read as integer.\n", apiLevelKeyString)
 		os.Exit(1)
 	}
 
