@@ -129,12 +129,12 @@ func startAuthCodeServer(verifier string) {
 		json.Unmarshal(tkn, &m)
 
 		for k, v := range m {
-			fmt.Printf("Response: Key: %s, Value: %v\n", k, v)
-			viper.Set(k, fmt.Sprint(v))
+			//fmt.Printf("Response: Key: %s, Value: %v\n", k, v)
 			if !slices.Contains([]string{"client_id", "token_type", "id_token"}, k) {
-				viper.Set(k, fmt.Sprint(v))
+				viper.Set(k, utils.ReflectValue(v))
 			}
 		}
+
 		viper.Set("access_token", fmt.Sprint(m["access_token"]))
 		if rt, ok := m["refresh_token"]; ok {
 			viper.Set("refresh_token", fmt.Sprint(rt))
