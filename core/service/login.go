@@ -131,7 +131,7 @@ func startAuthCodeServer(verifier string) {
 		for k, v := range m {
 			//fmt.Printf("Response: Key: %s, Value: %v\n", k, v)
 			if !slices.Contains([]string{"client_id", "token_type", "id_token"}, k) {
-				viper.Set(k, utils.ReflectValue(v))
+				viper.Set(k, fmt.Sprint(v))
 			}
 		}
 
