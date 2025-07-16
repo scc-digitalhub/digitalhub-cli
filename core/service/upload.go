@@ -136,50 +136,51 @@ func UploadHandler(env, input, project, resource string, id string, name string)
 		return fmt.Errorf("failed to create S3 client: %w", err)
 	}
 
-	// Status updater (sets status.state only)
-	updateStatus := func(newState string) error {
-		status["state"] = newState
+	// Inner function to update the status
+	updateStatus := func(artifactKey string, updateData map[string]interface{}) error {
+		existingData, ok := artifactMap[artifactKey].(map[string]interface{})
+		if !ok {
+			existingData = make(map[string]interface{})
+		}
+
+		merged := utils.MergeMaps(existingData, updateData, utils.MergeConfig{})
+		artifactMap[artifactKey] = merged
+
 		payload, err := json.Marshal(artifactMap)
 		if err != nil {
 			return fmt.Errorf("failed to marshal updated artifact: %w", err)
 		}
+
 		updateURL := utils.BuildCoreUrl(project, endpoint, id, nil)
 		req := utils.PrepareRequest("PUT", updateURL, payload, viper.GetString("access_token"))
+
 		_, err = utils.DoRequest(req)
 		if err != nil {
-			return fmt.Errorf("failed to update artifact status to %s: %w", newState, err)
+			return fmt.Errorf("failed to update artifact status with data %v: %w", updateData, err)
 		}
 		return nil
 	}
 
 	// Set status to UPLOADING
-	if err := updateStatus("UPLOADING"); err != nil {
+	if err := updateStatus("status", map[string]interface{}{"state": "UPLOADING"}); err != nil {
 		return err
 	}
 
 	// Upload
 	fileInfo, err := os.Stat(input)
 	if err != nil {
-		_ = updateStatus("ERROR")
+		_ = updateStatus("status", map[string]interface{}{"state": "ERROR"})
 		return fmt.Errorf("cannot access input: %w", err)
 	}
 
-	//TODO oltre allo status va aggiornata la lista dei files ....
-
-	//	"status": {
-	//		"files": [
-	//{
-	//"path": "test.txt",
-	//"name": "test.txt",
-	//"content_type": "text/plain",
-	//"last_modified": "Tue, 03 Jun 2025 09:26:20 GMT",
-	//"size": 13
-	//}
-	//],
-	//"state": "READY"
+	files := make([]map[string]interface{}, 0)
 
 	if fileInfo.IsDir() {
-		_, err = utils.UploadS3Dir(client, ctx, parsedPath, input)
+		_, files, err = utils.UploadS3Dir(client, ctx, parsedPath, input)
+		if err != nil {
+			_ = updateStatus("status", map[string]interface{}{"state": "ERROR"})
+			return fmt.Errorf("upload failed: %w", err)
+		}
 	} else {
 		var targetKey string
 		if strings.HasSuffix(parsedPath.Path, "/") {
@@ -187,15 +188,17 @@ func UploadHandler(env, input, project, resource string, id string, name string)
 		} else {
 			targetKey = parsedPath.Path
 		}
-		_, err = utils.UploadS3File(client, ctx, parsedPath.Host, targetKey, input)
+		_, files, err = utils.UploadS3File(client, ctx, parsedPath.Host, targetKey, input)
+		if err != nil {
+			log.Fatalf("Upload failed: %v", err)
+		}
+
 	}
 
-	if err != nil {
-		_ = updateStatus("ERROR")
-		return fmt.Errorf("upload failed: %w", err)
-	}
-
-	if err := updateStatus("READY"); err != nil {
+	if err := updateStatus("status", map[string]interface{}{
+		"state": "READY",
+		"files": files,
+	}); err != nil {
 		return fmt.Errorf("upload succeeded but failed to update status: %w", err)
 	}
 

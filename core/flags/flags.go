@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
 //
 // SPDX-License-Identifier: Apache-2.0
+
 package flags
 
 import (
@@ -73,19 +74,3 @@ func AddFlag[T AllowedTypes](cmd *cobra.Command, flag *FlagStruct[T]) {
 		fs.Hidden = true
 	}
 }
-
-/*
-
-for _, flag := range flagsToAdd {
-		switch flag {
-		case "env":
-			cmd.Flags().StringVarP(&CommonFlag.EnvFlag, "env", "e", "", "environment")
-		case "out":
-			cmd.Flags().StringVarP(&CommonFlag.OutFlag, "out", "o", "short", "output format (short, json, yaml)")
-		case "project":
-			cmd.Flags().StringVarP(&CommonFlag.ProjectFlag, "project", "p", "", "project")
-		case "name":
-			cmd.Flags().StringVarP(&CommonFlag.NameFlag, "name", "n", "", "name")
-		}
-	}
-*/
