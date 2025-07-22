@@ -41,14 +41,23 @@ func DownloadHandler(env string, output string, project string, name string, res
 		return fmt.Errorf("error reading response: %w", err)
 	}
 
-	// Parse as raw map instead of typed response
 	var raw map[string]interface{}
 	if err := json.Unmarshal(body, &raw); err != nil {
 		return fmt.Errorf("error unmarshalling JSON: %w", err)
 	}
 
-	contentList, ok := raw["content"].([]interface{})
-	if !ok || len(contentList) == 0 {
+	var contentList []interface{}
+	if id != "" {
+		contentList = []interface{}{raw}
+	} else {
+		var ok bool
+		contentList, ok = raw["content"].([]interface{})
+		if !ok {
+			return fmt.Errorf("missing or invalid 'content' field in response")
+		}
+	}
+
+	if len(contentList) == 0 {
 		return fmt.Errorf("no artifact was found in Content response")
 	}
 
