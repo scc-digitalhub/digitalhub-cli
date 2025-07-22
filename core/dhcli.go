@@ -8,10 +8,12 @@ import (
 	"context"
 	"dhcli/utils"
 	"fmt"
+	"os"
+	"slices"
+
 	"github.com/charmbracelet/fang"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"os"
 )
 
 var dhcli = &cobra.Command{
@@ -27,7 +29,9 @@ var dhcli = &cobra.Command{
 		}
 
 		// Reload ini config with a correct section
-		utils.RegisterIniCfgWithViper(env)
+		if !(slices.Contains([]string{"register", "use", "remove", "list-env"}, cmd.Name())) {
+			utils.RegisterIniCfgWithViper(env)
+		}
 
 		//// Bind all flags after loading config
 		//utils.BindFlagsToViperRecursive(cmd.Root())
@@ -51,7 +55,7 @@ func Execute() {
 		os.Exit(1)
 	}
 
-	// Uncomment this and commet the code above to use the original cobra.Execute() method
+	// Uncomment this and comment the code above to use the original cobra.Execute() method
 	//if err := dhcli.Execute(); err != nil {
 	//	_, err := fmt.Fprintln(os.Stderr, err)
 	//	if err != nil {

@@ -8,12 +8,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/spf13/viper"
 	"log"
 	"os"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/spf13/viper"
 
 	"sigs.k8s.io/yaml"
 
@@ -138,7 +139,7 @@ func printShortList(resources []interface{}) {
 }
 
 func printShortLineList(rName string, rId string, rKind string, rUpdated string, rState string, rLabels string) {
-	fmt.Printf("%-24s%-36s%-24s%-30s%-12s%s\n", rName, rId, rKind, rUpdated, rState, rLabels)
+	fmt.Printf("%-36s%-36s%-24s%-30s%-12s%s\n", rName, rId, rKind, rUpdated, rState, rLabels)
 }
 
 func printJSONList(resources []interface{}) {

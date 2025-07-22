@@ -9,8 +9,6 @@ import (
 	"dhcli/utils"
 	"encoding/json"
 	"fmt"
-
-	"github.com/spf13/viper"
 )
 
 func MetricsHandler(env string, project string, container string, resource string, id string) error {
@@ -20,6 +18,23 @@ func MetricsHandler(env string, project string, container string, resource strin
 	utils.CheckUpdateEnvironment()
 	utils.CheckApiLevel(utils.ApiLevelKey, utils.MetricsMin, utils.MetricsMax)
 
+	containerLog, err := GetContainerLog(project, endpoint, id, container)
+	if err != nil {
+		return err
+	}
+
+	statusMap := containerLog["status"].(map[string]interface{})
+	jsonData, err := json.Marshal(statusMap["metrics"].([]interface{}))
+
+	var pretty bytes.Buffer
+	if err := json.Indent(&pretty, jsonData, "", "    "); err != nil {
+		return err
+	}
+	fmt.Println(pretty.String())
+
+	return nil
+
+	/* This calls the /metrics API
 	// Request
 	method := "GET"
 	url := utils.BuildCoreUrl(project, endpoint, id, nil) + "/metrics"
@@ -37,4 +52,5 @@ func MetricsHandler(env string, project string, container string, resource strin
 	fmt.Println(pretty.String())
 
 	return nil
+	*/
 }

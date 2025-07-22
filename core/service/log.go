@@ -9,12 +9,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/spf13/viper"
 	"os"
 	"os/exec"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/spf13/viper"
 )
 
 func LogHandler(env string, project string, container string, follow bool, resource string, id string) error {
@@ -26,60 +27,13 @@ func LogHandler(env string, project string, container string, follow bool, resou
 
 	// Loop requests if following
 	for {
-		method := "GET"
-		url := utils.BuildCoreUrl(project, endpoint, id, nil) + "/logs"
-		req := utils.PrepareRequest(method, url, nil, viper.GetString("access_token"))
+		containerLog, err := GetContainerLog(project, endpoint, id, container)
 
-		body, err := utils.DoRequest(req)
+		logContents, err := base64.StdEncoding.DecodeString(containerLog["content"].(string))
 		if err != nil {
 			return err
 		}
-		logs := []interface{}{}
-		if err := json.Unmarshal(body, &logs); err != nil {
-			return fmt.Errorf("json parsing failed: %w", err)
-		}
-
-		// Name of the container to read logs from
-		containerName := container
-		if containerName == "" {
-			// If container is not specified, print main container's logs
-			// Get resource to figure out the main container's name
-			method := "GET"
-			url := utils.BuildCoreUrl(project, endpoint, id, nil)
-			req := utils.PrepareRequest(method, url, nil, viper.GetString("access_token"))
-			body, err := utils.DoRequest(req)
-			if err != nil {
-				return err
-			}
-
-			var m map[string]interface{}
-			if err := json.Unmarshal(body, &m); err != nil {
-				return err
-			}
-
-			spec := m["spec"].(map[string]interface{})
-			task := spec["task"].(string)
-			taskFormatted := strings.ReplaceAll(task[:strings.Index(task, ":")], "+", "")
-
-			containerName = fmt.Sprintf("c-%v-%v", taskFormatted, id)
-		}
-
-		// Loop over logs to find the correct one
-		for _, entry := range logs {
-			entryMap := entry.(map[string]interface{})
-			status := entryMap["status"]
-			statusMap := status.(map[string]interface{})
-			entryContainer := statusMap["container"].(string)
-
-			if containerName == entryContainer {
-				data, err := base64.StdEncoding.DecodeString(entryMap["content"].(string))
-				if err != nil {
-					return err
-				}
-				fmt.Printf("%v\n", string(data[:]))
-				break
-			}
-		}
+		fmt.Printf("%v\n", string(logContents))
 
 		if !follow {
 			return nil
@@ -95,4 +49,58 @@ func LogHandler(env string, project string, container string, follow bool, resou
 		cmd.Stdout = os.Stdout
 		cmd.Run()
 	}
+}
+
+func GetContainerLog(project string, endpoint string, id string, container string) (map[string]interface{}, error) {
+	method := "GET"
+	url := utils.BuildCoreUrl(project, endpoint, id, nil) + "/logs"
+	req := utils.PrepareRequest(method, url, nil, viper.GetString("access_token"))
+
+	body, err := utils.DoRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	logs := []interface{}{}
+	if err := json.Unmarshal(body, &logs); err != nil {
+		return nil, fmt.Errorf("json parsing failed: %w", err)
+	}
+
+	// Name of the container to read logs from
+	containerName := container
+	if containerName == "" {
+		// If container is not specified, print main container's logs
+		// Get resource to figure out the main container's name
+		method := "GET"
+		url := utils.BuildCoreUrl(project, endpoint, id, nil)
+		req := utils.PrepareRequest(method, url, nil, viper.GetString("access_token"))
+		body, err := utils.DoRequest(req)
+		if err != nil {
+			return nil, err
+		}
+
+		var m map[string]interface{}
+		if err := json.Unmarshal(body, &m); err != nil {
+			return nil, err
+		}
+
+		spec := m["spec"].(map[string]interface{})
+		task := spec["task"].(string)
+		taskFormatted := strings.ReplaceAll(task[:strings.Index(task, ":")], "+", "")
+
+		containerName = fmt.Sprintf("c-%v-%v", taskFormatted, id)
+	}
+
+	// Loop over logs to find the correct one
+	for _, entry := range logs {
+		entryMap := entry.(map[string]interface{})
+		status := entryMap["status"]
+		statusMap := status.(map[string]interface{})
+		entryContainer := statusMap["container"].(string)
+
+		if containerName == entryContainer {
+			return entryMap, nil
+		}
+	}
+
+	return nil, fmt.Errorf("Container not found.")
 }
