@@ -131,7 +131,7 @@ func (c *Client) DownloadFile(ctx context.Context, bucket, key, localPath string
 
 // UploadFile choose between normal upload or multipart based on threshold
 func (c *Client) UploadFile(ctx context.Context, bucket, key string, file *os.File) (interface{}, error) {
-	const threshold = 100 * 1024 * 1024 // 100MB
+	const threshold = 100 * 1024 * 1024
 
 	// Get file info
 	info, err := file.Stat()
@@ -153,7 +153,7 @@ func (c *Client) UploadFile(ctx context.Context, bucket, key string, file *os.Fi
 
 	fmt.Printf("📤 Uploading to s3://%s/%s (%.2fMB, type: %s)\n", bucket, key, float64(size)/(1024*1024), mime)
 
-	// Choose upload strategy
+	// Multipart upload with manager
 	if size > threshold {
 		return manager.NewUploader(c.s3).Upload(ctx, &s3.PutObjectInput{
 			Bucket:      aws.String(bucket),

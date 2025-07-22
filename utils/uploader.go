@@ -123,9 +123,9 @@ func UploadS3Dir(client *s3client.Client, ctx context.Context, parsedPath *Parse
 		contentType := http.DetectContentType(buf[:n])
 
 		dirPath := filepath.Dir(relPath)
-		normalizedPath := ""
+		normalizedPath := info.Name()
 		if dirPath != "." {
-			normalizedPath = filepath.ToSlash(dirPath)
+			normalizedPath = filepath.ToSlash(dirPath + "/" + info.Name())
 		}
 
 		fileInfos = append(fileInfos, map[string]interface{}{
