@@ -7,6 +7,7 @@ package s3client
 import (
 	"context"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"io"
 	"net/http"
 	"os"
@@ -102,7 +103,7 @@ func (c *Client) ListFiles(ctx context.Context, bucket string, prefix string, ma
 // DownloadFile downloads a file from S3 and saves it locally
 func (c *Client) DownloadFile(ctx context.Context, bucket, key, localPath string) error {
 
-	fmt.Printf("Downloading from S3 path: s3://%s/%s\n", bucket, key)
+	fmt.Printf("📥 Downloading from S3 path: s3://%s/%s\n", bucket, key)
 	fmt.Printf("Saving to local path: %s\n", localPath)
 
 	output, err := c.s3.GetObject(ctx, &s3.GetObjectInput{
@@ -128,42 +129,45 @@ func (c *Client) DownloadFile(ctx context.Context, bucket, key, localPath string
 	return nil
 }
 
-func (c *Client) UploadFile(ctx context.Context, bucket, key string, file *os.File) (*s3.PutObjectOutput, error) {
-	// Stat to get the size
-	stat, err := file.Stat()
+// UploadFile choose between normal upload or multipart based on threshold
+func (c *Client) UploadFile(ctx context.Context, bucket, key string, file *os.File) (interface{}, error) {
+	const threshold = 100 * 1024 * 1024 // 100MB
+
+	// Get file info
+	info, err := file.Stat()
 	if err != nil {
-		return nil, fmt.Errorf("failed to stat file: %w", err)
+		return nil, fmt.Errorf("stat error: %w", err)
 	}
-	size := stat.Size()
-
-	// Read the first 512 bytes to detect MIME type
-	header := make([]byte, 512)
-	n, err := file.Read(header)
-	if err != nil && err != io.EOF {
-		return nil, fmt.Errorf("failed to read file header: %w", err)
-	}
-
-	// Detect MIME type
-	mimeType := http.DetectContentType(header[:n])
-
-	// Reset the file to the beginning
+	size := info.Size()
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
-		return nil, fmt.Errorf("failed to rewind file: %w", err)
+		return nil, fmt.Errorf("seek error: %w", err)
 	}
 
-	fmt.Printf("Uploading to S3 path: s3://%s/%s\n", bucket, key)
-	fmt.Printf("Detected MIME type: %s\n", mimeType)
+	// Detect MIME TYPE
+	buf := make([]byte, 512)
+	n, _ := file.Read(buf)
+	mime := http.DetectContentType(buf[:n])
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		return nil, fmt.Errorf("rewind error: %w", err)
+	}
 
-	output, err := c.s3.PutObject(ctx, &s3.PutObjectInput{
+	fmt.Printf("📤 Uploading to s3://%s/%s (%.2fMB, type: %s)\n", bucket, key, float64(size)/(1024*1024), mime)
+
+	// Choose upload strategy
+	if size > threshold {
+		return manager.NewUploader(c.s3).Upload(ctx, &s3.PutObjectInput{
+			Bucket:      aws.String(bucket),
+			Key:         aws.String(key),
+			Body:        file,
+			ContentType: aws.String(mime),
+		})
+	}
+
+	return c.s3.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:        aws.String(bucket),
 		Key:           aws.String(key),
 		Body:          file,
-		ContentLength: &size,
-		ContentType:   aws.String(mimeType),
+		ContentLength: aws.Int64(size),
+		ContentType:   aws.String(mime),
 	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to upload file to S3: %w", err)
-	}
-
-	return output, nil
 }

@@ -35,7 +35,7 @@ func UploadHandler(env, input, project, resource string, id string, name string)
 		}
 
 		id = utils.UUIDv4NoDash()
-		log.Printf("No ID provided, generating new artifact ID: %s", id)
+		log.Printf("🆔 No ID provided, generating new artifact id: %s", id)
 
 		fileInfo, err := os.Stat(input)
 		if err != nil {
@@ -49,7 +49,7 @@ func UploadHandler(env, input, project, resource string, id string, name string)
 			path = fmt.Sprintf("s3://%s/%s/%s/%s/%s", "datalake", project, resource, id, fileInfo.Name())
 		}
 
-		log.Printf("Generated S3 path for new artifact: %s", path)
+		log.Printf("📂 S3 path for new artifact: %s", path)
 
 		spec := map[string]interface{}{
 			"path": path,
