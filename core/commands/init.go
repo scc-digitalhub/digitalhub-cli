@@ -21,7 +21,6 @@ var initCmd = func() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Install python packages for an environment",
-		Args:  cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := service.InitEnvironmentHandler(*preFlag.Value); err != nil {
 				log.Fatalf("Init failed: %v", err)

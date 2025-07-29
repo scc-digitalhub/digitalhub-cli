@@ -8,6 +8,7 @@ import (
 	"dhcli/utils"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -24,6 +25,10 @@ func LogHandler(env string, project string, container string, follow bool, resou
 	// Load environment and check API level requirements
 	utils.CheckUpdateEnvironment()
 	utils.CheckApiLevel(utils.ApiLevelKey, utils.LogMin, utils.LogMax)
+
+	if project == "" {
+		return errors.New("Project not specified.")
+	}
 
 	// Loop requests if following
 	for {

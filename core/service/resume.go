@@ -6,6 +6,7 @@ package service
 
 import (
 	"dhcli/utils"
+	"errors"
 
 	"github.com/spf13/viper"
 )
@@ -16,6 +17,10 @@ func ResumeHandler(env string, project string, resource string, id string) error
 	// Load environment and check API level requirements
 	utils.CheckUpdateEnvironment()
 	utils.CheckApiLevel(utils.ApiLevelKey, utils.ResumeMin, utils.ResumeMax)
+
+	if project == "" {
+		return errors.New("Project not specified.")
+	}
 
 	// Request
 	method := "POST"

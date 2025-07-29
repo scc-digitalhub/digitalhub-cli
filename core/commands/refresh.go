@@ -6,25 +6,33 @@ package commands
 
 import (
 	"dhcli/core"
+	"dhcli/core/flags"
 	"dhcli/core/service"
+	"log"
 
 	"github.com/spf13/cobra"
 )
 
-var refreshCmd = &cobra.Command{
-	Use:   "refresh <environment>",
-	Short: "Refresh access token",
-	Long:  "Refresh the access token of a given environment.",
-	Args:  cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		var environment string
-		if len(args) > 0 {
-			environment = args[0]
-		}
+var refreshCmd = func() *cobra.Command {
+	// Declare local env flag
+	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 
-		service.RefreshHandler(environment)
-	},
-}
+	cmd := &cobra.Command{
+		Use:   "refresh",
+		Short: "Refresh access token",
+		Long:  "Refresh the access token of a given environment.",
+		Run: func(cmd *cobra.Command, args []string) {
+			if err := service.RefreshHandler(); err != nil {
+				log.Fatalf("Refresh failed: %v", err)
+			}
+		},
+	}
+
+	// Add local env flag
+	flags.AddFlag(cmd, &envFlag)
+
+	return cmd
+}()
 
 func init() {
 	core.RegisterCommand(refreshCmd)

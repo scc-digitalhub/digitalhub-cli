@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"dhcli/utils"
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
@@ -17,6 +18,10 @@ func MetricsHandler(env string, project string, container string, resource strin
 	// Load environment and check API level requirements
 	utils.CheckUpdateEnvironment()
 	utils.CheckApiLevel(utils.ApiLevelKey, utils.MetricsMin, utils.MetricsMax)
+
+	if project == "" {
+		return errors.New("Project not specified.")
+	}
 
 	containerLog, err := GetContainerLog(project, endpoint, id, container)
 	if err != nil {

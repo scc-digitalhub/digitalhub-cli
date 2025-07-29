@@ -7,46 +7,48 @@ package service
 import (
 	"dhcli/utils"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
+
+	"github.com/spf13/viper"
 )
 
-func RefreshHandler(env string) {
-	// Read config from ini file
-	cfg, section := utils.LoadIniConfig([]string{env})
-
+func RefreshHandler() error {
 	data := url.Values{}
 	data.Set("grant_type", "refresh_token")
-	data.Set("client_id", section.Key("client_id").Value())
-	data.Set("refresh_token", section.Key("refresh_token").Value())
+	data.Set("client_id", viper.GetString("client_id"))
+	data.Set("refresh_token", viper.GetString("refresh_token"))
 
-	resp, err := http.Post(section.Key("token_endpoint").Value(), "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
+	resp, err := http.Post(viper.GetString("token_endpoint"), "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
 	if err != nil {
-		log.Printf("Error refreshing token: %v\n", err)
-		os.Exit(1)
+		return err
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("Error reading response: %v\n", err)
-		os.Exit(1)
+		return err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("Token server error: %s\nBody: %s\n", resp.Status, string(body))
-		os.Exit(1)
+		return errors.New(fmt.Sprintf("Token server error: %s %s", resp.Status, string(body)))
 	}
 
 	var responseJson map[string]interface{}
 	json.Unmarshal(body, &responseJson)
-	utils.UpdateKey(section, "access_token", responseJson["access_token"].(string))
-	utils.UpdateKey(section, "refresh_token", responseJson["refresh_token"].(string))
+	viper.Set("access_token", responseJson["access_token"].(string))
+	viper.Set("refresh_token", responseJson["refresh_token"].(string))
 
-	utils.SaveIni(cfg)
+	err = utils.UpdateIniSectionFromViper(viper.AllKeys())
+	if err != nil {
+		return err
+	}
+
 	log.Printf("Token refreshed.\n")
+	return nil
 }
