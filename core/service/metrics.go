@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 )
 
 func MetricsHandler(env string, project string, container string, resource string, id string) error {
@@ -29,6 +30,13 @@ func MetricsHandler(env string, project string, container string, resource strin
 	}
 
 	statusMap := containerLog["status"].(map[string]interface{})
+
+	metrics := statusMap["metrics"]
+	if metrics == nil {
+		log.Println("No metrics for this run.")
+		return nil
+	}
+
 	jsonData, err := json.Marshal(statusMap["metrics"].([]interface{}))
 
 	var pretty bytes.Buffer
