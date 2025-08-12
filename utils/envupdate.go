@@ -6,67 +6,17 @@ package utils
 
 import (
 	"fmt"
-	"github.com/spf13/viper"
 	"os"
 	"time"
+
+	"github.com/spf13/viper"
 
 	"gopkg.in/ini.v1"
 )
 
-//func CheckUpdateEnvironment(cfg *ini.File, section *ini.Section) {
-//	if section.HasKey(UpdatedEnvKey) {
-//		updated, err := time.Parse(time.RFC3339, section.Key(UpdatedEnvKey).Value())
-//		if err != nil || updated.Add(outdatedAfterHours*time.Hour).Before(time.Now()) {
-//			updateEnvironment(cfg, section)
-//		}
-//	}
-//}
-
-//func updateEnvironment(cfg *ini.File, section *ini.Section) {
-//	baseEndpoint := section.Key(DhCoreEndpoint).Value()
-//	if baseEndpoint == "" {
-//		return
-//	}
-//
-//	// Configuration
-//	config, err := FetchConfig(baseEndpoint + "/.well-known/configuration")
-//	if err != nil {
-//		return
-//	}
-//	for k, v := range config {
-//		newKey := k
-//		if newKey == ClientIdKey {
-//			newKey = "client_id"
-//		}
-//		UpdateKey(section, newKey, v)
-//	}
-//
-//	// OpenID Configuration
-//	openIdConfig, err := FetchConfig(baseEndpoint + "/.well-known/openid-configuration")
-//	if err != nil {
-//		return
-//	}
-//	for _, k := range OpenIdFields {
-//		if v, ok := openIdConfig[k]; ok && v != "" {
-//			UpdateKey(section, k, v)
-//		}
-//	}
-//
-//	// Update timestamp
-//	section.Key(UpdatedEnvKey).SetValue(time.Now().Format(time.RFC3339))
-//	SaveIni(cfg)
-//}
-
-func UpdateKey(section *ini.Section, k string, v interface{}) {
-	if !section.HasKey(k) {
-		section.NewKey(k, ReflectValue(v))
-	} else {
-		section.Key(k).SetValue(ReflectValue(v))
-	}
-}
-
 func CheckUpdateEnvironment() {
 	if viper.Get(UpdatedEnvKey) != nil {
+		fmt.Println("Checking for updates...")
 		updated, err := time.Parse(time.RFC3339, viper.GetString(UpdatedEnvKey))
 		if err != nil || updated.Add(outdatedAfterHours*time.Hour).Before(time.Now()) {
 			updateEnvironment()
@@ -77,6 +27,7 @@ func CheckUpdateEnvironment() {
 }
 
 func updateEnvironment() {
+	fmt.Println("+++++++++++++++++++++++++++++++++Updating environment++++++++++++++++++++++++++++++")
 	baseEndpoint := viper.GetString(DhCoreEndpoint)
 	if baseEndpoint == "" {
 		return
@@ -93,7 +44,7 @@ func updateEnvironment() {
 			newKey = "client_id"
 		}
 		// Update the key in the viper config
-		viper.Set(newKey, v)
+		viper.Set(newKey, ReflectValue(v))
 		//UpdateKey(section, newKey, v)
 	}
 
@@ -102,11 +53,8 @@ func updateEnvironment() {
 	if err != nil {
 		return
 	}
-	for _, k := range OpenIdFields {
-		if v, ok := openIdConfig[k]; ok && v != "" {
-			viper.Set(k, v)
-			//UpdateKey(section, k, v)
-		}
+	for k, v := range openIdConfig {
+		viper.Set(k, ReflectValue(v))
 	}
 
 	// Update timestamp
@@ -122,9 +70,9 @@ func UpdateIniSectionFromViper(keys []string) error {
 
 	//print all keys to update viper.allKeys() foreach
 	// This function updates the INI file section with keys and values from Viper.
-	for _, key := range viper.AllKeys() {
-		fmt.Printf("Enum key %s\n", key)
-	}
+	//for _, key := range viper.AllKeys() {
+	//	fmt.Printf("Enum key %s, Value: %s\n", key, viper.Get(key))
+	//}
 
 	iniPath := os.ExpandEnv("$HOME/" + IniName)
 
