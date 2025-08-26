@@ -21,22 +21,6 @@ brew tap scc-digitalhub/digitalhub-cli https://github.com/scc-digitalhub/digital
 brew install dhcli
 ```
 
-## Configuration
-
-The CLI needs a `config.json` file to be present in the same path you're running the commands from. It lists what resources the CLI can handle and also allows you to define aliases.
-
-For example, the following configuration would allow the CLI to only handle functions. Using a command with `functions`, `function` or `fn` as resource would yield the same result.
-
-``` json
-{
-    "resources": {
-        "functions": "function, fn"
-    }
-}
-```
-
-A functional instance of this file is provided within this repository.
-
 ## Development
 
 - `core/commands` contains the definition of available commands and what flags they accept

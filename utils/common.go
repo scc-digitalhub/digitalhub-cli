@@ -10,15 +10,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/spf13/viper"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/spf13/viper"
 
 	"gopkg.in/ini.v1"
 )
@@ -166,23 +168,6 @@ func TranslateFormat(format string) string {
 	return "short"
 }
 
-func loadConfig() map[string]interface{} {
-	file, err := os.ReadFile("./" + configFile)
-	if err != nil {
-		log.Printf("Failed to read config file, some functionalities may not work: %v\n", err)
-		return nil
-	}
-
-	var config map[string]interface{}
-	err = json.Unmarshal(file, &config)
-	if err != nil {
-		log.Printf("Error unmarshalling config file, some functionalities may not work: %v\n", err)
-		return nil
-	}
-
-	return config
-}
-
 func LoadIniConfig(args []string) (*ini.File, *ini.Section) {
 	cfg := LoadIni(false)
 
@@ -218,30 +203,13 @@ func LoadIniConfig(args []string) (*ini.File, *ini.Section) {
 }
 
 func TranslateEndpoint(resource string) string {
-	config := loadConfig()
-
-	if config != nil {
-		if endpoints, ok := config["resources"]; ok && reflect.ValueOf(endpoints).Kind() == reflect.Map {
-			endpointsMap := endpoints.(map[string]interface{})
-
-			for key, val := range endpointsMap {
-				if key == resource {
-					return key
-				}
-
-				if reflect.ValueOf(val).Kind() == reflect.String && val != "" {
-					aliases := strings.Split(val.(string), ",")
-					for _, alias := range aliases {
-						if strings.TrimSpace(alias) == resource {
-							return key
-						}
-					}
-				}
-			}
+	for key, val := range Resources {
+		if key == resource || slices.Contains(val, resource) {
+			return key
 		}
 	}
 
-	log.Printf("Resource '%v' is not supported or the configuration file is invalid. Check or edit supported resources in %v.\n", resource, configFile)
+	log.Printf("Resource '%v' is not supported.\n", resource)
 	os.Exit(1)
 	return ""
 }

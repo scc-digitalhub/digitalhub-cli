@@ -7,7 +7,6 @@ package utils
 const (
 	IniName            = ".dhcore.ini"
 	CurrentEnvironment = "current_environment"
-	configFile         = "config.json"
 	ApiLevelKey        = "dhcore_api_level"
 	ClientIdKey        = "dhcore_client_id"
 	UpdatedEnvKey      = "updated_environment"
@@ -42,3 +41,14 @@ const (
 )
 
 var OpenIdFields = []string{"authorization_endpoint", "token_endpoint", "issuer", "scopes_supported", "access_token", "refresh_token"}
+
+var Resources = map[string][]string{
+	"artifacts": []string{"artifact"},
+	"dataitems": []string{"dataitem"},
+	"functions": []string{"function", "fn"},
+	"models":    []string{"model"},
+	"projects":  []string{"project"},
+	"runs":      []string{"run"},
+	"workflows": []string{"workflow"},
+	"logs":      []string{"log"},
+}
