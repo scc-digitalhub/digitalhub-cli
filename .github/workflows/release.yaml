@@ -2,8 +2,8 @@ name: release
 run-name: Release on ${{ github.ref_name }}
 on:
   push:
-    tags:
-      - '*'  # es: v1.2.3
+    branches:
+      - main
 
 permissions:
   contents: write
