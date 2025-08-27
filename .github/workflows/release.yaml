@@ -2,12 +2,12 @@ name: release
 run-name: Release on ${{ github.ref_name }}
 on:
   push:
-    branches:
-      - main
+    tags:
+      - "*"
 
 permissions:
   contents: write
-  packages: write   # necessario per push su GHCR
+  packages: write
 
 env:
   REGISTRY: ghcr.io
