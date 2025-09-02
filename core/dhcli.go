@@ -30,7 +30,10 @@ var dhcli = &cobra.Command{
 
 		// Reload ini config with a correct section
 		if !(slices.Contains([]string{"register", "use", "remove", "list-env"}, cmd.Name())) {
-			utils.RegisterIniCfgWithViper(env)
+			err := utils.RegisterIniCfgWithViper(env)
+			if err != nil {
+				return err
+			}
 		}
 
 		//// Bind all flags after loading config

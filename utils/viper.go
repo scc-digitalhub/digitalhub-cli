@@ -2,13 +2,14 @@ package utils
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"gopkg.in/ini.v1"
-	"os"
-	"strings"
 )
 
 // Recurisvely bind all flags of a command and its subcommands to Viper.
@@ -30,11 +31,11 @@ func BindFlagsToViperRecursive(cmd *cobra.Command) {
 	}
 }
 
-func RegisterIniCfgWithViper(optionalEnv ...string) {
-	iniPath := os.ExpandEnv("$HOME/" + IniName)
+func RegisterIniCfgWithViper(optionalEnv ...string) error {
+	iniPath := getIniPath()
 	cfg, err := ini.Load(iniPath)
 	if err != nil {
-		panic(fmt.Errorf("failed to read ini file: %w", err))
+		return errors.New(fmt.Sprintf("failed to read ini file: %s", err))
 	}
 
 	defaultSection := cfg.Section("DEFAULT")
@@ -60,7 +61,7 @@ func RegisterIniCfgWithViper(optionalEnv ...string) {
 	for _, key := range selectedSection.Keys() {
 		_, err := fmt.Fprintf(buf, "%s = \"%s\"\n", key.Name(), key.Value())
 		if err != nil {
-			return
+			return nil
 		}
 	}
 
@@ -73,4 +74,5 @@ func RegisterIniCfgWithViper(optionalEnv ...string) {
 	viper.Set("current_environment", env)
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	return nil
 }

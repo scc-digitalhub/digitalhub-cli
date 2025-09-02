@@ -6,7 +6,6 @@ package utils
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/spf13/viper"
@@ -74,7 +73,7 @@ func UpdateIniSectionFromViper(keys []string) error {
 	//	fmt.Printf("Enum key %s, Value: %s\n", key, viper.Get(key))
 	//}
 
-	iniPath := os.ExpandEnv("$HOME/" + IniName)
+	iniPath := getIniPath()
 
 	cfg, err := ini.Load(iniPath)
 	if err != nil {
