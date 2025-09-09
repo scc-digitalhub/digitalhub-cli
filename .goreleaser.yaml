@@ -11,8 +11,9 @@ builds:
       - darwin
 
 archives:
-  - formats: [tar.gz]
-    # this name template makes the OS and Arch compatible with the results of `uname`.
+  # Default: ZIP per tutti
+  - formats: [zip]
+    # name template compatibile con `uname`
     name_template: >-
       {{ .ProjectName }}-
       {{- if eq .Os "windows" }}windows
@@ -22,11 +23,10 @@ archives:
       {{- if eq .Arch "all" }}
       {{- else }}-{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
-
-    # use zip for windows archives
+    # Override: su darwin usa tar.gz
     format_overrides:
-      - goos: windows
-        formats: [zip]
+      - goos: darwin
+        formats: [tar.gz]
 
 universal_binaries:
   - replace: true
@@ -44,8 +44,8 @@ release:
 
 brews:
   - repository:
-        owner: scc-digitalhub
-        name: digitalhub-cli
+      owner: scc-digitalhub
+      name: digitalhub-cli
     directory: Formula
     homepage: https://scc-digitalhub.github.io/
     description: A command-line tool for DigitalHub platform.
