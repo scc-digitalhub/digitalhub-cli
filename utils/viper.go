@@ -39,7 +39,7 @@ func RegisterIniCfgWithViper(optionalEnv ...string) error {
 		// INI missing: ENV-only mode.
 		fmt.Printf("⚠️  ini file not found or unreadable (%v); falling back to environment variables only\n", err)
 		setupEnv()
-		dumpEnvWithPrefix("") // optional: debug raw env
+		//dumpEnvWithPrefix("") // optional: debug raw env
 		return nil
 	}
 
