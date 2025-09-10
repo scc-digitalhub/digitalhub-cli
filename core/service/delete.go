@@ -7,9 +7,10 @@ package service
 import (
 	"dhcli/utils"
 	"fmt"
-	"github.com/spf13/viper"
 	"log"
 	"os"
+
+	"github.com/spf13/viper"
 )
 
 func DeleteHandler(env string, project string, name string, confirm bool, cascade bool, resource string, id string) error {
@@ -57,7 +58,7 @@ func DeleteHandler(env string, project string, name string, confirm bool, cascad
 
 	method := "DELETE"
 	url := utils.BuildCoreUrl(project, endpoint, id, params)
-	req := utils.PrepareRequest(method, url, nil, viper.GetString("access_token"))
+	req := utils.PrepareRequest(method, url, nil, viper.GetString(utils.DhCoreAccessToken))
 	_, err := utils.DoRequest(req)
 	if err != nil {
 		return err

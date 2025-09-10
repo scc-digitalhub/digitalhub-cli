@@ -25,7 +25,7 @@ func StopHandler(env string, project string, resource string, id string) error {
 	// Request
 	method := "POST"
 	url := utils.BuildCoreUrl(project, endpoint, id, nil) + "/stop"
-	req := utils.PrepareRequest(method, url, nil, viper.GetString("access_token"))
+	req := utils.PrepareRequest(method, url, nil, viper.GetString(utils.DhCoreAccessToken))
 
 	resp, err := utils.DoRequest(req)
 	if err != nil {

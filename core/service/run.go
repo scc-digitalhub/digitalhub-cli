@@ -9,10 +9,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/spf13/viper"
 	"log"
 	"os"
 	"reflect"
+
+	"github.com/spf13/viper"
 
 	"sigs.k8s.io/yaml"
 )
@@ -86,7 +87,7 @@ func RunHandler(env string, project string, functionName string, functionId stri
 	// Request
 	method := "POST"
 	url := utils.BuildCoreUrl(project, endpoint, "", nil)
-	req := utils.PrepareRequest(method, url, jsonBody, viper.GetString("access_token"))
+	req := utils.PrepareRequest(method, url, jsonBody, viper.GetString(utils.DhCoreAccessToken))
 	_, err = utils.DoRequest(req)
 	if err != nil {
 		return err
@@ -102,7 +103,7 @@ func getFunctionKey(project string, id string, name string) (string, string, err
 		// Get function by ID
 		method := "GET"
 		url := utils.BuildCoreUrl(project, "functions", id, nil)
-		req := utils.PrepareRequest(method, url, nil, viper.GetString("access_token"))
+		req := utils.PrepareRequest(method, url, nil, viper.GetString(utils.DhCoreAccessToken))
 		resp, err := utils.DoRequest(req)
 		if err != nil {
 			return "", "", err
@@ -114,7 +115,7 @@ func getFunctionKey(project string, id string, name string) (string, string, err
 		// Get latest function by name
 		method := "GET"
 		url := utils.BuildCoreUrl(project, "functions", "", map[string]string{"name": name})
-		req := utils.PrepareRequest(method, url, nil, viper.GetString("access_token"))
+		req := utils.PrepareRequest(method, url, nil, viper.GetString(utils.DhCoreAccessToken))
 		resp, err := utils.DoRequest(req)
 		if err != nil {
 			return "", "", err
@@ -148,7 +149,7 @@ func getTaskKey(project string, functionKey string, task string) (string, error)
 	method := "GET"
 	params := map[string]string{"function": functionKey}
 	url := utils.BuildCoreUrl(project, "tasks", "", params)
-	req := utils.PrepareRequest(method, url, nil, viper.GetString("access_token"))
+	req := utils.PrepareRequest(method, url, nil, viper.GetString(utils.DhCoreAccessToken))
 
 	resp, err := utils.DoRequest(req)
 	if err != nil {
@@ -193,7 +194,7 @@ func createTask(project string, function string, task string) (string, error) {
 	}
 
 	// Perform request
-	req := utils.PrepareRequest(method, url, jsonBody, viper.GetString("access_token"))
+	req := utils.PrepareRequest(method, url, jsonBody, viper.GetString(utils.DhCoreAccessToken))
 	resp, err := utils.DoRequest(req)
 	if err != nil {
 		return "", err

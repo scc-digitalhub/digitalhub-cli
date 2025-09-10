@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"github.com/spf13/viper"
 
 	"sigs.k8s.io/yaml"
@@ -39,7 +40,7 @@ func GetHandler(env string, output string, project string, name string, resource
 	}
 
 	url := utils.BuildCoreUrl(project, endpoint, id, params)
-	req := utils.PrepareRequest("GET", url, nil, viper.GetString("access_token"))
+	req := utils.PrepareRequest("GET", url, nil, viper.GetString(utils.DhCoreAccessToken))
 	body, err := utils.DoRequest(req)
 	if err != nil {
 		return fmt.Errorf("error in request: %w", err)

@@ -86,7 +86,7 @@ func ReflectValue(v interface{}) string {
 }
 
 func BuildCoreUrl(project string, resource string, id string, params map[string]string) string {
-	base := viper.GetString(DhCoreEndpoint) + "/api/" + viper.GetString("dhcore_api_version")
+	base := viper.GetString(DhCoreEndpoint) + "/api/" + viper.GetString(DhCoreApiVersion)
 	endpoint := ""
 	paramsString := ""
 	if resource != "projects" && project != "" {

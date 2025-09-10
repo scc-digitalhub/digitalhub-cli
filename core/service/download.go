@@ -11,10 +11,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/spf13/viper"
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/spf13/viper"
 )
 
 func DownloadHandler(env string, output string, project string, name string, resource string, id string) error {
@@ -35,7 +36,7 @@ func DownloadHandler(env string, output string, project string, name string, res
 
 	url := utils.BuildCoreUrl(project, endpoint, id, params)
 
-	req := utils.PrepareRequest("GET", url, nil, viper.GetString("access_token"))
+	req := utils.PrepareRequest("GET", url, nil, viper.GetString(utils.DhCoreAccessToken))
 	body, err := utils.DoRequest(req)
 	if err != nil {
 		return fmt.Errorf("error reading response: %w", err)

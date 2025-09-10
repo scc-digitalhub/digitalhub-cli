@@ -8,6 +8,7 @@ import (
 	"dhcli/utils"
 	"fmt"
 	"log"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -47,11 +48,7 @@ func RegisterHandler(env string, endpoint string) error {
 
 	// 3. Reflect config keys
 	for k, v := range config {
-		key := k
-		if key == utils.ClientIdKey {
-			key = "client_id"
-		}
-		section.NewKey(key, utils.ReflectValue(v))
+		section.NewKey(k, utils.ReflectValue(v))
 	}
 
 	// 4. Check API level
@@ -68,12 +65,27 @@ func RegisterHandler(env string, endpoint string) error {
 	if err != nil {
 		return fmt.Errorf("fetching OpenID configuration failed: %w", err)
 	}
-	for _, k := range utils.OpenIdFields {
-		var v interface{} = ""
-		if val, ok := openIdConfig[k]; ok {
-			v = val
+
+	keys := make([]string, 0, len(openIdConfig))
+	for k := range openIdConfig {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		v := openIdConfig[k]
+
+		// remap only if there is a DHCORE correspondence
+		targetKey := k
+		if dhKey, has := utils.DhCoreMap[k]; has {
+			targetKey = dhKey
 		}
-		section.NewKey(k, utils.ReflectValue(v))
+
+		// ReflectValue deve gestire slice/array (es. scopes_supported)
+		valStr := utils.ReflectValue(v)
+
+		// section.Key crea se non esiste; SetValue sovrascrive/assegna
+		section.Key(targetKey).SetValue(valStr)
 	}
 
 	// 6. Add timestamp

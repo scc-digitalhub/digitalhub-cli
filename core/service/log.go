@@ -59,7 +59,7 @@ func LogHandler(env string, project string, container string, follow bool, resou
 func GetContainerLog(project string, endpoint string, id string, container string) (map[string]interface{}, error) {
 	method := "GET"
 	url := utils.BuildCoreUrl(project, endpoint, id, nil) + "/logs"
-	req := utils.PrepareRequest(method, url, nil, viper.GetString("access_token"))
+	req := utils.PrepareRequest(method, url, nil, viper.GetString(utils.DhCoreAccessToken))
 
 	body, err := utils.DoRequest(req)
 	if err != nil {
@@ -77,7 +77,7 @@ func GetContainerLog(project string, endpoint string, id string, container strin
 		// Get resource to figure out the main container's name
 		method := "GET"
 		url := utils.BuildCoreUrl(project, endpoint, id, nil)
-		req := utils.PrepareRequest(method, url, nil, viper.GetString("access_token"))
+		req := utils.PrepareRequest(method, url, nil, viper.GetString(utils.DhCoreAccessToken))
 		body, err := utils.DoRequest(req)
 		if err != nil {
 			return nil, err

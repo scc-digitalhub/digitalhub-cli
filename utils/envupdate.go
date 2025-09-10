@@ -38,13 +38,8 @@ func updateEnvironment() {
 		return
 	}
 	for k, v := range config {
-		newKey := k
-		if newKey == ClientIdKey {
-			newKey = "client_id"
-		}
 		// Update the key in the viper config
-		viper.Set(newKey, ReflectValue(v))
-		//UpdateKey(section, newKey, v)
+		viper.Set(k, ReflectValue(v))
 	}
 
 	// OpenID Configuration

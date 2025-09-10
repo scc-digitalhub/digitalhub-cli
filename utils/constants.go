@@ -8,9 +8,13 @@ const (
 	IniName            = ".dhcore.ini"
 	CurrentEnvironment = "current_environment"
 	ApiLevelKey        = "dhcore_api_level"
-	ClientIdKey        = "dhcore_client_id"
 	UpdatedEnvKey      = "updated_environment"
+	DhCoreIssuer       = "dhcore_issuer"
+	DhCoreClientId     = "dhcore_client_id"
 	DhCoreEndpoint     = "dhcore_endpoint"
+	DhCoreApiVersion   = "dhcore_api_version"
+	DhCoreAccessToken  = "dhcore_access_token"
+	DhCoreRefreshToken = "dhcore_refresh_token"
 
 	outdatedAfterHours = 1
 
@@ -41,6 +45,15 @@ const (
 )
 
 var OpenIdFields = []string{"authorization_endpoint", "token_endpoint", "issuer", "scopes_supported", "access_token", "refresh_token"}
+
+var DhCoreMap = map[string]string{
+	"issuer":             DhCoreIssuer,
+	"client_id":          DhCoreClientId,
+	"dhcore_endpoint":    DhCoreEndpoint,
+	"dhcore_api_version": DhCoreApiVersion,
+	"access_token":       DhCoreAccessToken,
+	"refresh_token":      DhCoreRefreshToken,
+}
 
 var Resources = map[string][]string{
 	"artifacts": []string{"artifact"},

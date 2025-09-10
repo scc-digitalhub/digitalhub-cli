@@ -12,7 +12,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/spf13/viper"
 	"io"
 	"log"
 	"net/http"
@@ -20,8 +19,9 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"slices"
 	"strings"
+
+	"github.com/spf13/viper"
 
 	"dhcli/utils"
 )
@@ -101,7 +101,7 @@ func startAuthCodeServer(verifier string) {
 
 		tkn := exchangeAuthCode(
 			viper.GetString("token_endpoint"),
-			viper.GetString("client_id"),
+			viper.GetString(utils.DhCoreClientId),
 			verifier,
 			authCode,
 		)
@@ -129,15 +129,12 @@ func startAuthCodeServer(verifier string) {
 		json.Unmarshal(tkn, &m)
 
 		for k, v := range m {
-			//fmt.Printf("Response: Key: %s, Value: %v\n", k, v)
-			if !slices.Contains([]string{"client_id", "token_type", "id_token"}, k) {
-				viper.Set(k, fmt.Sprint(v))
+			key := k
+			if mapped, ok := utils.DhCoreMap[k]; ok {
+				key = mapped
 			}
-		}
-
-		viper.Set("access_token", fmt.Sprint(m["access_token"]))
-		if rt, ok := m["refresh_token"]; ok {
-			viper.Set("refresh_token", fmt.Sprint(rt))
+			//fmt.Printf("Response: Key: %s (→ %s), Value: %v\n", k, key, v)
+			viper.Set(key, fmt.Sprint(v))
 		}
 
 		err := utils.UpdateIniSectionFromViper(viper.AllKeys())
@@ -182,7 +179,7 @@ func exchangeAuthCode(tokenURL, clientID, verifier, code string) []byte {
 func buildAuthURL(chal, state string) string {
 	v := url.Values{
 		"response_type":         {"code"},
-		"client_id":             {viper.GetString("client_id")},
+		"client_id":             {viper.GetString(utils.DhCoreClientId)},
 		"redirect_uri":          {redirectURI},
 		"code_challenge":        {chal},
 		"code_challenge_method": {"S256"},

@@ -7,9 +7,10 @@ package service
 import (
 	"dhcli/utils"
 	"encoding/json"
-	"github.com/spf13/viper"
 	"log"
 	"os"
+
+	"github.com/spf13/viper"
 
 	"sigs.k8s.io/yaml"
 )
@@ -82,7 +83,7 @@ func CreateHandler(env string, project string, name string, filePath string, res
 	// Request
 	method := "POST"
 	url := utils.BuildCoreUrl(project, endpoint, "", nil)
-	req := utils.PrepareRequest(method, url, jsonBody, viper.GetString("access_token"))
+	req := utils.PrepareRequest(method, url, jsonBody, viper.GetString(utils.DhCoreAccessToken))
 	_, err = utils.DoRequest(req)
 	if err != nil {
 		return err

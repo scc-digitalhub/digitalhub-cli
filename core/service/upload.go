@@ -11,10 +11,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/spf13/viper"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/spf13/viper"
 )
 
 func UploadHandler(env, input, project, resource string, id string, name string) error {
@@ -73,7 +74,7 @@ func UploadHandler(env, input, project, resource string, id string, name string)
 		}
 		url := utils.BuildCoreUrl(project, endpoint, "", nil)
 		log.Printf("Creating artifact at URL: %s", url)
-		req := utils.PrepareRequest("POST", url, payload, viper.GetString("access_token"))
+		req := utils.PrepareRequest("POST", url, payload, viper.GetString(utils.DhCoreAccessToken))
 		_, err = utils.DoRequest(req)
 		if err != nil {
 			return fmt.Errorf("failed to create artifact: %w", err)
@@ -86,7 +87,7 @@ func UploadHandler(env, input, project, resource string, id string, name string)
 	url := utils.BuildCoreUrl(project, endpoint, id, nil)
 	log.Printf("Requesting artifact info from URL: %s", url)
 
-	req := utils.PrepareRequest("GET", url, nil, viper.GetString("access_token"))
+	req := utils.PrepareRequest("GET", url, nil, viper.GetString(utils.DhCoreAccessToken))
 	body, err := utils.DoRequest(req)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve artifact info: %w", err)
@@ -152,7 +153,7 @@ func UploadHandler(env, input, project, resource string, id string, name string)
 		}
 
 		updateURL := utils.BuildCoreUrl(project, endpoint, id, nil)
-		req := utils.PrepareRequest("PUT", updateURL, payload, viper.GetString("access_token"))
+		req := utils.PrepareRequest("PUT", updateURL, payload, viper.GetString(utils.DhCoreAccessToken))
 
 		_, err = utils.DoRequest(req)
 		if err != nil {

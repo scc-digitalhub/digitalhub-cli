@@ -76,7 +76,7 @@ func fetchAllPages(project, endpoint string, params map[string]string) ([]interf
 
 	for {
 		url := utils.BuildCoreUrl(project, endpoint, "", params)
-		req := utils.PrepareRequest("GET", url, nil, viper.GetString("access_token"))
+		req := utils.PrepareRequest("GET", url, nil, viper.GetString(utils.DhCoreAccessToken))
 		body, err := utils.DoRequest(req)
 		if err != nil {
 			return nil, 0, err

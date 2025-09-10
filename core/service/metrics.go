@@ -51,7 +51,7 @@ func MetricsHandler(env string, project string, container string, resource strin
 	// Request
 	method := "GET"
 	url := utils.BuildCoreUrl(project, endpoint, id, nil) + "/metrics"
-	req := utils.PrepareRequest(method, url, nil, viper.GetString("access_token"))
+	req := utils.PrepareRequest(method, url, nil, viper.GetString(DhCoreAccessToken))
 
 	body, err := utils.DoRequest(req)
 	if err != nil {

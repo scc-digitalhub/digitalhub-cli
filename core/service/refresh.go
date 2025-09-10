@@ -21,8 +21,8 @@ import (
 func RefreshHandler() error {
 	data := url.Values{}
 	data.Set("grant_type", "refresh_token")
-	data.Set("client_id", viper.GetString("client_id"))
-	data.Set("refresh_token", viper.GetString("refresh_token"))
+	data.Set("client_id", viper.GetString(utils.DhCoreClientId))
+	data.Set("refresh_token", viper.GetString(utils.DhCoreRefreshToken))
 
 	resp, err := http.Post(viper.GetString("token_endpoint"), "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
 	if err != nil {
@@ -41,8 +41,8 @@ func RefreshHandler() error {
 
 	var responseJson map[string]interface{}
 	json.Unmarshal(body, &responseJson)
-	viper.Set("access_token", responseJson["access_token"].(string))
-	viper.Set("refresh_token", responseJson["refresh_token"].(string))
+	viper.Set(utils.DhCoreAccessToken, responseJson["access_token"].(string))
+	viper.Set(utils.DhCoreRefreshToken, responseJson["refresh_token"].(string))
 
 	err = utils.UpdateIniSectionFromViper(viper.AllKeys())
 	if err != nil {
