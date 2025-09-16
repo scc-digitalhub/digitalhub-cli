@@ -24,5 +24,6 @@ RUN apk add --no-cache ca-certificates
 COPY --from=builder /out/dhcli /usr/local/bin/dhcli
 RUN chmod +x /usr/local/bin/dhcli
 
-RUN adduser -D dhcli
-USER dhcli
+RUN addgroup --gid 65500 dhcli
+RUN adduser --uid 65500 -G dhcli -S dhcli
+USER 65500
