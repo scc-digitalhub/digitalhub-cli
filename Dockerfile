@@ -27,3 +27,5 @@ RUN chmod +x /usr/local/bin/dhcli
 RUN addgroup --gid 65500 dhcli
 RUN adduser --uid 65500 -G dhcli -S dhcli
 USER 65500
+
+WORKDIR /home/dhcli
