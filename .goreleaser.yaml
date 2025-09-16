@@ -3,6 +3,7 @@ version: 2
 project_name: dhcli
 
 builds:
+  # General build: all targets
   - id: dhcli
     env:
       - CGO_ENABLED=0
@@ -14,28 +15,53 @@ builds:
       - amd64
       - arm64
 
-# Produce BOTH zip and tar.gz for every target
+  # Brew-only build: darwin targets (kept separate so brew sees a single archive/arch)
+  - id: brew
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
 archives:
-  - id: zip
+  # Produce ZIP for the general build
+  - id: zip_all
+    builds:
+      - dhcli
     format: zip
     name_template: >-
       {{ .ProjectName }}-
-      {{- if eq .Os "windows" }}windows{{ else if eq .Os "darwin" }}darwin{{ else if eq .Os "linux" }}linux{{ else }}{{ .Os }}{{ end }}
-      {{- if ne .Arch "all" }}-{{ .Arch }}{{ end }}
+      {{- .Os }}-{{ .Arch }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
-  - id: tgz
+
+  # Produce TGZ for the general build
+  - id: tgz_all
+    builds:
+      - dhcli
     format: tar.gz
     name_template: >-
       {{ .ProjectName }}-
-      {{- if eq .Os "windows" }}windows{{ else if eq .Os "darwin" }}darwin{{ else if eq .Os "linux" }}linux{{ else }}{{ .Os }}{{ end }}
-      {{- if ne .Arch "all" }}-{{ .Arch }}{{ end }}
+      {{- .Os }}-{{ .Arch }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
 
-# Merge darwin amd64+arm64 into a single universal binary
+  # Produce a single TGZ per darwin arch for Homebrew (from the 'brew' build only)
+  - id: tgz_brew
+    builds:
+      - brew
+    format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}-
+      {{- .Os }}-{{ .Arch }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+# Merge darwin/amd64 + darwin/arm64 for the brew build (single universal binary)
 universal_binaries:
-  - id: dhcli-universal
+  - id: brew_universal
+    ids:
+      - brew
     replace: true
-    # will pick the darwin/amd64 and darwin/arm64 from the 'dhcli' build
 
 changelog:
   sort: asc
@@ -45,17 +71,17 @@ changelog:
       - "^test:"
 
 release:
-  # generate a GitHub prerelease automatically when the tag is semver pre-release (e.g. v1.2.3-beta.1)
   prerelease: auto
   replace_existing_draft: true
   replace_existing_artifacts: true
 
 brews:
-  - repository:
+  - ids:
+      - brew        # only consume artifacts from the 'brew' build
+    repository:
       owner: scc-digitalhub
       name: digitalhub-cli
     directory: Formula
     homepage: https://scc-digitalhub.github.io/
     description: A command-line tool for DigitalHub platform.
-    # Skip Homebrew on prereleases (publish only for stable tags)
-    skip_upload: auto
+    skip_upload: auto   # skip on prereleases, publish on stable
