@@ -7,8 +7,8 @@ package utils
 const (
 	IniName            = ".dhcore.ini"
 	CurrentEnvironment = "current_environment"
-	ApiLevelKey        = "dhcore_api_level"
 	UpdatedEnvKey      = "updated_environment"
+	ApiLevelKey        = "dhcore_api_level"
 	DhCoreIssuer       = "dhcore_issuer"
 	DhCoreClientId     = "dhcore_client_id"
 	DhCoreEndpoint     = "dhcore_endpoint"
@@ -43,8 +43,6 @@ const (
 	MetricsMin = 10
 	MetricsMax = 0
 )
-
-var OpenIdFields = []string{"authorization_endpoint", "token_endpoint", "issuer", "scopes_supported", "access_token", "refresh_token"}
 
 var DhCoreMap = map[string]string{
 	"issuer":             DhCoreIssuer,

@@ -7,6 +7,7 @@ package service
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
@@ -14,12 +15,14 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/spf13/viper"
 
@@ -32,17 +35,26 @@ var generatedState string
 
 // Runs PKCE flow for authentication
 func LoginHandler() error {
-	//cfg, section := loadIniCfg(env)
-
+	// Ensure environment is up-to-date and compatible
 	utils.CheckUpdateEnvironment()
 	utils.CheckApiLevel(utils.ApiLevelKey, utils.LoginMin, utils.LoginMax)
-
-	cv, cc := generatePKCE()
+	
+	// PKCE
+	verifier, challenge := generatePKCE()
 	generatedState = randomString(32)
 
-	startAuthCodeServer(cv)
+	// Start local callback server
+	stop, err := startAuthCodeServer(verifier)
+	if err != nil {
+		return fmt.Errorf("impossibile avviare il server locale: %w", err)
+	}
+	defer stop()
 
-	authURL := buildAuthURL(cc, generatedState)
+	// Build authorize URL
+	authURL, err := buildAuthURL(challenge, generatedState)
+	if err != nil {
+		return err
+	}
 
 	fmt.Println("─────────────────────────────────────────────────────────────────────")
 	fmt.Println("🔐  The following URL will be opened in your browser to authenticate:")
@@ -51,17 +63,16 @@ func LoginHandler() error {
 	fmt.Println("─────────────────────────────────────────────────────────────────────")
 	fmt.Print("Press Enter to continue... ")
 
-	_, err := bufio.NewReader(os.Stdin).ReadBytes('\n')
-	if err != nil {
-		fmt.Printf("Error while authenticating: %v", err)
-		return err
+	if _, err := bufio.NewReader(os.Stdin).ReadBytes('\n'); err != nil {
+		return fmt.Errorf("errore lettura input: %w", err)
 	}
 
 	if err := openBrowser(authURL); err != nil {
 		log.Printf("Error opening browser: %v", err)
 	}
 
-	select {} // lock the program to wait for user interaction
+	// Block until callback handler exits the process (or server is stopped)
+	select {}
 }
 
 func generatePKCE() (verifier, challenge string) {
@@ -85,8 +96,12 @@ func randomStringCharset(n int, cs string) string {
 	return string(b)
 }
 
-func startAuthCodeServer(verifier string) {
-	http.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
+// Starts http://localhost:4000/callback and returns a stop() func to shutdown.
+// Minimal timeouts and context to avoid hanging.
+func startAuthCodeServer(verifier string) (func(), error) {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
 		authCode := r.URL.Query().Get("code")
 		state := r.URL.Query().Get("state")
 
@@ -112,7 +127,7 @@ func startAuthCodeServer(verifier string) {
 
 		var prettyJSON bytes.Buffer
 		if err := json.Indent(&prettyJSON, tkn, "", "  "); err != nil {
-			prettyJSON.Write(tkn) // Simple fallback text if an error occurred
+			prettyJSON.Write(tkn)
 		}
 
 		w.Header().Set("Content-Type", "text/html")
@@ -124,33 +139,54 @@ func startAuthCodeServer(verifier string) {
 		fmt.Fprintf(w, "<pre id=\"resp\" style=\"background:#f6f8fa;border:1px solid #ccc;padding:16px;width:800px;min-height:400px;overflow:auto;\">%s</pre>", prettyJSON.String())
 		fmt.Fprintln(w, "</div>")
 
+		// Map token response into Viper
 		var m map[string]interface{}
-
-		json.Unmarshal(tkn, &m)
-
+		if err := json.Unmarshal(tkn, &m); err != nil {
+			log.Printf("json parse error: %v", err)
+		}
 		for k, v := range m {
 			key := k
 			if mapped, ok := utils.DhCoreMap[k]; ok {
 				key = mapped
 			}
-			//fmt.Printf("Response: Key: %s (→ %s), Value: %v\n", k, key, v)
 			viper.Set(key, fmt.Sprint(v))
 		}
 
-		err := utils.UpdateIniSectionFromViper(viper.AllKeys())
-		if err != nil {
-			return
+		// I can also pass just some specific config keys
+		if err := utils.UpdateIniSectionFromViper(viper.AllKeys()); err != nil {
+			log.Printf("persist error: %v", err)
 		}
 
 		log.Println("Login successful.")
 		go os.Exit(0)
 	})
-	go func() {
-		err := http.ListenAndServe(":4000", nil)
-		if err != nil {
 
+	srv := &http.Server{
+		Addr:              ":4000",
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		ReadTimeout:       15 * time.Second,
+	}
+
+	ln, err := net.Listen("tcp", srv.Addr)
+	if err != nil {
+		return nil, err
+	}
+
+	go func() {
+		if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
+			log.Printf("auth server error: %v", err)
 		}
 	}()
+
+	stop := func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(ctx)
+	}
+
+	return stop, nil
 }
 
 func exchangeAuthCode(tokenURL, clientID, verifier, code string) []byte {
@@ -161,12 +197,16 @@ func exchangeAuthCode(tokenURL, clientID, verifier, code string) []byte {
 		"code":          {code},
 		"redirect_uri":  {redirectURI},
 	}
-	resp, err := http.PostForm(tokenURL, v)
+
+	// HTTP client with timeout
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.PostForm(tokenURL, v)
 	if err != nil {
 		log.Printf("Token request error: %v", err)
 		return nil
 	}
 	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		log.Printf("Token error %s: %s", resp.Status, body)
@@ -176,7 +216,20 @@ func exchangeAuthCode(tokenURL, clientID, verifier, code string) []byte {
 	return tkn
 }
 
-func buildAuthURL(chal, state string) string {
+func buildAuthURL(chal, state string) (string, error) {
+	// Robust scope normalization (commas/spaces → single space)
+	raw := viper.GetString("scopes_supported")
+	var scopes []string
+	if raw != "" {
+		split := strings.FieldsFunc(raw, func(r rune) bool { return r == ',' || r == ' ' || r == '\t' || r == '\n' })
+		for _, s := range split {
+			if s != "" {
+				scopes = append(scopes, s)
+			}
+		}
+	}
+	scope := url.QueryEscape(strings.Join(scopes, " "))
+
 	v := url.Values{
 		"response_type":         {"code"},
 		"client_id":             {viper.GetString(utils.DhCoreClientId)},
@@ -185,8 +238,11 @@ func buildAuthURL(chal, state string) string {
 		"code_challenge_method": {"S256"},
 		"state":                 {state},
 	}
-	scope := strings.ReplaceAll(viper.GetString("scopes_supported"), ",", "%20")
-	return viper.GetString("authorization_endpoint") + "?" + v.Encode() + "&scope=" + scope
+	base := viper.GetString("authorization_endpoint")
+	if base == "" {
+		return "", fmt.Errorf("authorization_endpoint non configurato")
+	}
+	return base + "?" + v.Encode() + "&scope=" + scope, nil
 }
 
 func openBrowser(u string) error {

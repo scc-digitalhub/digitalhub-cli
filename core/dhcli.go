@@ -13,7 +13,6 @@ import (
 
 	"github.com/charmbracelet/fang"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var dhcli = &cobra.Command{
@@ -36,20 +35,17 @@ var dhcli = &cobra.Command{
 			}
 		}
 
-		//// Bind all flags after loading config
-		//utils.BindFlagsToViperRecursive(cmd.Root())
+		// Show final config
+		//fmt.Println("📦 Final Config:")
+		//for _, key := range viper.AllKeys() {
+		//	fmt.Printf("%s = %v\n", key, viper.Get(key))
+		//}
+
 		return nil
 	},
 }
 
 func Execute() {
-
-	// Show final config
-	fmt.Println("📦 Final Config:")
-	for _, key := range viper.AllKeys() {
-		fmt.Printf("%s = %v\n", key, viper.Get(key))
-	}
-
 	if err := fang.Execute(context.Background(), dhcli); err != nil {
 		_, err := fmt.Fprintln(os.Stderr, err)
 		if err != nil {
@@ -57,15 +53,6 @@ func Execute() {
 		}
 		os.Exit(1)
 	}
-
-	// Uncomment this and comment the code above to use the original cobra.Execute() method
-	//if err := dhcli.Execute(); err != nil {
-	//	_, err := fmt.Fprintln(os.Stderr, err)
-	//	if err != nil {
-	//		return
-	//	}
-	//	os.Exit(1)
-	//}
 }
 
 func RegisterCommand(cmd *cobra.Command) {
