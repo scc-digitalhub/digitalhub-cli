@@ -3,64 +3,35 @@ version: 2
 project_name: dhcli
 
 builds:
-  # General build: all targets
   - id: dhcli
     env:
       - CGO_ENABLED=0
-    goos:
-      - linux
-      - windows
-      - darwin
-    goarch:
-      - amd64
-      - arm64
-
-  # Brew-only build: darwin targets (kept separate so brew sees a single archive/arch)
-  - id: brew
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - darwin
-    goarch:
-      - amd64
-      - arm64
+    goos: [linux, windows, darwin]
+    goarch: [amd64, arm64]
+    # (optional) main: ./cmd/dhcli
 
 archives:
-  # Produce ZIP for the general build
-  - id: zip_all
-    builds:
-      - dhcli
-    format: zip
+  # ZIP for all targets
+  - id: zip
+    formats: [zip]
     name_template: >-
       {{ .ProjectName }}-
-      {{- .Os }}-{{ .Arch }}
+      {{- if eq .Os "windows" }}windows{{ else if eq .Os "darwin" }}darwin{{ else if eq .Os "linux" }}linux{{ else }}{{ .Os }}{{ end }}
+      {{- if ne .Arch "all" }}-{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
 
-  # Produce TGZ for the general build
-  - id: tgz_all
-    builds:
-      - dhcli
-    format: tar.gz
+  # TAR.GZ for all targets
+  - id: tgz
+    formats: [tar.gz]
     name_template: >-
       {{ .ProjectName }}-
-      {{- .Os }}-{{ .Arch }}
+      {{- if eq .Os "windows" }}windows{{ else if eq .Os "darwin" }}darwin{{ else if eq .Os "linux" }}linux{{ else }}{{ .Os }}{{ end }}
+      {{- if ne .Arch "all" }}-{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
 
-  # Produce a single TGZ per darwin arch for Homebrew (from the 'brew' build only)
-  - id: tgz_brew
-    builds:
-      - brew
-    format: tar.gz
-    name_template: >-
-      {{ .ProjectName }}-
-      {{- .Os }}-{{ .Arch }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}
-
-# Merge darwin/amd64 + darwin/arm64 for the brew build (single universal binary)
 universal_binaries:
-  - id: brew_universal
-    ids:
-      - brew
+  - id: dhcli-universal
+    # will merge darwin/amd64 + darwin/arm64 from build "dhcli"
     replace: true
 
 changelog:
@@ -75,13 +46,15 @@ release:
   replace_existing_draft: true
   replace_existing_artifacts: true
 
+# NOTE: "brews" is deprecated; you'll see a warning.
+# For now, keep it (CLI formula) and pin it to a SINGLE archive id (tgz).
 brews:
-  - ids:
-      - brew        # only consume artifacts from the 'brew' build
+  - name: dhcli
+    ids: [tgz]        # <-- important: pick only one archive set for the formula
     repository:
       owner: scc-digitalhub
       name: digitalhub-cli
     directory: Formula
     homepage: https://scc-digitalhub.github.io/
     description: A command-line tool for DigitalHub platform.
-    skip_upload: auto   # skip on prereleases, publish on stable
+    skip_upload: auto  # skip on pre-releases
