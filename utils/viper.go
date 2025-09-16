@@ -208,11 +208,11 @@ func loadIniSectionIntoViper(cfg *ini.File, env string) error {
 	selected := def
 	if env != "" && cfg.HasSection(env) {
 		selected = cfg.Section(env)
-		fmt.Printf("✅ Using section: [%s]\n", env)
+		fmt.Printf("Using section: [%s]\n", env)
 	} else if env == "" || strings.EqualFold(env, "DEFAULT") {
-		fmt.Println("ℹ️  no environment selected, using [DEFAULT]")
+		fmt.Println("no environment selected, using [DEFAULT]")
 	} else {
-		fmt.Println("⚠️  current_environment not found/invalid, falling back to [DEFAULT]")
+		fmt.Println("current_environment not found/invalid, falling back to [DEFAULT]")
 	}
 
 	merged := make(map[string]string)
@@ -248,13 +248,13 @@ func RegisterIniCfgWithViper(optionalEnv ...string) error {
 		fmt.Println("ℹ️  ini file not found; bootstrapping from environment variables…")
 		envName := resolveEnvName(optionalEnv...)
 		if err := WriteIniFromStruct(iniPath, envName); err != nil {
-			fmt.Printf("⚠️  failed to create ini from env (%v); continuing in env-only mode\n", err)
+			fmt.Printf("failed to create ini from env (%v); continuing in env-only mode\n", err)
 			viper.Set("current_environment", envName)
 			return nil
 		}
 		cfg, err = ini.Load(iniPath)
 		if err != nil {
-			fmt.Printf("⚠️  created ini but cannot read it back (%v); continuing in env-only mode\n", err)
+			fmt.Printf("created ini but cannot read it back (%v); continuing in env-only mode\n", err)
 			viper.Set("current_environment", envName)
 			return nil
 		}

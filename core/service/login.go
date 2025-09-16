@@ -38,7 +38,7 @@ func LoginHandler() error {
 	// Ensure environment is up-to-date and compatible
 	utils.CheckUpdateEnvironment()
 	utils.CheckApiLevel(utils.ApiLevelKey, utils.LoginMin, utils.LoginMax)
-	
+
 	// PKCE
 	verifier, challenge := generatePKCE()
 	generatedState = randomString(32)
@@ -57,7 +57,7 @@ func LoginHandler() error {
 	}
 
 	fmt.Println("─────────────────────────────────────────────────────────────────────")
-	fmt.Println("🔐  The following URL will be opened in your browser to authenticate:")
+	fmt.Println("  The following URL will be opened in your browser to authenticate:  ")
 	fmt.Println("─────────────────────────────────────────────────────────────────────")
 	fmt.Println(authURL)
 	fmt.Println("─────────────────────────────────────────────────────────────────────")
