@@ -3,33 +3,39 @@ version: 2
 project_name: dhcli
 
 builds:
-  - env:
+  - id: dhcli
+    env:
       - CGO_ENABLED=0
     goos:
       - linux
       - windows
       - darwin
+    goarch:
+      - amd64
+      - arm64
 
+# Produce BOTH zip and tar.gz for every target
 archives:
-  # Default: ZIP per tutti
-  - formats: [zip]
-    # name template compatibile con `uname`
+  - id: zip
+    format: zip
     name_template: >-
       {{ .ProjectName }}-
-      {{- if eq .Os "windows" }}windows
-      {{- else if eq .Os "darwin" }}darwin
-      {{- else if eq .Os "linux" }}linux
-      {{- else }}{{ .Os }}{{ end }}
-      {{- if eq .Arch "all" }}
-      {{- else }}-{{ .Arch }}{{ end }}
+      {{- if eq .Os "windows" }}windows{{ else if eq .Os "darwin" }}darwin{{ else if eq .Os "linux" }}linux{{ else }}{{ .Os }}{{ end }}
+      {{- if ne .Arch "all" }}-{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
-    # Override: su darwin usa tar.gz
-    format_overrides:
-      - goos: darwin
-        formats: [tar.gz]
+  - id: tgz
+    format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}-
+      {{- if eq .Os "windows" }}windows{{ else if eq .Os "darwin" }}darwin{{ else if eq .Os "linux" }}linux{{ else }}{{ .Os }}{{ end }}
+      {{- if ne .Arch "all" }}-{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
 
+# Merge darwin amd64+arm64 into a single universal binary
 universal_binaries:
-  - replace: true
+  - id: dhcli-universal
+    replace: true
+    # will pick the darwin/amd64 and darwin/arm64 from the 'dhcli' build
 
 changelog:
   sort: asc
@@ -39,6 +45,8 @@ changelog:
       - "^test:"
 
 release:
+  # generate a GitHub prerelease automatically when the tag is semver pre-release (e.g. v1.2.3-beta.1)
+  prerelease: auto
   replace_existing_draft: true
   replace_existing_artifacts: true
 
@@ -49,3 +57,5 @@ brews:
     directory: Formula
     homepage: https://scc-digitalhub.github.io/
     description: A command-line tool for DigitalHub platform.
+    # Skip Homebrew on prereleases (publish only for stable tags)
+    skip_upload: auto
