@@ -166,7 +166,7 @@ func WriteIniFromStruct(iniPath, envName string) error {
 		}
 		sec.Key(key).SetValue(val)
 	}
-	sec.Key(UpdatedEnvKey).SetValue(time.Now().UTC().Format(time.RFC3339))
+
 	return cfg.SaveTo(iniPath)
 }
 
@@ -245,7 +245,7 @@ func RegisterIniCfgWithViper(optionalEnv ...string) error {
 
 	cfg, err := ini.Load(iniPath)
 	if err != nil {
-		fmt.Println("ℹ️  ini file not found; bootstrapping from environment variables…")
+		fmt.Println("INI file not found; bootstrapping from environment variables…")
 		envName := resolveEnvName(optionalEnv...)
 		if err := WriteIniFromStruct(iniPath, envName); err != nil {
 			fmt.Printf("failed to create ini from env (%v); continuing in env-only mode\n", err)
