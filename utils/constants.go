@@ -10,12 +10,12 @@ const (
 	UpdatedEnvKey      = "updated_environment"
 	ApiLevelKey        = "dhcore_api_level"
 	DhCoreName         = "dhcore_name"
-	DhCoreIssuer       = "dhcore_issuer"
+	DhCoreIssuer       = "issuer"
 	DhCoreClientId     = "dhcore_client_id"
 	DhCoreEndpoint     = "dhcore_endpoint"
 	DhCoreApiVersion   = "dhcore_api_version"
-	DhCoreAccessToken  = "dhcore_access_token"
-	DhCoreRefreshToken = "dhcore_refresh_token"
+	DhCoreAccessToken  = "access_token"
+	DhCoreRefreshToken = "refresh_token"
 
 	outdatedAfterHours = 1
 

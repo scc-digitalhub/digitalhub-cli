@@ -41,7 +41,7 @@ type Config struct {
 	DbPort                            string `vkey:"db_port"                              env:"DB_PORT"                              persist:"true"`
 	DbUsername                        string `vkey:"db_username"                          env:"DB_USERNAME"                          persist:"true"`
 	DhProjects                        string `vkey:"dh_projects"                          env:"DH_PROJECTS"                          persist:"true"`
-	DhcoreAccessToken                 string `vkey:"dhcore_access_token"                  env:"DHCORE_ACCESS_TOKEN"                  persist:"true"  secret:"true"`
+	DhcoreAccessToken                 string `vkey:"access_token"                         env:"ACCESS_TOKEN"                  persist:"true"  secret:"true"`
 	DhcoreApiLevel                    string `vkey:"dhcore_api_level"                     env:"DHCORE_API_LEVEL"                     persist:"true"`
 	DhcoreApiVersion                  string `vkey:"dhcore_api_version"                   env:"DHCORE_API_VERSION"                   persist:"true"  default:"v1"`
 	DhcoreAuthenticationMethods       string `vkey:"dhcore_authentication_methods"        env:"DHCORE_AUTHENTICATION_METHODS"        persist:"true"`
@@ -53,7 +53,7 @@ type Config struct {
 	DhcoreIssuer                      string `vkey:"dhcore_issuer"                        env:"DHCORE_ISSUER"                        persist:"true"`
 	DhcoreName                        string `vkey:"dhcore_name"                          env:"DHCORE_NAME"                          persist:"true"`
 	DhcoreRealm                       string `vkey:"dhcore_realm"                         env:"DHCORE_REALM"                         persist:"true"`
-	DhcoreRefreshToken                string `vkey:"dhcore_refresh_token"                 env:"DHCORE_REFRESH_TOKEN"                 persist:"true"  secret:"true"`
+	DhcoreRefreshToken                string `vkey:"refresh_token"                        env:"REFRESH_TOKEN"                 persist:"true"  secret:"true"`
 	DhcoreVersion                     string `vkey:"dhcore_version"                       env:"DHCORE_VERSION"                       persist:"true"`
 	GrantTypesSupported               string `vkey:"grant_types_supported"                env:"GRANT_TYPES_SUPPORTED"                persist:"true"`
 	Issuer                            string `vkey:"issuer"                               env:"ISSUER"                               persist:"true"`
