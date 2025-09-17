@@ -41,21 +41,21 @@ type Config struct {
 	DbPort                            string `vkey:"db_port"                              env:"DB_PORT"                              persist:"true"`
 	DbUsername                        string `vkey:"db_username"                          env:"DB_USERNAME"                          persist:"true"`
 	DhProjects                        string `vkey:"dh_projects"                          env:"DH_PROJECTS"                          persist:"true"`
-	DhcoreAccessToken                 string `vkey:"access_token"                         env:"ACCESS_TOKEN"                  persist:"true"  secret:"true"`
+	DhcoreAccessToken                 string `vkey:"access_token"                         env:"DHCORE_ACCESS_TOKEN"                  persist:"true"  secret:"true"`
 	DhcoreApiLevel                    string `vkey:"dhcore_api_level"                     env:"DHCORE_API_LEVEL"                     persist:"true"`
 	DhcoreApiVersion                  string `vkey:"dhcore_api_version"                   env:"DHCORE_API_VERSION"                   persist:"true"  default:"v1"`
 	DhcoreAuthenticationMethods       string `vkey:"dhcore_authentication_methods"        env:"DHCORE_AUTHENTICATION_METHODS"        persist:"true"`
-	DhcoreClientId                    string `vkey:"client_id"                            env:"CLIENT_ID"                     persist:"true"`
+	DhcoreClientId                    string `vkey:"client_id"                            env:"DHCORE_CLIENT_ID"                     persist:"true"`
 	DhcoreDefaultFilesStore           string `vkey:"dhcore_default_files_store"           env:"DHCORE_DEFAULT_FILES_STORE"           persist:"true"`
 	DhcoreEndpoint                    string `vkey:"dhcore_endpoint"                      env:"DHCORE_ENDPOINT"                      persist:"true"`
 	DhcoreExpiresIn                   string `vkey:"dhcore_expires_in"                    env:"DHCORE_EXPIRES_IN"                    persist:"true"`
 	DhcoreIdToken                     string `vkey:"dhcore_id_token"                      env:"DHCORE_ID_TOKEN"                      persist:"true"  secret:"true"`
 	DhcoreName                        string `vkey:"dhcore_name"                          env:"DHCORE_NAME"                          persist:"true"`
 	DhcoreRealm                       string `vkey:"dhcore_realm"                         env:"DHCORE_REALM"                         persist:"true"`
-	DhcoreRefreshToken                string `vkey:"refresh_token"                        env:"REFRESH_TOKEN"                 persist:"true"  secret:"true"`
+	DhcoreRefreshToken                string `vkey:"refresh_token"                        env:"DHCORE_REFRESH_TOKEN"                 persist:"true"  secret:"true"`
 	DhcoreVersion                     string `vkey:"dhcore_version"                       env:"DHCORE_VERSION"                       persist:"true"`
 	GrantTypesSupported               string `vkey:"grant_types_supported"                env:"GRANT_TYPES_SUPPORTED"                persist:"true"`
-	Issuer                            string `vkey:"issuer"                               env:"ISSUER"                               persist:"true"`
+	Issuer                            string `vkey:"issuer"                               env:"DHCORE_ISSUER"                               persist:"true"`
 	JwksUri                           string `vkey:"jwks_uri"                             env:"JWKS_URI"                             persist:"true"`
 	ResponseTypesSupported            string `vkey:"response_types_supported"             env:"RESPONSE_TYPES_SUPPORTED"             persist:"true"`
 	S3Bucket                          string `vkey:"s3_bucket"                            env:"S3_BUCKET"                            persist:"true"`
