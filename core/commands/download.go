@@ -20,6 +20,7 @@ var downloadCmd = func() *cobra.Command {
 	projectFlag := flags.NewStringFlag("project", "p", "project", "")
 	nameFlag := flags.NewStringFlag("name", "n", "name", "")
 	outFlag := flags.NewStringFlag("out", "o", "output filename or directory", "")
+	//TODO change outFlat in destination and 'd'
 
 	cmd := &cobra.Command{
 		Use:   "download <resource> <id>",

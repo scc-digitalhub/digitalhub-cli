@@ -9,6 +9,7 @@ const (
 	CurrentEnvironment = "current_environment"
 	UpdatedEnvKey      = "updated_environment"
 	ApiLevelKey        = "dhcore_api_level"
+	DhCoreName         = "dhcore_name"
 	DhCoreIssuer       = "dhcore_issuer"
 	DhCoreClientId     = "dhcore_client_id"
 	DhCoreEndpoint     = "dhcore_endpoint"
@@ -54,12 +55,12 @@ var DhCoreMap = map[string]string{
 }
 
 var Resources = map[string][]string{
-	"artifacts": []string{"artifact"},
-	"dataitems": []string{"dataitem"},
-	"functions": []string{"function", "fn"},
-	"models":    []string{"model"},
-	"projects":  []string{"project"},
-	"runs":      []string{"run"},
-	"workflows": []string{"workflow"},
-	"logs":      []string{"log"},
+	"artifacts": {"artifact"},
+	"dataitems": {"dataitem"},
+	"functions": {"function", "fn"},
+	"models":    {"model"},
+	"projects":  {"project"},
+	"runs":      {"run"},
+	"workflows": {"workflow"},
+	"logs":      {"log"},
 }

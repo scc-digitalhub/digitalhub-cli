@@ -20,17 +20,15 @@ var dhcli = &cobra.Command{
 	Short: "dhcli is a tool for managing resource in core platform",
 	Long:  `dhcli is a command-line utility for downloading, uploading, and managing core platform entity`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		// Parse --env if present
 		envFlag := cmd.Flags().Lookup("env")
 		var env string
 		if envFlag != nil && envFlag.Value.String() != "" {
 			env = envFlag.Value.String()
 		}
 
-		// Reload ini config with a correct section
+		// Only skip config for explicit maintenance cmds
 		if !(slices.Contains([]string{"register", "use", "remove", "list-env"}, cmd.Name())) {
-			err := utils.RegisterIniCfgWithViper(env)
-			if err != nil {
+			if err := utils.RegisterIniCfgWithViper(env); err != nil {
 				return err
 			}
 		}
@@ -47,10 +45,7 @@ var dhcli = &cobra.Command{
 
 func Execute() {
 	if err := fang.Execute(context.Background(), dhcli); err != nil {
-		_, err := fmt.Fprintln(os.Stderr, err)
-		if err != nil {
-			return
-		}
+		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }

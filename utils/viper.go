@@ -25,6 +25,7 @@ const EnvDumpPrefix = ""
 // - persist: "true" to write the key into the INI
 // - default: optional default to set if key is unset
 // - secret: "true" if sensitive (not used here, but handy for logging)
+// - bind: "false" to NOT bind from env (we still can set defaults)
 type Config struct {
 	AuthorizationEndpoint             string `vkey:"authorization_endpoint"               env:"AUTHORIZATION_ENDPOINT"               persist:"true"`
 	AwsAccessKeyID                    string `vkey:"aws_access_key_id"                    env:"AWS_ACCESS_KEY_ID"                    persist:"true"  secret:"true"`
@@ -66,28 +67,22 @@ type Config struct {
 	TokenEndpointAuthMethodsSupported string `vkey:"token_endpoint_auth_methods_supported" env:"TOKEN_ENDPOINT_AUTH_METHODS_SUPPORTED" persist:"true"`
 	UserinfoEndpoint                  string `vkey:"userinfo_endpoint"                    env:"USERINFO_ENDPOINT"                    persist:"true"`
 
-	// Optional bookkeeping keys; add/remove as you like
+	// Bookkeeping
 	UpdatedEnvironment string `vkey:"updated_environment" env:"UPDATED_ENVIRONMENT" persist:"true" bind:"false"`
 
-	// Expose the active env name in Viper (not persisted here)
+	// Not persisted: only for convenience/logs
 	CurrentEnvironment string `vkey:"current_environment" env:"CURRENT_ENVIRONMENT" persist:"false"`
 }
 
-// resolveEnvName mirrors your previous selection logic.
+// resolveEnvName: --env > "default"
 func resolveEnvName(optionalEnv ...string) string {
 	if len(optionalEnv) > 0 && optionalEnv[0] != "" && strings.ToLower(optionalEnv[0]) != "null" {
 		return optionalEnv[0]
 	}
-	if v := os.Getenv("CURRENT_ENVIRONMENT"); v != "" {
-		return v
-	}
-	if v := os.Getenv("DHCORE_NAME"); v != "" {
-		return v
-	}
-	return "env"
+	return "default"
 }
 
-// mirror PREFIX_FOO -> FOO, so we can BindEnv with one canonical name.
+// mirror PREFIX_FOO -> FOO (optional)
 func mirrorPrefix(prefix string) {
 	if prefix == "" {
 		return
@@ -109,8 +104,6 @@ func mirrorPrefix(prefix string) {
 }
 
 // Bind env for all fields of Config using struct tags.
-// - Supports prefix via mirrorPrefix()
-// - Sets defaults from `default` tag
 func BindEnvFromStruct(prefix string) {
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
@@ -125,6 +118,7 @@ func BindEnvFromStruct(prefix string) {
 			continue
 		}
 
+		// if false not to bind
 		if f.Tag.Get("bind") == "false" {
 			if def := f.Tag.Get("default"); def != "" && !viper.IsSet(key) {
 				viper.SetDefault(key, def)
@@ -208,11 +202,11 @@ func loadIniSectionIntoViper(cfg *ini.File, env string) error {
 	selected := def
 	if env != "" && cfg.HasSection(env) {
 		selected = cfg.Section(env)
-		fmt.Printf("Using section: [%s]\n", env)
+		fmt.Printf("Using env: [%s]\n", env)
 	} else if env == "" || strings.EqualFold(env, "DEFAULT") {
-		fmt.Println("no environment selected, using [DEFAULT]")
+		fmt.Println("Using env: [DEFAULT]")
 	} else {
-		fmt.Println("current_environment not found/invalid, falling back to [DEFAULT]")
+		fmt.Println("Env not found, falling back to [DEFAULT]")
 	}
 
 	merged := make(map[string]string)
@@ -235,44 +229,88 @@ func loadIniSectionIntoViper(cfg *ini.File, env string) error {
 }
 
 // RegisterIniCfgWithViper:
-// 1) bind ENV from struct (live, no mass Set)
-// 2) load INI or bootstrap it (persist only fields persist:"true")
+// 1) bind ENV from struct (live)
+// 2) load INI or lazy-bootstraps it from well-known (writes only target env)
 // 3) load active section into Viper and set current_environment
 func RegisterIniCfgWithViper(optionalEnv ...string) error {
-	iniPath := getIniPath() // assume defined elsewhere in utils
+	iniPath := getIniPath()
 
 	BindEnvFromStruct(EnvDumpPrefix)
 
 	cfg, err := ini.Load(iniPath)
 	if err != nil {
-		fmt.Println("INI file not found; bootstrapping from environment variables…")
-		envName := resolveEnvName(optionalEnv...)
-		if err := WriteIniFromStruct(iniPath, envName); err != nil {
-			fmt.Printf("failed to create ini from env (%v); continuing in env-only mode\n", err)
-			viper.Set("current_environment", envName)
+		fmt.Println("INI not found; bootstrapping from well-known…")
+		envName, bootErr := bootstrapFromWellKnownAndWrite(iniPath, optionalEnv...)
+		if bootErr != nil {
+			fmt.Printf("Bootstrap failed: %v\n", bootErr)
+			if envName == "" {
+				envName = resolveEnvName(optionalEnv...)
+			}
+			viper.Set(CurrentEnvironment, envName)
 			return nil
 		}
 		cfg, err = ini.Load(iniPath)
 		if err != nil {
-			fmt.Printf("created ini but cannot read it back (%v); continuing in env-only mode\n", err)
-			viper.Set("current_environment", envName)
+			fmt.Printf("INI written but cannot reload: %v (ENV-only mode)\n", err)
+			viper.Set(CurrentEnvironment, viper.GetString(CurrentEnvironment))
 			return nil
 		}
 	}
 
-	env := ""
-	if len(optionalEnv) > 0 && optionalEnv[0] != "" && strings.ToLower(optionalEnv[0]) != "null" {
-		env = optionalEnv[0]
-	} else {
-		env = cfg.Section("DEFAULT").Key("current_environment").String()
-		if env == "" {
-			env = resolveEnvName() // fallback if DEFAULT lacks it
+	// active env: --env > DEFAULT.current_environment > dhcore_name > default
+	env := resolveEnvName(optionalEnv...)
+	if env == "default" {
+		if v := cfg.Section("DEFAULT").Key("current_environment").String(); v != "" {
+			env = v
 		}
 	}
 
 	if err := loadIniSectionIntoViper(cfg, env); err != nil {
 		return fmt.Errorf("failed to load INI into viper: %w", err)
 	}
-	viper.Set("current_environment", env)
+	viper.Set(CurrentEnvironment, env)
 	return nil
+}
+
+// Bootstrap (when INI is missing): read well-known, pick envName, write INI once.
+func bootstrapFromWellKnownAndWrite(iniPath string, optionalEnv ...string) (string, error) {
+	baseEndpoint := viper.GetString(DhCoreEndpoint)
+	if baseEndpoint == "" {
+		return "", fmt.Errorf("missing %s: set it in env or run 'dhcli register'", DhCoreEndpoint)
+	}
+
+	coreCfg, err := FetchConfig(baseEndpoint + "/.well-known/configuration")
+	if err != nil {
+		return "", fmt.Errorf("fetch configuration failed: %w", err)
+	}
+	for k, v := range coreCfg {
+		viper.Set(k, ReflectValue(v))
+	}
+
+	// env selection: --env > dhcore_name > default
+	envName := resolveEnvName(optionalEnv...)
+	if envName == "default" {
+		if nm := viper.GetString(DhCoreName); nm != "" {
+			envName = nm
+		}
+	}
+
+	oidcCfg, err := FetchConfig(baseEndpoint + "/.well-known/openid-configuration")
+	if err != nil {
+		return "", fmt.Errorf("fetch openid-configuration failed: %w", err)
+	}
+	for k, v := range oidcCfg {
+		viper.Set(k, ReflectValue(v))
+	}
+
+	viper.Set(CurrentEnvironment, envName)
+
+	if err := WriteIniFromStruct(iniPath, envName); err != nil {
+		return "", fmt.Errorf("write ini failed: %w", err)
+	}
+
+	if _, err := ini.Load(iniPath); err != nil {
+		return "", fmt.Errorf("ini written but cannot reload: %w", err)
+	}
+	return envName, nil
 }

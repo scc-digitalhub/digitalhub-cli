@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
-
 	"gopkg.in/ini.v1"
 )
 
@@ -30,9 +29,7 @@ func getIniPath() string {
 	if err != nil {
 		iniPath = "."
 	}
-	iniPath += string(os.PathSeparator) + IniName
-
-	return iniPath
+	return iniPath + string(os.PathSeparator) + IniName
 }
 
 func LoadIni(createOnMissing bool) *ini.File {
@@ -44,13 +41,11 @@ func LoadIni(createOnMissing bool) *ini.File {
 		}
 		return ini.Empty()
 	}
-
 	return cfg
 }
 
 func SaveIni(cfg *ini.File) {
-	err := cfg.SaveTo(getIniPath())
-	if err != nil {
+	if err := cfg.SaveTo(getIniPath()); err != nil {
 		log.Printf("Failed to update ini file: %v\n", err)
 		os.Exit(1)
 	}
@@ -58,7 +53,6 @@ func SaveIni(cfg *ini.File) {
 
 func ReflectValue(v interface{}) string {
 	f := reflect.ValueOf(v)
-
 	switch f.Kind() {
 	case reflect.String:
 		return f.String()
@@ -70,25 +64,24 @@ func ReflectValue(v interface{}) string {
 		return fmt.Sprint(f.Float())
 	case reflect.Bool:
 		return fmt.Sprint(f.Bool())
-	case reflect.TypeOf(time.Now()).Kind():
-		return f.Interface().(time.Time).Format(time.RFC3339)
 	case reflect.Slice:
-		s := []string{}
-		for _, element := range f.Interface().([]interface{}) {
-			if reflect.ValueOf(element).Kind() == reflect.String {
-				s = append(s, element.(string))
+		var s []string
+		for _, el := range f.Interface().([]interface{}) {
+			if reflect.ValueOf(el).Kind() == reflect.String {
+				s = append(s, el.(string))
 			}
 		}
 		return strings.Join(s, ",")
 	default:
+		// time.Time and others handled as string/JSON upstream
 		return ""
 	}
 }
 
-func BuildCoreUrl(project string, resource string, id string, params map[string]string) string {
+func BuildCoreUrl(project, resource, id string, params map[string]string) string {
 	base := viper.GetString(DhCoreEndpoint) + "/api/" + viper.GetString(DhCoreApiVersion)
-	endpoint := ""
-	paramsString := ""
+
+	var endpoint string
 	if resource != "projects" && project != "" {
 		endpoint += "/-/" + project
 	}
@@ -96,21 +89,27 @@ func BuildCoreUrl(project string, resource string, id string, params map[string]
 	if id != "" {
 		endpoint += "/" + id
 	}
-	if params != nil && len(params) > 0 {
-		paramsString = "?"
-		for key, val := range params {
-			if val != "" {
-				paramsString += key + "=" + val + "&"
+
+	var qs string
+	if len(params) > 0 {
+		var sb strings.Builder
+		sb.WriteString("?")
+		for k, v := range params {
+			if v != "" {
+				sb.WriteString(k)
+				sb.WriteString("=")
+				sb.WriteString(v)
+				sb.WriteString("&")
 			}
 		}
-		paramsString = paramsString[:len(paramsString)-1]
+		qs = strings.TrimSuffix(sb.String(), "&")
 	}
 
-	return base + endpoint + paramsString
+	return base + endpoint + qs
 }
 
-func PrepareRequest(method string, url string, data []byte, accessToken string) *http.Request {
-	var body io.Reader = nil
+func PrepareRequest(method, url string, data []byte, accessToken string) *http.Request {
+	var body io.Reader
 	if data != nil {
 		body = bytes.NewReader(data)
 	}
@@ -119,15 +118,12 @@ func PrepareRequest(method string, url string, data []byte, accessToken string) 
 		log.Printf("Failed to initialize request: %v\n", err)
 		os.Exit(1)
 	}
-
 	if data != nil {
 		req.Header.Add("Content-type", "application/json")
 	}
-
 	if accessToken != "" {
 		req.Header.Add("Authorization", "Bearer "+accessToken)
 	}
-
 	return req
 }
 
@@ -139,67 +135,31 @@ func DoRequest(req *http.Request) ([]byte, error) {
 		os.Exit(1)
 	}
 	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
 
+	body, err := io.ReadAll(resp.Body)
 	if resp.StatusCode != 200 {
-		// Extract message from body (if present), to return a more meaningful error
 		msg := ""
 		var bodyMap map[string]interface{}
-		if err := json.Unmarshal(body, &bodyMap); err == nil {
-			if message, ok := bodyMap["message"]; ok && reflect.ValueOf(message).Kind() == reflect.String {
-				msg += " - " + message.(string)
+		if json.Unmarshal(body, &bodyMap) == nil {
+			if m, ok := bodyMap["message"].(string); ok {
+				msg = " - " + m
 			}
 		}
-
 		log.Printf("Core responded with: %v%v\n", resp.Status, msg)
 		os.Exit(1)
 	}
-
 	return body, err
 }
 
 func TranslateFormat(format string) string {
-	lower := strings.ToLower(format)
-	if lower == "json" {
+	switch strings.ToLower(format) {
+	case "json":
 		return "json"
-	} else if lower == "yaml" || lower == "yml" {
+	case "yaml", "yml":
 		return "yaml"
+	default:
+		return "short"
 	}
-	return "short"
-}
-
-func LoadIniConfig(args []string) (*ini.File, *ini.Section) {
-	cfg := LoadIni(false)
-
-	sectionName := ""
-
-	if len(args) == 0 || args[0] == "" {
-		if cfg.HasSection("DEFAULT") {
-			defaultSection, err := cfg.GetSection("DEFAULT")
-			if err != nil {
-				log.Printf("Error while reading default environment: %v\n", err)
-				os.Exit(1)
-			}
-			if defaultSection.HasKey("current_environment") {
-				sectionName = defaultSection.Key("current_environment").String()
-			}
-		}
-
-		if sectionName == "" {
-			log.Println("Error: environment was not passed and default environment is not specified in ini file.")
-			os.Exit(1)
-		}
-	} else {
-		sectionName = args[0]
-	}
-
-	section, err := cfg.GetSection(sectionName)
-	if err != nil {
-		log.Printf("Failed to read section '%s': %v.\n", sectionName, err)
-		os.Exit(1)
-	}
-
-	return cfg, section
 }
 
 func TranslateEndpoint(resource string) string {
@@ -208,7 +168,6 @@ func TranslateEndpoint(resource string) string {
 			return key
 		}
 	}
-
 	log.Printf("Resource '%v' is not supported.\n", resource)
 	os.Exit(1)
 	return ""
@@ -233,14 +192,15 @@ func WaitForConfirmation(msg string) {
 		if err != nil {
 			log.Printf("Error in reading user input: %v\n", err)
 			os.Exit(1)
-		} else {
-			yn := strings.TrimSpace(string(userInput))
-			if strings.ToLower(yn) == "y" || yn == "" {
-				break
-			} else if strings.ToLower(yn) == "n" {
-				log.Println("Cancelling.")
-				os.Exit(0)
-			}
+		}
+		yn := strings.TrimSpace(string(userInput))
+		switch strings.ToLower(yn) {
+		case "y", "":
+			return
+		case "n":
+			log.Println("Cancelling.")
+			os.Exit(0)
+		default:
 			log.Println("Invalid input, must be y or n")
 		}
 	}
@@ -248,48 +208,50 @@ func WaitForConfirmation(msg string) {
 
 func PrintCommentForYaml(args ...string) {
 	fmt.Printf("# Generated on: %v\n", time.Now().Round(0))
-	fmt.Printf("#   from environment: %v (core version %v)\n", viper.GetString("dhcore_name"), viper.GetString("dhcore_version"))
+	fmt.Printf("#   from environment: %v (core version %v)\n", viper.GetString(DhCoreName), viper.GetString("dhcore_version"))
 	fmt.Printf("#   found at: %v\n", viper.GetString(DhCoreEndpoint))
-	argsString := ""
+	var parts []string
 	for _, s := range args {
 		if s != "" {
-			argsString += s + " "
+			parts = append(parts, s)
 		}
 	}
-	if argsString != "" {
-		fmt.Printf("#   with parameters: %v\n", argsString[:len(argsString)-1])
+	if len(parts) > 0 {
+		fmt.Printf("#   with parameters: %v\n", strings.Join(parts, " "))
 	}
 }
 
-func CheckApiLevel(apiLevelKey string, min int, max int) {
-
-	//print api level key
+func CheckApiLevel(apiLevelKey string, min, max int) {
 	fmt.Printf("Checking API level for %v command...\n", viper.GetString(apiLevelKey))
 
-	apiLevelKeyString := viper.GetString(apiLevelKey)
-
-	if apiLevelKeyString == "" {
+	apiLevelStr := viper.GetString(apiLevelKey)
+	if apiLevelStr == "" {
 		log.Println("ERROR: Unable to check compatibility, environment does not specify API level.")
 		os.Exit(1)
 	}
 
-	apiLevel, err := strconv.Atoi(apiLevelKeyString)
+	apiLevel, err := strconv.Atoi(apiLevelStr)
 	if err != nil {
-		log.Printf("ERROR: Unable to check compatibility, as API level %v could not be read as integer.\n", apiLevelKeyString)
+		log.Printf("ERROR: API level %v is not an integer.\n", apiLevelStr)
 		os.Exit(1)
 	}
 
-	supportedInterval := ""
-	if min != 0 {
-		supportedInterval += fmt.Sprintf("%v <= ", min)
+	inRange := true
+	if min != 0 && apiLevel < min {
+		inRange = false
 	}
-	supportedInterval += "level"
-	if max != 0 {
-		supportedInterval += fmt.Sprintf(" <= %v", max)
+	if max != 0 && apiLevel > max {
+		inRange = false
 	}
-
-	if (min != 0 && apiLevel < min) || (max != 0 && apiLevel > max) {
-		log.Printf("ERROR: API level %v is not within the supported interval for this command: %v\n", apiLevel, supportedInterval)
+	if !inRange {
+		interval := "level"
+		if min != 0 {
+			interval = fmt.Sprintf("%v <= %s", min, interval)
+		}
+		if max != 0 {
+			interval = fmt.Sprintf("%s <= %v", interval, max)
+		}
+		log.Printf("ERROR: API level %v is not within the supported interval: %v\n", apiLevel, interval)
 		os.Exit(1)
 	}
 }
@@ -300,7 +262,6 @@ func GetStringValue(m map[string]interface{}, key string) string {
 			return s
 		}
 	}
-
 	return ""
 }
 
@@ -312,7 +273,7 @@ func FetchConfig(configURL string) (map[string]interface{}, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return nil, errors.New(fmt.Sprintf("Core returned a non-200 status code: %v", resp.Status))
+		return nil, fmt.Errorf("Core returned a non-200 status code: %v", resp.Status)
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -324,24 +285,20 @@ func FetchConfig(configURL string) (map[string]interface{}, error) {
 	if err := json.Unmarshal(body, &config); err != nil {
 		return nil, err
 	}
-
 	return config, nil
 }
 
 func PrintResponseState(resp []byte) error {
-	// Parse response to check new state
 	var m map[string]interface{}
 	if err := json.Unmarshal(resp, &m); err != nil {
 		return err
 	}
-	if status, ok := m["status"]; ok {
-		statusMap := status.(map[string]interface{})
-		if state, ok := statusMap["state"]; ok {
-			log.Printf("Core response successful, new state: %v\n", state.(string))
+	if status, ok := m["status"].(map[string]interface{}); ok {
+		if state, ok := status["state"].(string); ok {
+			log.Printf("Core response successful, new state: %v\n", state)
 			return nil
 		}
 	}
-
 	log.Println("WARNING: core response successful, but unable to confirm new state.")
 	return nil
 }

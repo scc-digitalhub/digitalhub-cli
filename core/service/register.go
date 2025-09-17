@@ -31,7 +31,7 @@ func RegisterHandler(env string, endpoint string) error {
 	}
 
 	if env == "" || env == "null" {
-		env = utils.GetStringValue(config, "dhcore_name")
+		env = utils.GetStringValue(config, utils.DhCoreName)
 		if env == "" {
 			return fmt.Errorf("environment not specified and not defined in core configuration")
 		}

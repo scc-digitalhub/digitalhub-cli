@@ -13,102 +13,91 @@ import (
 
 // CheckUpdateEnvironment decides whether to refresh the environment:
 // - missing/empty timestamp -> update
-// - invalid timestamp -> update
-// - older than TTL -> update
+// - invalid timestamp       -> update
+// - older than TTL          -> update
 func CheckUpdateEnvironment() {
-	const key = UpdatedEnvKey // "updated_environment"
+	const key = UpdatedEnvKey
 
 	val := viper.GetString(key)
 	isSet := viper.IsSet(key)
-	fmt.Printf("Checking config freshness (%s)… isSet=%v, value=%q\n", key, isSet, val)
+	fmt.Printf("Config freshness (%s): isSet=%v value=%q\n", key, isSet, val)
 
-	// 1) Missing or empty
 	if !isSet || val == "" {
-		fmt.Println("Update needed: no timestamp found.")
+		fmt.Println("Update: no timestamp.")
 		updateEnvironment()
 		return
 	}
 
-	// 2) Invalid RFC3339
 	t, err := time.Parse(time.RFC3339, val)
 	if err != nil {
-		fmt.Printf("Update needed: invalid timestamp (%v).\n", err)
+		fmt.Printf("Update: invalid timestamp (%v).\n", err)
 		updateEnvironment()
 		return
 	}
 
-	// 3) Outdated
 	now := time.Now().UTC()
-	ut := t.UTC()
-	age := now.Sub(ut)
+	age := now.Sub(t.UTC())
 	ttl := time.Duration(outdatedAfterHours) * time.Hour
 
 	if age >= ttl {
-		fmt.Printf("Update needed: outdated (age %s ≥ TTL %s).\n", age, ttl)
+		fmt.Printf("Update: outdated (age %s ≥ TTL %s).\n", age, ttl)
 		updateEnvironment()
 		return
 	}
 
-	fmt.Printf("Fresh: age %s < TTL %s. No update.\n", age, ttl)
+	fmt.Printf("Fresh: age %s < TTL %s.\n", age, ttl)
 }
 
-// updateEnvironment fetches well-known configs, updates Viper, bumps the timestamp,
-// and persists only allowlisted keys (struct+tag) into the INI.
+// Fetch well-known, update Viper, bump timestamp, persist allowlisted keys.
 func updateEnvironment() {
 	fmt.Println("Updating environment…")
 	baseEndpoint := viper.GetString(DhCoreEndpoint)
 	if baseEndpoint == "" {
-		// Probabilmente RegisterIniCfgWithViper non ha ancora caricato l'endpoint.
 		fmt.Println("Skip: dhcore_endpoint is empty.")
 		return
 	}
 
-	// 1) Core configuration
-	config, err := FetchConfig(baseEndpoint + "/.well-known/configuration")
+	cfg, err := FetchConfig(baseEndpoint + "/.well-known/configuration")
 	if err != nil {
 		fmt.Printf("Config fetch failed: %v\n", err)
 		return
 	}
-	for k, v := range config {
+	for k, v := range cfg {
 		viper.Set(k, ReflectValue(v))
 	}
 
-	// 2) OpenID configuration
-	openIdConfig, err := FetchConfig(baseEndpoint + "/.well-known/openid-configuration")
+	oidc, err := FetchConfig(baseEndpoint + "/.well-known/openid-configuration")
 	if err != nil {
-		fmt.Printf("OpenID config fetch failed: %v\n", err)
+		fmt.Printf("OpenID fetch failed: %v\n", err)
 		return
 	}
-	for k, v := range openIdConfig {
+	for k, v := range oidc {
 		viper.Set(k, ReflectValue(v))
 	}
 
-	// 3) Timestamp (UTC, RFC3339)
 	ts := time.Now().UTC().Format(time.RFC3339)
 	viper.Set(UpdatedEnvKey, ts)
-	fmt.Printf("🕒 Set %s=%s (UTC)\n", UpdatedEnvKey, ts)
+	fmt.Printf("Set %s=%s\n", UpdatedEnvKey, ts)
 
-	// 4) Persist ONLY allowlisted keys into the current section
 	env := viper.GetString(CurrentEnvironment)
 	if env == "" {
-		env = resolveEnvName() // fallback prudente
+		env = resolveEnvName()
 	}
 	if err := UpdateIniFromStruct(getIniPath(), env); err != nil {
 		fmt.Printf("Persist failed: %v\n", err)
 		return
 	}
-	fmt.Printf("Persisted allowlisted to section [%s].\n", env)
+	fmt.Printf("Persisted to [%s].\n", env)
 }
 
-// UpdateIniSectionFromViper is kept for backward compatibility.
-// It now delegates to UpdateIniFromStruct, ignoring the provided keys.
+// Backward-compat wrapper.
 func UpdateIniSectionFromViper(_ []string) error {
 	env := viper.GetString(CurrentEnvironment)
 	if env == "" {
 		env = resolveEnvName()
 	}
 	if err := UpdateIniFromStruct(getIniPath(), env); err != nil {
-		return fmt.Errorf("failed to save ini (allowlisted): %w", err)
+		return fmt.Errorf("failed to save ini: %w", err)
 	}
 	fmt.Printf("Updated section [%s] in %s\n", env, getIniPath())
 	return nil
