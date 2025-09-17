@@ -11,7 +11,7 @@ const (
 	ApiLevelKey        = "dhcore_api_level"
 	DhCoreName         = "dhcore_name"
 	DhCoreIssuer       = "issuer"
-	DhCoreClientId     = "dhcore_client_id"
+	DhCoreClientId     = "client_id"
 	DhCoreEndpoint     = "dhcore_endpoint"
 	DhCoreApiVersion   = "dhcore_api_version"
 	DhCoreAccessToken  = "access_token"
@@ -47,7 +47,7 @@ const (
 
 var DhCoreMap = map[string]string{
 	"issuer":             DhCoreIssuer,
-	"client_id":          DhCoreClientId,
+	"dhcore_client_id":   DhCoreClientId,
 	"dhcore_endpoint":    DhCoreEndpoint,
 	"dhcore_api_version": DhCoreApiVersion,
 	"access_token":       DhCoreAccessToken,

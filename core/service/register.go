@@ -48,7 +48,12 @@ func RegisterHandler(env string, endpoint string) error {
 
 	// 3. Reflect config keys
 	for k, v := range config {
-		section.NewKey(k, utils.ReflectValue(v))
+
+		targetKey := k
+		if dhKey, has := utils.DhCoreMap[k]; has {
+			targetKey = dhKey
+		}
+		section.NewKey(targetKey, utils.ReflectValue(v))
 	}
 
 	// 4. Check API level
