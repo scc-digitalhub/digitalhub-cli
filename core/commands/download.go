@@ -19,9 +19,8 @@ var downloadCmd = func() *cobra.Command {
 	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	projectFlag := flags.NewStringFlag("project", "p", "project", "")
 	nameFlag := flags.NewStringFlag("name", "n", "name", "")
-	outFlag := flags.NewStringFlag("out", "o", "output filename or directory", "")
-	//TODO change outFlat in destination and 'd'
-
+	destinationFlag := flags.NewStringFlag("destination", "d", "output filename or directory", "")
+	outFlag := flags.NewStringFlag("out", "o", "output format (short, json, yaml)", "")
 	cmd := &cobra.Command{
 		Use:   "download <resource> <id>",
 		Short: "Download a resource from the S3 aws",
@@ -40,6 +39,7 @@ var downloadCmd = func() *cobra.Command {
 
 			if err := service.DownloadHandler(
 				*envFlag.Value,
+				*destinationFlag.Value,
 				*outFlag.Value,
 				*projectFlag.Value,
 				*nameFlag.Value,
@@ -56,6 +56,7 @@ var downloadCmd = func() *cobra.Command {
 	flags.AddFlag(cmd, &projectFlag)
 	flags.AddFlag(cmd, &nameFlag)
 	flags.AddFlag(cmd, &outFlag)
+	flags.AddFlag(cmd, &destinationFlag)
 
 	return cmd
 }()

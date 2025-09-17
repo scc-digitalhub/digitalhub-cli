@@ -4,12 +4,13 @@ import (
 	"context"
 	s3client "dhcli/configs"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
 // DownloadHTTPFile function for get a file from http or https
@@ -59,7 +60,7 @@ func DownloadS3FileOrDir(s3Client *s3client.Client, ctx context.Context,
 			// TODO strip prefix and keep all the folder structure
 			relativePath := strings.TrimPrefix(file.Path, path)
 
-			fmt.Printf("ParsedPath: Host=%s, Path=%s\n, LocalPath=%s\n", parsedPath.Host, parsedPath.Path, localPath)
+			//fmt.Printf("ParsedPath: Host=%s, Path=%s\n, LocalPath=%s\n", parsedPath.Host, parsedPath.Path, localPath)
 			targetPath := filepath.Join(localPath, relativePath)
 
 			// Create a directory if necessary

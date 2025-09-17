@@ -7,11 +7,12 @@ package s3client
 import (
 	"context"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"io"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -103,8 +104,8 @@ func (c *Client) ListFiles(ctx context.Context, bucket string, prefix string, ma
 // DownloadFile downloads a file from S3 and saves it locally
 func (c *Client) DownloadFile(ctx context.Context, bucket, key, localPath string) error {
 
-	fmt.Printf("📥 Downloading from S3 path: s3://%s/%s\n", bucket, key)
-	fmt.Printf("Saving to local path: %s\n", localPath)
+	// fmt.Printf("Downloading from S3 path: s3://%s/%s\n", bucket, key)
+	// fmt.Printf("Saving to local path: %s\n", localPath)
 
 	output, err := c.s3.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: &bucket,
@@ -151,7 +152,7 @@ func (c *Client) UploadFile(ctx context.Context, bucket, key string, file *os.Fi
 		return nil, fmt.Errorf("rewind error: %w", err)
 	}
 
-	fmt.Printf("📤 Uploading to s3://%s/%s (%.2fMB, type: %s)\n", bucket, key, float64(size)/(1024*1024), mime)
+	fmt.Printf("Uploading to s3://%s/%s (%.2fMB, type: %s)\n", bucket, key, float64(size)/(1024*1024), mime)
 
 	// Multipart upload with manager
 	if size > threshold {
