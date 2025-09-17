@@ -45,12 +45,11 @@ type Config struct {
 	DhcoreApiLevel                    string `vkey:"dhcore_api_level"                     env:"DHCORE_API_LEVEL"                     persist:"true"`
 	DhcoreApiVersion                  string `vkey:"dhcore_api_version"                   env:"DHCORE_API_VERSION"                   persist:"true"  default:"v1"`
 	DhcoreAuthenticationMethods       string `vkey:"dhcore_authentication_methods"        env:"DHCORE_AUTHENTICATION_METHODS"        persist:"true"`
-	DhcoreClientId                    string `vkey:"dhcore_client_id"                     env:"DHCORE_CLIENT_ID"                     persist:"true"`
+	DhcoreClientId                    string `vkey:"client_id"                            env:"CLIENT_ID"                     persist:"true"`
 	DhcoreDefaultFilesStore           string `vkey:"dhcore_default_files_store"           env:"DHCORE_DEFAULT_FILES_STORE"           persist:"true"`
 	DhcoreEndpoint                    string `vkey:"dhcore_endpoint"                      env:"DHCORE_ENDPOINT"                      persist:"true"`
 	DhcoreExpiresIn                   string `vkey:"dhcore_expires_in"                    env:"DHCORE_EXPIRES_IN"                    persist:"true"`
 	DhcoreIdToken                     string `vkey:"dhcore_id_token"                      env:"DHCORE_ID_TOKEN"                      persist:"true"  secret:"true"`
-	DhcoreIssuer                      string `vkey:"dhcore_issuer"                        env:"DHCORE_ISSUER"                        persist:"true"`
 	DhcoreName                        string `vkey:"dhcore_name"                          env:"DHCORE_NAME"                          persist:"true"`
 	DhcoreRealm                       string `vkey:"dhcore_realm"                         env:"DHCORE_REALM"                         persist:"true"`
 	DhcoreRefreshToken                string `vkey:"refresh_token"                        env:"REFRESH_TOKEN"                 persist:"true"  secret:"true"`
