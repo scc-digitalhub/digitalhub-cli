@@ -15,9 +15,9 @@ import (
 
 var runCmd = func() *cobra.Command {
 	envFlag := flags.NewStringFlag("env", "e", "environment", "")
-	projectFlag := flags.NewStringFlag("project", "p", "project", "")
-	fnNameFlag := flags.NewStringFlag("fn-name", "n", "name of the function to run", "")
-	fnIDFlag := flags.NewStringFlag("fn-id", "i", "ID of the function to run", "")
+	projectFlag := flags.NewStringFlag("project", "p", "Mandatory", "")
+	fnNameFlag := flags.NewStringFlag("fn-name", "n", "name of the function to run, alternative to ID", "")
+	fnIDFlag := flags.NewStringFlag("fn-id", "i", "ID of the function to run, alternative to name", "")
 	filePathFlag := flags.NewStringFlag("file", "f", "path to a YAML file containing the resource definition", "")
 
 	cmd := &cobra.Command{

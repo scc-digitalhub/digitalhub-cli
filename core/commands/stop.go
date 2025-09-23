@@ -15,7 +15,7 @@ import (
 
 var stopCmd = func() *cobra.Command {
 	envFlag := flags.NewStringFlag("env", "e", "environment", "")
-	projectFlag := flags.NewStringFlag("project", "p", "project", "")
+	projectFlag := flags.NewStringFlag("project", "p", "Mandatory", "")
 
 	cmd := &cobra.Command{
 		Use:   "stop <resource> <id>",

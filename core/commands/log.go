@@ -15,7 +15,7 @@ import (
 
 var logCmd = func() *cobra.Command {
 	envFlag := flags.NewStringFlag("env", "e", "environment", "")
-	projectFlag := flags.NewStringFlag("project", "p", "project", "")
+	projectFlag := flags.NewStringFlag("project", "p", "Mandatory", "")
 	containerFlag := flags.NewStringFlag("container", "c", "Container ID", "")
 	followFlag := flags.NewBoolFlag("follow", "f", "Attach console and continue to refresh logs", false)
 

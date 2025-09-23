@@ -15,8 +15,8 @@ import (
 
 var updateCmd = func() *cobra.Command {
 	envFlag := flags.NewStringFlag("env", "e", "environment", "")
-	projectFlag := flags.NewStringFlag("project", "p", "project", "")
-	fileFlag := flags.NewStringFlag("file", "f", "path to the YAML file containing the resource data to be updated", "")
+	projectFlag := flags.NewStringFlag("project", "p", "Mandatory for resources other than projects", "")
+	fileFlag := flags.NewStringFlag("file", "f", "path to the YAML file containing the resource data to be updated; mandatory", "")
 
 	cmd := &cobra.Command{
 		Use:   "update <resource> <id>",

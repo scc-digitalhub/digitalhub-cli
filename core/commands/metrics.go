@@ -15,8 +15,8 @@ import (
 
 var metricsCmd = func() *cobra.Command {
 	envFlag := flags.NewStringFlag("env", "e", "environment", "")
-	projectFlag := flags.NewStringFlag("project", "p", "project", "")
-	containerFlag := flags.NewStringFlag("container", "c", "container", "")
+	projectFlag := flags.NewStringFlag("project", "p", "Mandatory", "")
+	containerFlag := flags.NewStringFlag("container", "c", "Container ID", "")
 
 	cmd := &cobra.Command{
 		Use:   "metrics <resource> <id>",

@@ -20,7 +20,7 @@ import (
 
 func UploadHandler(env, input, project, resource string, id string, name string) error {
 	if input == "" {
-		return errors.New("missing required input file or directory: --input/-i")
+		return errors.New("missing required input file or directory")
 	}
 
 	endpoint := utils.TranslateEndpoint(resource)

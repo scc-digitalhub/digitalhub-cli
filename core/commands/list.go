@@ -17,11 +17,11 @@ var listCmd = func() *cobra.Command {
 	// Declare local flags using generic constructors
 	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	outFlag := flags.NewStringFlag("out", "o", "output format (short, json, yaml)", "short")
-	projectFlag := flags.NewStringFlag("project", "p", "project", "")
-	nameFlag := flags.NewStringFlag("name", "n", "name", "")
+	projectFlag := flags.NewStringFlag("project", "p", "Mandatory for resources other than projects", "")
+	nameFlag := flags.NewStringFlag("name", "n", "If specified, all versions of the resource will be listed", "")
 
-	kindFlag := flags.NewStringFlag("kind", "k", "kind", "")
-	stateFlag := flags.NewStringFlag("state", "s", "state", "")
+	kindFlag := flags.NewStringFlag("kind", "k", "Filter by kind", "")
+	stateFlag := flags.NewStringFlag("state", "s", "Filter by state", "")
 
 	cmd := &cobra.Command{
 		Use:   "list <resource>",

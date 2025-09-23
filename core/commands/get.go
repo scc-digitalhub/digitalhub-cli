@@ -18,11 +18,11 @@ var getCmd = func() *cobra.Command {
 	// Local flag declarations
 	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	outFlag := flags.NewStringFlag("out", "o", "output format (short, json, yaml)", "")
-	projectFlag := flags.NewStringFlag("project", "p", "project", "")
-	nameFlag := flags.NewStringFlag("name", "n", "name", "")
+	projectFlag := flags.NewStringFlag("project", "p", "Mandatory for resources other than projects", "")
+	nameFlag := flags.NewStringFlag("name", "n", "Alternative to id, will retrieve latest version", "")
 
 	cmd := &cobra.Command{
-		Use:   "get <resource> [id]",
+		Use:   "get <resource> [<id>]",
 		Short: "Retrieve a resource",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 1 || len(args) > 2 {

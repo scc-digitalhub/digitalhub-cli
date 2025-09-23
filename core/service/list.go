@@ -30,7 +30,7 @@ func ListResourcesHandler(env string, output string, project string, name string
 	format := utils.TranslateFormat(output)
 
 	if endpoint != "projects" && project == "" {
-		return errors.New("project is mandatory when listing resources other than projects")
+		return errors.New("Project is mandatory when performing this operation on resources other than projects.")
 	}
 
 	// Build query params

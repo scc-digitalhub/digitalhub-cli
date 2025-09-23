@@ -9,18 +9,19 @@ import (
 	"dhcli/core/flags"
 	"dhcli/core/service"
 	"errors"
-	"github.com/spf13/cobra"
 	"log"
+
+	"github.com/spf13/cobra"
 )
 
 var uploadCmd = func() *cobra.Command {
 	envFlag := flags.NewStringFlag("env", "e", "environment", "")
-	projectFlag := flags.NewStringFlag("project", "p", "project", "")
-	nameFlag := flags.NewStringFlag("name", "n", "name", "")
-	inputFlag := flags.NewStringFlag("file", "f", "input filename or directory", "")
+	projectFlag := flags.NewStringFlag("project", "p", "Mandatory for resources other than projects", "")
+	nameFlag := flags.NewStringFlag("name", "n", "Mandatory when creating a new artifact", "")
+	inputFlag := flags.NewStringFlag("file", "f", "Input filename or directory; mandatory", "")
 
 	cmd := &cobra.Command{
-		Use:   "upload <resource>",
+		Use:   "upload <resource> [<id>]",
 		Short: "Upload a resource on the S3 aws",
 		Long:  "Upload an artifact from ........................",
 		Args: func(cmd *cobra.Command, args []string) error {

@@ -17,13 +17,13 @@ import (
 var deleteCmd = func() *cobra.Command {
 	// Declare flags locally with proper initialization
 	envFlag := flags.NewStringFlag("env", "e", "environment", "")
-	projectFlag := flags.NewStringFlag("project", "p", "project", "")
-	nameFlag := flags.NewStringFlag("name", "n", "name", "")
-	confirmFlag := flags.NewBoolFlag("confirm", "y", "skips the deletion confirmation prompt", false)
-	cascadeFlag := flags.NewBoolFlag("cascade", "c", "if set, also deletes related resources (for projects)", false)
+	projectFlag := flags.NewStringFlag("project", "p", "Mandatory for resources other than projects", "")
+	nameFlag := flags.NewStringFlag("name", "n", "Alternative to id, will delete all versions of resource", "")
+	confirmFlag := flags.NewBoolFlag("confirm", "y", "Skips the deletion confirmation prompt", false)
+	cascadeFlag := flags.NewBoolFlag("cascade", "c", "If set, also deletes related resources (for projects)", false)
 
 	cmd := &cobra.Command{
-		Use:   "delete <resource> [id]",
+		Use:   "delete <resource> [<id>]",
 		Short: "Delete a resource by ID or name",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 1 || len(args) > 2 {

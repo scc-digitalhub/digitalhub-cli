@@ -16,7 +16,7 @@ import (
 var resumeCmd = func() *cobra.Command {
 	// Define local env flag
 	envFlag := flags.NewStringFlag("env", "e", "environment", "")
-	projectFlag := flags.NewStringFlag("project", "p", "project", "")
+	projectFlag := flags.NewStringFlag("project", "p", "Mandatory", "")
 
 	cmd := &cobra.Command{
 		Use:   "resume <resource> <id>",

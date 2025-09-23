@@ -18,10 +18,10 @@ var createCmd = func() *cobra.Command {
 	// Declare cmd all flags
 
 	envFlag := flags.NewStringFlag("env", "e", "environment", "")
-	projectFlag := flags.NewStringFlag("project", "p", "project", "")
-	nameFlag := flags.NewStringFlag("name", "n", "name", "")
-	resetIdFlag := flags.NewBoolFlag("reset-id", "r", "if set, removes the id field from the file to ensure the server assigns a new one", false)
-	fileFlag := flags.NewStringFlag("file", "f", "path to a YAML file containing the resource definition", "")
+	projectFlag := flags.NewStringFlag("project", "p", "Mandatory for resources other than projects", "")
+	nameFlag := flags.NewStringFlag("name", "n", "Projects may be created with name alone", "")
+	resetIdFlag := flags.NewBoolFlag("reset-id", "r", "If set, removes the id field from the file to ensure the server assigns a new one", false)
+	fileFlag := flags.NewStringFlag("file", "f", "Path to a YAML file containing the resource definition, mandatory for resources other than projects", "")
 
 	cmd := &cobra.Command{
 		Use:   "create <resource>",

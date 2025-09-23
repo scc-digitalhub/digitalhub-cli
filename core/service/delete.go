@@ -43,10 +43,10 @@ func DeleteHandler(env string, project string, name string, confirm bool, cascad
 			os.Exit(1)
 		}
 		if endpoint != "projects" {
-			confirmationMessage = fmt.Sprintf("All versions of endpoint named '%v' (%v) will be deleted, proceed? Y/n", name, endpoint)
+			confirmationMessage = fmt.Sprintf("All versions of resource '%v' (%v) will be deleted, proceed? Y/n", name, endpoint)
 			params["name"] = name
 		} else {
-			confirmationMessage = fmt.Sprintf("Resource %v (%v) will be deleted, proceed? Y/n", name, endpoint)
+			confirmationMessage = fmt.Sprintf("Project '%v' will be deleted, proceed? Y/n", name)
 			id = name
 		}
 	}

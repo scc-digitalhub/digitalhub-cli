@@ -27,7 +27,7 @@ func GetHandler(env string, output string, project string, name string, resource
 	format := utils.TranslateFormat(output)
 
 	if endpoint != "projects" && project == "" {
-		return errors.New("project is mandatory when working with resources other than projects")
+		return errors.New("Project is mandatory when performing this operation on resources other than projects.")
 	}
 
 	params := map[string]string{}
