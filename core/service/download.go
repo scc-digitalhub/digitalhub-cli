@@ -17,7 +17,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/spf13/viper"
 	"sigs.k8s.io/yaml"
 )
@@ -155,9 +154,10 @@ func DownloadHandler(env string, destination string, output string, project stri
 					log.Println("Error downloading from S3:", err)
 				}
 
-				// Rebuild local target paths for the downloaded files
+				// Rebuild local target paths for the downloaded files (ORA con paginazione completa)
 				baseDir := dirBaseForLocalTarget(localPath)
-				files, err := s3Client.ListFiles(ctx, parsedPath.Host, parsedPath.Path, aws.Int32(200))
+
+				files, err := s3Client.ListFilesAll(ctx, parsedPath.Host, parsedPath.Path)
 				if err != nil {
 					log.Printf("Warning: failed to list S3 folder for reporting (%v)\n", err)
 					break

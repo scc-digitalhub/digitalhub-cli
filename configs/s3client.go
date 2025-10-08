@@ -70,18 +70,34 @@ type S3File struct {
 	LastModified string
 }
 
-// ListFiles lists all objects under a given prefix (like a folder)
-// TODO add Continuation Token
-func (c *Client) ListFiles(ctx context.Context, bucket string, prefix string, maxKeys *int32) ([]S3File, error) {
+/*
+ListFilesPaged lists a single "page" of objects with continuation token support.
+
+- bucket, prefix: bucket e "cartella"
+- maxKeys: quante chiavi per pagina (nil = default S3; in genere imposta 1000)
+- continuationToken: token restituito dalla pagina precedente (nil per la prima)
+
+Ritorna:
+- files della pagina
+- nextContinuationToken (nil se non c’è una pagina successiva)
+*/
+func (c *Client) ListFilesPaged(
+	ctx context.Context,
+	bucket string,
+	prefix string,
+	maxKeys *int32,
+	continuationToken *string,
+) ([]S3File, *string, error) {
 	input := &s3.ListObjectsV2Input{
-		Bucket:  aws.String(bucket),
-		Prefix:  aws.String(prefix),
-		MaxKeys: maxKeys,
+		Bucket:            aws.String(bucket),
+		Prefix:            aws.String(prefix),
+		MaxKeys:           maxKeys,
+		ContinuationToken: continuationToken,
 	}
 
 	resp, err := c.s3.ListObjectsV2(ctx, input)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list objects in S3: %w", err)
+		return nil, nil, fmt.Errorf("failed to list objects in S3: %w", err)
 	}
 
 	files := make([]S3File, 0, len(resp.Contents))
@@ -98,7 +114,41 @@ func (c *Client) ListFiles(ctx context.Context, bucket string, prefix string, ma
 		})
 	}
 
-	return files, nil
+	return files, resp.NextContinuationToken, nil
+}
+
+/*
+ListFilesAll lists ALL objects under a given prefix by following continuation tokens
+fino ad esaurire le pagine.
+*/
+func (c *Client) ListFilesAll(ctx context.Context, bucket string, prefix string) ([]S3File, error) {
+	var allFiles []S3File
+	var token *string
+	maxResult := int32(200)
+
+	for {
+		files, nextToken, err := c.ListFilesPaged(ctx, bucket, prefix, &maxResult, token)
+		if err != nil {
+			return nil, err
+		}
+		allFiles = append(allFiles, files...)
+
+		if nextToken == nil || (nextToken != nil && *nextToken == "") {
+			break
+		}
+		token = nextToken
+	}
+
+	return allFiles, nil
+}
+
+/*
+DEPRECATO (compat): ListFiles fa una sola pagina.
+Usa ListFilesAll o ListFilesPaged.
+*/
+func (c *Client) ListFiles(ctx context.Context, bucket string, prefix string, maxKeys *int32) ([]S3File, error) {
+	files, _, err := c.ListFilesPaged(ctx, bucket, prefix, maxKeys, nil)
+	return files, err
 }
 
 // DownloadFile downloads a file from S3 and saves it locally
