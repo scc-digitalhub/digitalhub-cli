@@ -30,7 +30,7 @@ type DownloadInfo struct {
 // DownloadHandler downloads artifacts and reports local target paths.
 // - short: prints local paths
 // - json/yaml: prints filename, size, path for each downloaded file
-func DownloadHandler(env string, destination string, output string, project string, name string, resource string, id string) error {
+func DownloadHandler(env string, destination string, output string, project string, name string, resource string, id string, verbose bool) error {
 	endpoint := utils.TranslateEndpoint(resource)
 
 	if endpoint != "projects" && project == "" {
@@ -152,13 +152,12 @@ func DownloadHandler(env string, destination string, output string, project stri
 			parsedPath.Path = strings.TrimPrefix(parsedPath.Path, "/")
 
 			if strings.HasSuffix(parsedPath.Path, "/") {
-				// Directory download (paginato), con stesso comportamento di cleanLocalPath:
-				// non mantenere il prefisso root nel path locale.
-				if err := utils.DownloadS3FileOrDir(s3Client, ctx, parsedPath, localPath); err != nil {
+				// Directory download (paginato)
+				if err := utils.DownloadS3FileOrDir(s3Client, ctx, parsedPath, localPath, verbose); err != nil {
 					log.Println("Error downloading from S3:", err)
 				}
 
-				// Rebuild local target paths per reporting (ORA con lista completa)
+				// Rebuild local target paths per reporting (lista completa)
 				baseDir := dirBaseForLocalTarget(localPath)
 				files, err := s3Client.ListFilesAll(ctx, parsedPath.Host, parsedPath.Path)
 				if err != nil {
@@ -178,7 +177,7 @@ func DownloadHandler(env string, destination string, output string, project stri
 				}
 			} else {
 				// Single file
-				if err := utils.DownloadS3FileOrDir(s3Client, ctx, parsedPath, localPath); err != nil {
+				if err := utils.DownloadS3FileOrDir(s3Client, ctx, parsedPath, localPath, verbose); err != nil {
 					log.Println("Error downloading from S3:", err)
 					continue
 				}
