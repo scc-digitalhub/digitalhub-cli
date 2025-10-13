@@ -172,35 +172,11 @@ func (c *Client) WalkPrefix(
 	return nil
 }
 
-/* -------------------- DOWNLOAD / UPLOAD -------------------- */
-
-func (c *Client) DownloadFile(ctx context.Context, bucket, key, localPath string) error {
-	out, err := c.s3.GetObject(ctx, &s3.GetObjectInput{
-		Bucket: &bucket,
-		Key:    &key,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to get object from S3: %w", err)
-	}
-	defer out.Body.Close()
-
-	f, err := os.Create(localPath)
-	if err != nil {
-		return fmt.Errorf("failed to create local file: %w", err)
-	}
-	defer f.Close()
-
-	if _, err := io.Copy(f, out.Body); err != nil {
-		return fmt.Errorf("failed to write to local file: %w", err)
-	}
-	return nil
-}
-
-// ---- NUOVO: download con progress callback (non rompe la tua API esistente)
+/* -------------------- PROGRESS HOOK -------------------- */
 
 type ProgressHook struct {
 	OnStart    func(key string, totalBytes int64)                     // chiamata una volta all’inizio
-	OnProgress func(key string, written, totalBytes int64)            // chiamata durante il download
+	OnProgress func(key string, written, totalBytes int64)            // chiamata periodicamente
 	OnDone     func(key string, totalBytes int64, took time.Duration) // a fine file
 }
 
@@ -222,6 +198,30 @@ func (pw *progressWriter) Write(p []byte) (int, error) {
 		pw.lastEmit = now
 	}
 	return n, nil
+}
+
+/* -------------------- DOWNLOAD -------------------- */
+
+func (c *Client) DownloadFile(ctx context.Context, bucket, key, localPath string) error {
+	out, err := c.s3.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: &bucket,
+		Key:    &key,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to get object from S3: %w", err)
+	}
+	defer out.Body.Close()
+
+	f, err := os.Create(localPath)
+	if err != nil {
+		return fmt.Errorf("failed to create local file: %w", err)
+	}
+	defer f.Close()
+
+	if _, err := io.Copy(f, out.Body); err != nil {
+		return fmt.Errorf("failed to write to local file: %w", err)
+	}
+	return nil
 }
 
 func (c *Client) DownloadFileWithProgress(
@@ -253,7 +253,7 @@ func (c *Client) DownloadFileWithProgress(
 	pw := &progressWriter{
 		key:        key,
 		total:      total,
-		interval:   250 * time.Millisecond, // throttle degli aggiornamenti
+		interval:   250 * time.Millisecond,
 		onProgress: nil,
 	}
 	if hook != nil {
@@ -273,6 +273,9 @@ func (c *Client) DownloadFileWithProgress(
 	return nil
 }
 
+/* -------------------- UPLOAD -------------------- */
+
+// Compat: upload senza progress (non tocco il tuo codice esistente)
 func (c *Client) UploadFile(ctx context.Context, bucket, key string, file *os.File) (interface{}, error) {
 	const threshold = 100 * 1024 * 1024
 
@@ -285,14 +288,13 @@ func (c *Client) UploadFile(ctx context.Context, bucket, key string, file *os.Fi
 		return nil, fmt.Errorf("seek error: %w", err)
 	}
 
+	// Detect MIME TYPE
 	buf := make([]byte, 512)
 	n, _ := file.Read(buf)
 	mime := http.DetectContentType(buf[:n])
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
 		return nil, fmt.Errorf("rewind error: %w", err)
 	}
-
-	fmt.Printf("Uploading to s3://%s/%s (%.2fMB, type: %s)\n", bucket, key, float64(size)/(1024*1024), mime)
 
 	if size > threshold {
 		return manager.NewUploader(c.s3).Upload(ctx, &s3.PutObjectInput{
@@ -310,4 +312,73 @@ func (c *Client) UploadFile(ctx context.Context, bucket, key string, file *os.Fi
 		ContentLength: aws.Int64(size),
 		ContentType:   aws.String(mime),
 	})
+}
+
+// Nuovo: upload con progress (usa lo stesso threshold/strategy)
+func (c *Client) UploadFileWithProgress(
+	ctx context.Context,
+	bucket, key string,
+	file *os.File,
+	hook *ProgressHook,
+) (interface{}, error) {
+	const threshold = 100 * 1024 * 1024
+
+	info, err := file.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("stat error: %w", err)
+	}
+	size := info.Size()
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		return nil, fmt.Errorf("seek error: %w", err)
+	}
+
+	// MIME
+	header := make([]byte, 512)
+	n, _ := file.Read(header)
+	mime := http.DetectContentType(header[:n])
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		return nil, fmt.Errorf("rewind error: %w", err)
+	}
+
+	if hook != nil && hook.OnStart != nil {
+		hook.OnStart(key, size)
+	}
+
+	pw := &progressWriter{
+		key:        key,
+		total:      size,
+		interval:   250 * time.Millisecond,
+		onProgress: nil,
+	}
+	if hook != nil {
+		pw.onProgress = hook.OnProgress
+	}
+
+	start := time.Now()
+	reader := io.TeeReader(file, pw)
+
+	if size > threshold {
+		out, err := manager.NewUploader(c.s3).Upload(ctx, &s3.PutObjectInput{
+			Bucket:      aws.String(bucket),
+			Key:         aws.String(key),
+			Body:        reader,
+			ContentType: aws.String(mime),
+		})
+		if hook != nil && hook.OnDone != nil {
+			hook.OnDone(key, size, time.Since(start))
+		}
+		return out, err
+	}
+
+	out, err := c.s3.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:        aws.String(bucket),
+		Key:           aws.String(key),
+		Body:          reader,
+		ContentLength: aws.Int64(size),
+		ContentType:   aws.String(mime),
+	})
+	if hook != nil && hook.OnDone != nil {
+		hook.OnDone(key, size, time.Since(start))
+	}
+	return out, err
 }
