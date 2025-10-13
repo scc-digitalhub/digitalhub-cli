@@ -13,14 +13,15 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/viper"
 )
 
-func UploadHandler(env, input, project, resource string, id string, name string) error {
+func UploadHandler(env, input, project, resource string, id string, name string, verbose bool) error {
 	if input == "" {
-		return errors.New("missing required input file or directory: --input/-i")
+		return errors.New("missing required input file or directory")
 	}
 
 	endpoint := utils.TranslateEndpoint(resource)
@@ -68,25 +69,19 @@ func UploadHandler(env, input, project, resource string, id string, name string)
 		}
 
 		payload, err := json.Marshal(entity)
-		fmt.Printf("Payload for artifact creation: %s\n", payload)
 		if err != nil {
 			return fmt.Errorf("failed to marshal artifact creation payload: %w", err)
 		}
 		url := utils.BuildCoreUrl(project, endpoint, "", nil)
-		log.Printf("Creating artifact at URL: %s", url)
 		req := utils.PrepareRequest("POST", url, payload, viper.GetString(utils.DhCoreAccessToken))
-		_, err = utils.DoRequest(req)
-		if err != nil {
+		if _, err = utils.DoRequest(req); err != nil {
 			return fmt.Errorf("failed to create artifact: %w", err)
 		}
 		log.Printf("Artifact created with ID: %s", id)
-
 	}
 
 	// From here on, we assume the artifact already exists and we are uploading to it
 	url := utils.BuildCoreUrl(project, endpoint, id, nil)
-	log.Printf("Requesting artifact info from URL: %s", url)
-
 	req := utils.PrepareRequest("GET", url, nil, viper.GetString(utils.DhCoreAccessToken))
 	body, err := utils.DoRequest(req)
 	if err != nil {
@@ -137,13 +132,12 @@ func UploadHandler(env, input, project, resource string, id string, name string)
 		return fmt.Errorf("failed to create S3 client: %w", err)
 	}
 
-	// Inner function to update the status
+	// Helper: update status back to CORE
 	updateStatus := func(artifactKey string, updateData map[string]interface{}) error {
 		existingData, ok := artifactMap[artifactKey].(map[string]interface{})
 		if !ok {
 			existingData = make(map[string]interface{})
 		}
-
 		merged := utils.MergeMaps(existingData, updateData, utils.MergeConfig{})
 		artifactMap[artifactKey] = merged
 
@@ -151,12 +145,9 @@ func UploadHandler(env, input, project, resource string, id string, name string)
 		if err != nil {
 			return fmt.Errorf("failed to marshal updated artifact: %w", err)
 		}
-
 		updateURL := utils.BuildCoreUrl(project, endpoint, id, nil)
 		req := utils.PrepareRequest("PUT", updateURL, payload, viper.GetString(utils.DhCoreAccessToken))
-
-		_, err = utils.DoRequest(req)
-		if err != nil {
+		if _, err = utils.DoRequest(req); err != nil {
 			return fmt.Errorf("failed to update artifact status with data %v: %w", updateData, err)
 		}
 		return nil
@@ -174,10 +165,11 @@ func UploadHandler(env, input, project, resource string, id string, name string)
 		return fmt.Errorf("cannot access input: %w", err)
 	}
 
-	files := make([]map[string]interface{}, 0)
+	var files []map[string]interface{}
 
+	// Messaggio utente: sempre un banner minimo su stderr (ma la stampa è dentro utils)
 	if fileInfo.IsDir() {
-		_, files, err = utils.UploadS3Dir(client, ctx, parsedPath, input)
+		_, files, err = utils.UploadS3Dir(client, ctx, parsedPath, input, verbose)
 		if err != nil {
 			_ = updateStatus("status", map[string]interface{}{"state": "ERROR"})
 			return fmt.Errorf("upload failed: %w", err)
@@ -185,15 +177,15 @@ func UploadHandler(env, input, project, resource string, id string, name string)
 	} else {
 		var targetKey string
 		if strings.HasSuffix(parsedPath.Path, "/") {
-			targetKey = parsedPath.Path + fileInfo.Name()
+			targetKey = filepath.ToSlash(filepath.Join(parsedPath.Path, fileInfo.Name()))
 		} else {
 			targetKey = parsedPath.Path
 		}
-		_, files, err = utils.UploadS3File(client, ctx, parsedPath.Host, targetKey, input)
+		_, files, err = utils.UploadS3File(client, ctx, parsedPath.Host, targetKey, input, verbose)
 		if err != nil {
-			log.Fatalf("Upload failed: %v", err)
+			_ = updateStatus("status", map[string]interface{}{"state": "ERROR"})
+			return fmt.Errorf("upload failed: %w", err)
 		}
-
 	}
 
 	if err := updateStatus("status", map[string]interface{}{

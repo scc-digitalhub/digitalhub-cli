@@ -17,7 +17,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/spf13/viper"
 	"sigs.k8s.io/yaml"
 )
@@ -31,7 +30,7 @@ type DownloadInfo struct {
 // DownloadHandler downloads artifacts and reports local target paths.
 // - short: prints local paths
 // - json/yaml: prints filename, size, path for each downloaded file
-func DownloadHandler(env string, destination string, output string, project string, name string, resource string, id string) error {
+func DownloadHandler(env string, destination string, output string, project string, name string, resource string, id string, verbose bool) error {
 	endpoint := utils.TranslateEndpoint(resource)
 
 	if endpoint != "projects" && project == "" {
@@ -149,15 +148,18 @@ func DownloadHandler(env string, destination string, output string, project stri
 				s3Client = client
 			}
 
+			// Normalizza l'S3 key (rimuove eventuale leading "/")
+			parsedPath.Path = strings.TrimPrefix(parsedPath.Path, "/")
+
 			if strings.HasSuffix(parsedPath.Path, "/") {
-				// Directory download
-				if err := utils.DownloadS3FileOrDir(s3Client, ctx, parsedPath, localPath); err != nil {
+				// Directory download (paginato)
+				if err := utils.DownloadS3FileOrDir(s3Client, ctx, parsedPath, localPath, verbose); err != nil {
 					log.Println("Error downloading from S3:", err)
 				}
 
-				// Rebuild local target paths for the downloaded files
+				// Rebuild local target paths per reporting (lista completa)
 				baseDir := dirBaseForLocalTarget(localPath)
-				files, err := s3Client.ListFiles(ctx, parsedPath.Host, parsedPath.Path, aws.Int32(200))
+				files, err := s3Client.ListFilesAll(ctx, parsedPath.Host, parsedPath.Path)
 				if err != nil {
 					log.Printf("Warning: failed to list S3 folder for reporting (%v)\n", err)
 					break
@@ -175,7 +177,7 @@ func DownloadHandler(env string, destination string, output string, project stri
 				}
 			} else {
 				// Single file
-				if err := utils.DownloadS3FileOrDir(s3Client, ctx, parsedPath, localPath); err != nil {
+				if err := utils.DownloadS3FileOrDir(s3Client, ctx, parsedPath, localPath, verbose); err != nil {
 					log.Println("Error downloading from S3:", err)
 					continue
 				}
