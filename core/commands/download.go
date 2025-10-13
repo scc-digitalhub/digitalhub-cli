@@ -20,7 +20,9 @@ var downloadCmd = func() *cobra.Command {
 	projectFlag := flags.NewStringFlag("project", "p", "Mandatory for resources other than projects", "")
 	nameFlag := flags.NewStringFlag("name", "n", "Alternative to id, will download latest version", "")
 	destinationFlag := flags.NewStringFlag("destination", "d", "output filename or directory", "")
-	outFlag := flags.NewStringFlag("out", "o", "output format (short, json, yaml)", "")
+	outFlag := flags.NewStringFlag("out", "o", "Output format (short, json, yaml)", "")
+	verboseFlag := flags.NewBoolFlag("verbose", "v", "Verbose progress/logging", false)
+	
 	cmd := &cobra.Command{
 		Use:   "download <resource> [<id>]",
 		Short: "Download a resource from the S3 aws",
@@ -45,6 +47,7 @@ var downloadCmd = func() *cobra.Command {
 				*nameFlag.Value,
 				args[0],
 				id,
+				*verboseFlag.Value,
 			); err != nil {
 				log.Fatalf("Download failed: %v", err)
 			}
@@ -57,6 +60,7 @@ var downloadCmd = func() *cobra.Command {
 	flags.AddFlag(cmd, &nameFlag)
 	flags.AddFlag(cmd, &outFlag)
 	flags.AddFlag(cmd, &destinationFlag)
+	flags.AddFlag(cmd, &verboseFlag)
 
 	return cmd
 }()

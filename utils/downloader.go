@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package utils
 
 import (
@@ -9,22 +13,29 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
-// DownloadHTTPFile function for get a file from http or https
+/* ------------ logging helpers (stderr) ------------ */
+
+func infof(format string, a ...any) {
+	fmt.Fprintf(os.Stderr, "[INFO] "+format+"\n", a...)
+}
+func warnf(format string, a ...any) {
+	fmt.Fprintf(os.Stderr, "[WARN] "+format+"\n", a...)
+}
+
+/* ------------ HTTP ------------ */
+
 func DownloadHTTPFile(url string, destination string) error {
 	resp, err := http.Get(url)
 	if err != nil {
 		return err
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-
-		}
-	}(resp.Body)
+	defer func(Body io.ReadCloser) { _ = Body.Close() }(resp.Body)
 
 	out, err := os.Create(destination)
 	if err != nil {
@@ -36,58 +47,157 @@ func DownloadHTTPFile(url string, destination string) error {
 	return err
 }
 
-// DownloadS3FileOrDir Function for download file or directory form S3
-func DownloadS3FileOrDir(s3Client *s3client.Client, ctx context.Context,
-	parsedPath *ParsedPath, localPath string,
+/* ------------ S3: file o directory (with continuation token) ------------ */
+
+func DownloadS3FileOrDir(
+	s3Client *s3client.Client,
+	ctx context.Context,
+	parsedPath *ParsedPath,
+	localPath string,
+	verbose bool,
 ) error {
 	bucket := parsedPath.Host
-	path := parsedPath.Path
+	// normalizza: rimuovi eventuale leading "/" (alcuni artifact salvano "/xxx/..")
+	path := strings.TrimPrefix(parsedPath.Path, "/")
 
-	//TODO for pagination use ContinuationToken (check how to do it)
-
-	// If folder
+	// Directory?
 	if strings.HasSuffix(path, "/") {
+		localBase := cleanLocalPath(localPath)
 
-		localPath = cleanLocalPath(localPath)
-
-		files, err := s3Client.ListFiles(ctx, bucket, path, aws.Int32(200)) //TODO remove maxKeys???
-		if err != nil {
-			return fmt.Errorf("failed to list S3 folder: %w", err)
+		var totalFiles int
+		var totalBytes int64
+		if verbose {
+			// in verbose provo a dare numeri totali prima di iniziare
+			all, err := s3Client.ListFilesAll(ctx, bucket, path)
+			if err != nil {
+				warnf("Listing failed, proceeding without totals: %v", err)
+			} else {
+				totalFiles = len(all)
+				for _, f := range all {
+					totalBytes += f.Size
+				}
+				infof("Preparing download s3://%s/%s → %s (%d files, %.2f MB)",
+					bucket, path, displayPath(localBase), totalFiles, float64(totalBytes)/(1024*1024))
+			}
+		}
+		if !verbose || totalFiles == 0 {
+			// messaggio minimo anche senza verbose (o se count non disponibile)
+			infof("Preparing download s3://%s/%s → %s", bucket, path, displayPath(localBase))
 		}
 
-		for _, file := range files {
-			// Build path
-			// TODO strip prefix and keep all the folder structure
-			relativePath := strings.TrimPrefix(file.Path, path)
+		// Scarica via WalkPrefix (pagination)
+		pageSize := int32(1000)
+		var idx int
 
-			//fmt.Printf("ParsedPath: Host=%s, Path=%s\n, LocalPath=%s\n", parsedPath.Host, parsedPath.Path, localPath)
-			targetPath := filepath.Join(localPath, relativePath)
+		return s3Client.WalkPrefix(ctx, bucket, path, pageSize, func(obj s3types.Object) error {
+			idx++
+			key := aws.ToString(obj.Key)
+			relativePath := strings.TrimPrefix(key, path)
+			targetPath := filepath.Join(localBase, relativePath)
 
-			// Create a directory if necessary
-			if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+			if err := os.MkdirAll(filepath.Dir(targetPath), 0o755); err != nil {
 				return fmt.Errorf("failed to create local directory: %w", err)
 			}
 
-			if err := s3Client.DownloadFile(ctx, bucket, file.Path, targetPath); err != nil {
-				return fmt.Errorf("failed to download file: %w", err)
+			if verbose {
+				if totalFiles > 0 {
+					fmt.Fprintf(os.Stderr, "   [%d/%d] %s\n", idx, totalFiles, relativePath)
+				} else {
+					fmt.Fprintf(os.Stderr, "   [%d] %s\n", idx, relativePath)
+				}
+
+				// barra di avanzamento
+				hook := &s3client.ProgressHook{
+					OnStart: func(k string, total int64) {
+						if total > 0 {
+							fmt.Fprintf(os.Stderr, "      └─ size: %.2f MB\n", float64(total)/(1024*1024))
+						}
+					},
+					OnProgress: func(k string, written, total int64) {
+						if total <= 0 {
+							return
+						}
+						pct := float64(written) / float64(total) * 100
+						fmt.Fprintf(os.Stderr, "\r      └─ downloading: %6.2f%%", pct)
+					},
+					OnDone: func(k string, total int64, took time.Duration) {
+						if total > 0 {
+							fmt.Fprintf(os.Stderr, "\r      └─ done:        100.00%% in %s\n", took.Truncate(100*time.Millisecond))
+						} else {
+							fmt.Fprintf(os.Stderr, "      └─ done in %s\n", took.Truncate(100*time.Millisecond))
+						}
+					},
+				}
+				if err := s3Client.DownloadFileWithProgress(ctx, bucket, key, targetPath, hook); err != nil {
+					return fmt.Errorf("failed to download file: %w", err)
+				}
+			} else {
+				// silenzioso dopo il banner iniziale
+				if err := s3Client.DownloadFile(ctx, bucket, key, targetPath); err != nil {
+					return fmt.Errorf("failed to download file: %w", err)
+				}
 			}
-		}
-	} else {
-		// Single file
-		if err := s3Client.DownloadFile(ctx, bucket, path, localPath); err != nil {
-			return fmt.Errorf("S3 download failed: %w", err)
-		}
+
+			return nil
+		})
 	}
 
+	// Singolo file
+	key := path
+	if verbose {
+		infof("Preparing download s3://%s/%s → %s", bucket, key, displayPath(localPath))
+		hook := &s3client.ProgressHook{
+			OnStart: func(k string, total int64) {
+				if total > 0 {
+					fmt.Fprintf(os.Stderr, "   size: %.2f MB\n", float64(total)/(1024*1024))
+				}
+			},
+			OnProgress: func(k string, written, total int64) {
+				if total <= 0 {
+					return
+				}
+				pct := float64(written) / float64(total) * 100
+				fmt.Fprintf(os.Stderr, "\r   downloading: %6.2f%%", pct)
+			},
+			OnDone: func(k string, total int64, took time.Duration) {
+				if total > 0 {
+					fmt.Fprintf(os.Stderr, "\r   done:        100.00%% in %s\n", took.Truncate(100*time.Millisecond))
+				} else {
+					fmt.Fprintf(os.Stderr, "   done in %s\n", took.Truncate(100*time.Millisecond))
+				}
+			},
+		}
+		if err := s3Client.DownloadFileWithProgress(ctx, bucket, key, localPath, hook); err != nil {
+			return fmt.Errorf("S3 download failed: %w", err)
+		}
+		return nil
+	}
+
+	// non-verbose: banner minimo + download silenzioso
+	infof("Preparing download s3://%s/%s → %s", bucket, key, displayPath(localPath))
+	if err := s3Client.DownloadFile(ctx, bucket, key, localPath); err != nil {
+		return fmt.Errorf("S3 download failed: %w", err)
+	}
 	return nil
 }
 
+/* ------------ helpers ------------ */
+
+// Rimuove l’ultimo segmento dal path locale in modo che i file della “cartella” S3
+// vengano salvati senza includere il prefisso root.
 func cleanLocalPath(path string) string {
 	clean := filepath.Clean(path)
 	parts := strings.Split(clean, string(os.PathSeparator))
-
 	if len(parts) == 1 {
 		return ""
 	}
 	return filepath.Join(parts[:len(parts)-1]...)
+}
+
+// per stampare cartelle vuote come "." invece di stringa vuota
+func displayPath(p string) string {
+	if p == "" {
+		return "."
+	}
+	return p
 }
