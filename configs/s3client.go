@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
 type Client struct {
@@ -39,7 +40,6 @@ func NewClient(ctx context.Context, cfgCreds Config) (*Client, error) {
 		cfgCreds.AccessToken,
 	))
 
-	// Load AWS configuration with credentials and region
 	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithCredentialsProvider(creds),
 		config.WithRegion(cfgCreds.Region),
@@ -48,16 +48,13 @@ func NewClient(ctx context.Context, cfgCreds Config) (*Client, error) {
 		return nil, fmt.Errorf("failed to load AWS config: %w", err)
 	}
 
-	// Initialize S3 client options
 	s3Options := func(o *s3.Options) {
-		// If a custom endpoint is provided, set it as BaseEndpoint
 		if cfgCreds.EndpointURL != "" {
 			o.BaseEndpoint = aws.String(cfgCreds.EndpointURL)
-			o.UsePathStyle = true // Necessary for some S3-compatible services
+			o.UsePathStyle = true // necessario per molti S3-compat
 		}
 	}
 
-	// Create S3 client with the specified options
 	return &Client{
 		s3: s3.NewFromConfig(cfg, s3Options),
 	}, nil
@@ -70,17 +67,8 @@ type S3File struct {
 	LastModified string
 }
 
-/*
-ListFilesPaged lists a single "page" of objects with continuation token support.
+/* -------------------- LIST (paginata) -------------------- */
 
-- bucket, prefix: bucket e "cartella"
-- maxKeys: quante chiavi per pagina (nil = default S3; in genere imposta 1000)
-- continuationToken: token restituito dalla pagina precedente (nil per la prima)
-
-Ritorna:
-- files della pagina
-- nextContinuationToken (nil se non c’è una pagina successiva)
-*/
 func (c *Client) ListFilesPaged(
 	ctx context.Context,
 	bucket string,
@@ -102,89 +90,114 @@ func (c *Client) ListFilesPaged(
 
 	files := make([]S3File, 0, len(resp.Contents))
 	for _, obj := range resp.Contents {
-		name := *obj.Key
+		name := aws.ToString(obj.Key)
 		if prefix != "" && strings.HasPrefix(name, prefix) {
 			name = strings.TrimPrefix(name, prefix)
 		}
 		files = append(files, S3File{
-			Path:         *obj.Key,
+			Path:         aws.ToString(obj.Key),
 			Name:         name,
-			Size:         *obj.Size,
-			LastModified: obj.LastModified.Format("2025-06-02T15:04:05Z07:00"),
+			Size:         aws.ToInt64(obj.Size),
+			LastModified: obj.LastModified.Format("2006-01-02T15:04:05Z07:00"),
 		})
 	}
 
 	return files, resp.NextContinuationToken, nil
 }
 
-/*
-ListFilesAll lists ALL objects under a given prefix by following continuation tokens
-fino ad esaurire le pagine.
-*/
 func (c *Client) ListFilesAll(ctx context.Context, bucket string, prefix string) ([]S3File, error) {
 	var allFiles []S3File
 	var token *string
-	maxResult := int32(200)
+	max := int32(1000)
 
 	for {
-		files, nextToken, err := c.ListFilesPaged(ctx, bucket, prefix, &maxResult, token)
+		files, nextToken, err := c.ListFilesPaged(ctx, bucket, prefix, &max, token)
 		if err != nil {
 			return nil, err
 		}
 		allFiles = append(allFiles, files...)
-
-		if nextToken == nil || (nextToken != nil && *nextToken == "") {
+		if nextToken == nil || *nextToken == "" {
 			break
 		}
 		token = nextToken
 	}
-
 	return allFiles, nil
 }
 
-/*
-DEPRECATO (compat): ListFiles fa una sola pagina.
-Usa ListFilesAll o ListFilesPaged.
-*/
+// compat (una sola pagina)
 func (c *Client) ListFiles(ctx context.Context, bucket string, prefix string, maxKeys *int32) ([]S3File, error) {
 	files, _, err := c.ListFilesPaged(ctx, bucket, prefix, maxKeys, nil)
 	return files, err
 }
 
-// DownloadFile downloads a file from S3 and saves it locally
+/* -------------------- WALK (paginato + callback) -------------------- */
+
+func (c *Client) WalkPrefix(
+	ctx context.Context,
+	bucket string,
+	prefix string,
+	pageSize int32,
+	fn func(obj s3types.Object) error,
+) error {
+	var token *string
+
+	for {
+		input := &s3.ListObjectsV2Input{
+			Bucket:            aws.String(bucket),
+			Prefix:            aws.String(prefix),
+			MaxKeys:           aws.Int32(pageSize),
+			ContinuationToken: token,
+		}
+
+		resp, err := c.s3.ListObjectsV2(ctx, input)
+		if err != nil {
+			return fmt.Errorf("list error: %w", err)
+		}
+
+		for _, obj := range resp.Contents {
+			// escludi placeholder "cartella"
+			if obj.Key != nil && !(strings.HasSuffix(aws.ToString(obj.Key), "/") && aws.ToInt64(obj.Size) == 0) {
+				if err := fn(obj); err != nil {
+					return err
+				}
+			}
+		}
+
+		if resp.NextContinuationToken == nil || *resp.NextContinuationToken == "" {
+			break
+		}
+		token = resp.NextContinuationToken
+	}
+	return nil
+}
+
+/* -------------------- DOWNLOAD / UPLOAD -------------------- */
+
 func (c *Client) DownloadFile(ctx context.Context, bucket, key, localPath string) error {
-
-	// fmt.Printf("Downloading from S3 path: s3://%s/%s\n", bucket, key)
-	// fmt.Printf("Saving to local path: %s\n", localPath)
-
-	output, err := c.s3.GetObject(ctx, &s3.GetObjectInput{
+	out, err := c.s3.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: &bucket,
 		Key:    &key,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to get object from S3: %w", err)
 	}
-	defer output.Body.Close()
+	defer out.Body.Close()
 
-	file, err := os.Create(localPath)
+	f, err := os.Create(localPath)
 	if err != nil {
 		return fmt.Errorf("failed to create local file: %w", err)
 	}
-	defer file.Close()
+	defer f.Close()
 
-	_, err = io.Copy(file, output.Body)
-	if err != nil {
+	if _, err := io.Copy(f, out.Body); err != nil {
 		return fmt.Errorf("failed to write to local file: %w", err)
 	}
-
 	return nil
 }
 
-// UploadFile choose between normal upload or multipart based on threshold
 func (c *Client) UploadFile(ctx context.Context, bucket, key string, file *os.File) (interface{}, error) {
 	const threshold = 100 * 1024 * 1024
 
-	// Get file info
 	info, err := file.Stat()
 	if err != nil {
 		return nil, fmt.Errorf("stat error: %w", err)
@@ -194,7 +207,6 @@ func (c *Client) UploadFile(ctx context.Context, bucket, key string, file *os.Fi
 		return nil, fmt.Errorf("seek error: %w", err)
 	}
 
-	// Detect MIME TYPE
 	buf := make([]byte, 512)
 	n, _ := file.Read(buf)
 	mime := http.DetectContentType(buf[:n])
@@ -204,7 +216,6 @@ func (c *Client) UploadFile(ctx context.Context, bucket, key string, file *os.Fi
 
 	fmt.Printf("Uploading to s3://%s/%s (%.2fMB, type: %s)\n", bucket, key, float64(size)/(1024*1024), mime)
 
-	// Multipart upload with manager
 	if size > threshold {
 		return manager.NewUploader(c.s3).Upload(ctx, &s3.PutObjectInput{
 			Bucket:      aws.String(bucket),
