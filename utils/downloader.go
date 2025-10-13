@@ -37,7 +37,7 @@ func DownloadHTTPFile(url string, destination string) error {
 	return err
 }
 
-/* ------------ S3: file o directory (paginato, continuation token) ------------ */
+/* ------------ S3: file o directory (with continuation token) ------------ */
 
 func DownloadS3FileOrDir(
 	s3Client *s3client.Client,
@@ -46,16 +46,15 @@ func DownloadS3FileOrDir(
 	localPath string,
 ) error {
 	bucket := parsedPath.Host
-	// normalizza: rimuovi leading "/" da path S3 (alcuni artifact salvano "/xxx/..")
+	// normalizza: rimuovi eventuale leading "/" (alcuni artifact salvano "/xxx/..")
 	path := strings.TrimPrefix(parsedPath.Path, "/")
 
-	// È una "cartella"?
+	// Directory?
 	if strings.HasSuffix(path, "/") {
-		// Comportamento "vecchio": NON includere il prefisso root nel path locale.
-		// Salva sotto il parent di localPath (equivalente al tuo cleanLocalPath).
 		localBase := cleanLocalPath(localPath)
 
-		pageSize := int32(1000) // valore alto; se l'endpoint limita, WalkPrefix continua a paginare
+		// use ContinuationToken to paginate files
+		pageSize := int32(200)
 		return s3Client.WalkPrefix(ctx, bucket, path, pageSize, func(obj s3types.Object) error {
 			key := aws.ToString(obj.Key)
 
@@ -85,8 +84,8 @@ func DownloadS3FileOrDir(
 
 /* ------------ helpers ------------ */
 
-// come il tuo vecchio cleanLocalPath: torna il parent dir di localPath
-// (così il prefisso root S3 non è ricreato in locale)
+// Rimuove l’ultimo segmento dal path locale in modo che i file della “cartella” S3
+// vengano salvati senza includere il prefisso root.
 func cleanLocalPath(path string) string {
 	clean := filepath.Clean(path)
 	parts := strings.Split(clean, string(os.PathSeparator))

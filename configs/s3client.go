@@ -40,6 +40,7 @@ func NewClient(ctx context.Context, cfgCreds Config) (*Client, error) {
 		cfgCreds.AccessToken,
 	))
 
+	// Load AWS configuration with credentials and region
 	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithCredentialsProvider(creds),
 		config.WithRegion(cfgCreds.Region),
@@ -48,13 +49,16 @@ func NewClient(ctx context.Context, cfgCreds Config) (*Client, error) {
 		return nil, fmt.Errorf("failed to load AWS config: %w", err)
 	}
 
+	// Initialize S3 client options
 	s3Options := func(o *s3.Options) {
+		// If a custom endpoint is provided, set it as BaseEndpoint
 		if cfgCreds.EndpointURL != "" {
 			o.BaseEndpoint = aws.String(cfgCreds.EndpointURL)
-			o.UsePathStyle = true // necessario per molti S3-compat
+			o.UsePathStyle = true // Necessary for some S3-compatible services
 		}
 	}
 
+	// Create S3 client with the specified options
 	return &Client{
 		s3: s3.NewFromConfig(cfg, s3Options),
 	}, nil
@@ -67,8 +71,7 @@ type S3File struct {
 	LastModified string
 }
 
-/* -------------------- LIST (paginata) -------------------- */
-
+// ListFiles lists all objects under a given prefix (like a folder)
 func (c *Client) ListFilesPaged(
 	ctx context.Context,
 	bucket string,
@@ -108,7 +111,7 @@ func (c *Client) ListFilesPaged(
 func (c *Client) ListFilesAll(ctx context.Context, bucket string, prefix string) ([]S3File, error) {
 	var allFiles []S3File
 	var token *string
-	max := int32(1000)
+	max := int32(200)
 
 	for {
 		files, nextToken, err := c.ListFilesPaged(ctx, bucket, prefix, &max, token)
@@ -131,7 +134,6 @@ func (c *Client) ListFiles(ctx context.Context, bucket string, prefix string, ma
 }
 
 /* -------------------- WALK (paginato + callback) -------------------- */
-
 func (c *Client) WalkPrefix(
 	ctx context.Context,
 	bucket string,
@@ -195,9 +197,11 @@ func (c *Client) DownloadFile(ctx context.Context, bucket, key, localPath string
 	return nil
 }
 
+// UploadFile choose between normal upload or multipart based on threshold
 func (c *Client) UploadFile(ctx context.Context, bucket, key string, file *os.File) (interface{}, error) {
 	const threshold = 100 * 1024 * 1024
 
+	// Get file info
 	info, err := file.Stat()
 	if err != nil {
 		return nil, fmt.Errorf("stat error: %w", err)
@@ -207,6 +211,7 @@ func (c *Client) UploadFile(ctx context.Context, bucket, key string, file *os.Fi
 		return nil, fmt.Errorf("seek error: %w", err)
 	}
 
+	// Detect MIME TYPE
 	buf := make([]byte, 512)
 	n, _ := file.Read(buf)
 	mime := http.DetectContentType(buf[:n])
@@ -216,6 +221,7 @@ func (c *Client) UploadFile(ctx context.Context, bucket, key string, file *os.Fi
 
 	fmt.Printf("Uploading to s3://%s/%s (%.2fMB, type: %s)\n", bucket, key, float64(size)/(1024*1024), mime)
 
+	// Multipart upload with manager
 	if size > threshold {
 		return manager.NewUploader(c.s3).Upload(ctx, &s3.PutObjectInput{
 			Bucket:      aws.String(bucket),
