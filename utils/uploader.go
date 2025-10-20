@@ -44,12 +44,8 @@ func UploadS3File(client *s3client.Client, ctx context.Context, bucket, key, loc
 		return nil, nil, fmt.Errorf("seek error: %w", err)
 	}
 
-	// Banner
-	if verbose {
-		upInfof("Preparing upload %s → s3://%s/%s", displayPathUpload(localPath), bucket, key)
-	} else {
-		upInfof("Preparing upload %s → s3://%s/%s", displayPathUpload(localPath), bucket, key)
-	}
+	// Banner (uguale per verbose / non-verbose)
+	upInfof("Preparing upload %s → s3://%s/%s", displayPathUpload(localPath), bucket, key)
 
 	// Upload
 	var output interface{}
@@ -84,30 +80,53 @@ func UploadS3File(client *s3client.Client, ctx context.Context, bucket, key, loc
 			return nil, nil, fmt.Errorf("upload error: %w", err)
 		}
 	} else {
-		// rewind per sicurezza
+		// NON-verbose: progress globale su una riga (percentuale affidabile dal size locale)
+		st, statErr := file.Stat()
+		var total int64
+		if statErr == nil {
+			total = st.Size()
+		}
+		var gp globalProgress
+		if total > 0 {
+			gp.totalKnown = true
+			gp.totalBytes = total
+		}
+
+		var prevWritten int64
+		hook := &s3client.ProgressHook{
+			OnStart: func(k string, tot int64) {
+				if tot > 0 && !gp.totalKnown {
+					gp.totalKnown = true
+					gp.totalBytes = tot
+				}
+			},
+			OnProgress: func(k string, written, tot int64) {
+				delta := written - prevWritten
+				if delta > 0 {
+					gp.add(delta)
+					gp.render(false)
+				}
+				prevWritten = written
+			},
+			OnDone: func(k string, tot int64, took time.Duration) {
+				if tot > prevWritten {
+					gp.add(tot - prevWritten)
+				}
+				gp.render(true)
+				gp.done()
+			},
+		}
 		if _, err := file.Seek(0, io.SeekStart); err != nil {
 			return nil, nil, fmt.Errorf("seek error: %w", err)
 		}
-		output, err = client.UploadFile(ctx, bucket, key, file)
+		output, err = client.UploadFileWithProgress(ctx, bucket, key, file, hook)
 		if err != nil {
 			return nil, nil, fmt.Errorf("upload error: %w", err)
 		}
 	}
 
 	// Normalize upload response to map
-	result := map[string]interface{}{}
-	switch v := output.(type) {
-	case *s3.PutObjectOutput:
-		if v.ETag != nil {
-			result["etag"] = *v.ETag
-		}
-		if v.VersionId != nil {
-			result["version_id"] = *v.VersionId
-		}
-	case *manager.UploadOutput:
-		result["location"] = v.Location
-		result["upload_id"] = v.UploadID
-	}
+	result := normalizeUploadResult(output)
 
 	// Describe the uploaded file
 	info, err := os.Stat(localPath)
@@ -134,8 +153,9 @@ func UploadS3Dir(client *s3client.Client, ctx context.Context, parsedPath *Parse
 	bucket := parsedPath.Host
 	prefix := parsedPath.Path
 
-	// Enumerazione file locali (per poter stampare [i/N] e totals)
+	// Enumerazione file locali (per stampare [i/N] e calcolare totals)
 	var localFiles []string
+	var totalBytes int64
 	err := filepath.Walk(localPath, func(path string, info os.FileInfo, walkErr error) error {
 		if walkErr != nil {
 			return fmt.Errorf("walk error: %w", walkErr)
@@ -144,6 +164,7 @@ func UploadS3Dir(client *s3client.Client, ctx context.Context, parsedPath *Parse
 			return nil
 		}
 		localFiles = append(localFiles, path)
+		totalBytes += info.Size()
 		return nil
 	})
 	if err != nil {
@@ -152,13 +173,23 @@ func UploadS3Dir(client *s3client.Client, ctx context.Context, parsedPath *Parse
 
 	total := len(localFiles)
 	if verbose {
-		upInfof("Preparing upload directory %s → s3://%s/%s (%d files)", displayPathUpload(localPath), bucket, prefix, total)
+		upInfof("Preparing upload directory %s → s3://%s/%s (%d files, %.2f MB)",
+			displayPathUpload(localPath), bucket, prefix, total, float64(totalBytes)/(1024*1024))
 	} else {
 		upInfof("Preparing upload directory %s → s3://%s/%s", displayPathUpload(localPath), bucket, prefix)
 	}
 
 	var results []map[string]interface{}
 	var fileInfos []map[string]interface{}
+
+	// Progress globale per modalità non-verbose
+	var gp *globalProgress
+	if !verbose {
+		gp = &globalProgress{
+			totalKnown: totalBytes > 0,
+			totalBytes: totalBytes,
+		}
+	}
 
 	for i, path := range localFiles {
 		info, err := os.Stat(path)
@@ -217,14 +248,31 @@ func UploadS3Dir(client *s3client.Client, ctx context.Context, parsedPath *Parse
 			if upErr != nil {
 				return nil, nil, fmt.Errorf("upload error (%s): %w", path, upErr)
 			}
-
 			results = append(results, normalizeUploadResult(out))
 		} else {
+			// non-verbose: aggiorna la progress BAR GLOBALE con un hook per-file
+			var prevWritten int64
+			hook := &s3client.ProgressHook{
+				OnProgress: func(k string, written, total int64) {
+					delta := written - prevWritten
+					if delta > 0 && gp != nil {
+						gp.add(delta)
+						gp.render(false)
+					}
+					prevWritten = written
+				},
+				OnDone: func(k string, total int64, took time.Duration) {
+					if total > prevWritten && gp != nil {
+						gp.add(total - prevWritten)
+						gp.render(true)
+					}
+				},
+			}
 			if _, err := file.Seek(0, io.SeekStart); err != nil {
 				_ = file.Close()
 				return nil, nil, fmt.Errorf("seek error: %w", err)
 			}
-			out, upErr := client.UploadFile(ctx, bucket, s3Key, file)
+			out, upErr := client.UploadFileWithProgress(ctx, bucket, s3Key, file, hook)
 			_ = file.Close()
 			if upErr != nil {
 				return nil, nil, fmt.Errorf("upload error (%s): %w", path, upErr)
@@ -247,6 +295,9 @@ func UploadS3Dir(client *s3client.Client, ctx context.Context, parsedPath *Parse
 		})
 	}
 
+	if !verbose && gp != nil {
+		gp.done()
+	}
 	return results, fileInfos, nil
 }
 

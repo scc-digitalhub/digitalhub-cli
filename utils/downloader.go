@@ -28,7 +28,7 @@ func warnf(format string, a ...any) {
 	fmt.Fprintf(os.Stderr, "[WARN] "+format+"\n", a...)
 }
 
-/* ------------ HTTP ------------ */
+/* ------------ HTTP (con progress “silenzioso” se possibile) ------------ */
 
 func DownloadHTTPFile(url string, destination string) error {
 	resp, err := http.Get(url)
@@ -43,8 +43,32 @@ func DownloadHTTPFile(url string, destination string) error {
 	}
 	defer out.Close()
 
-	_, err = io.Copy(out, resp.Body)
-	return err
+	// progress line unica anche senza verbose
+	gp := &globalProgress{}
+	if resp.ContentLength > 0 {
+		gp.totalKnown = true
+		gp.totalBytes = resp.ContentLength
+	}
+
+	buf := make([]byte, 1024*128) // 128KB
+	for {
+		n, readErr := resp.Body.Read(buf)
+		if n > 0 {
+			if _, werr := out.Write(buf[:n]); werr != nil {
+				return werr
+			}
+			gp.add(int64(n))
+			gp.render(false)
+		}
+		if readErr != nil {
+			if readErr == io.EOF {
+				break
+			}
+			return readErr
+		}
+	}
+	gp.done()
+	return nil
 }
 
 /* ------------ S3: file o directory (with continuation token) ------------ */
@@ -66,30 +90,42 @@ func DownloadS3FileOrDir(
 
 		var totalFiles int
 		var totalBytes int64
-		if verbose {
-			// in verbose provo a dare numeri totali prima di iniziare
-			all, err := s3Client.ListFilesAll(ctx, bucket, path)
-			if err != nil {
-				warnf("Listing failed, proceeding without totals: %v", err)
-			} else {
-				totalFiles = len(all)
-				for _, f := range all {
-					totalBytes += f.Size
-				}
+		var totalsKnown bool
+
+		// Calcolo totals SEMPRE se possibile (serve per la percentuale globale)
+		all, err := s3Client.ListFilesAll(ctx, bucket, path)
+		if err != nil {
+			warnf("Listing failed, proceeding without totals: %v", err)
+			infof("Preparing download s3://%s/%s → %s", bucket, path, displayPath(localBase))
+			totalsKnown = false
+		} else {
+			totalFiles = len(all)
+			for _, f := range all {
+				totalBytes += f.Size
+			}
+			totalsKnown = totalFiles > 0 && totalBytes > 0
+			if verbose {
 				infof("Preparing download s3://%s/%s → %s (%d files, %.2f MB)",
 					bucket, path, displayPath(localBase), totalFiles, float64(totalBytes)/(1024*1024))
+			} else {
+				infof("Preparing download s3://%s/%s → %s", bucket, path, displayPath(localBase))
 			}
-		}
-		if !verbose || totalFiles == 0 {
-			// messaggio minimo anche senza verbose (o se count non disponibile)
-			infof("Preparing download s3://%s/%s → %s", bucket, path, displayPath(localBase))
 		}
 
 		// Scarica via WalkPrefix (pagination)
 		pageSize := int32(1000)
 		var idx int
 
-		return s3Client.WalkPrefix(ctx, bucket, path, pageSize, func(obj s3types.Object) error {
+		// Progress globale SOLO quando non-verbose (in verbose mantieni i dettagli per file)
+		var gp *globalProgress
+		if !verbose {
+			gp = &globalProgress{
+				totalKnown: totalsKnown,
+				totalBytes: totalBytes,
+			}
+		}
+
+		err = s3Client.WalkPrefix(ctx, bucket, path, pageSize, func(obj s3types.Object) error {
 			idx++
 			key := aws.ToString(obj.Key)
 			relativePath := strings.TrimPrefix(key, path)
@@ -106,7 +142,7 @@ func DownloadS3FileOrDir(
 					fmt.Fprintf(os.Stderr, "   [%d] %s\n", idx, relativePath)
 				}
 
-				// barra di avanzamento
+				// barra di avanzamento per-file (già presente)
 				hook := &s3client.ProgressHook{
 					OnStart: func(k string, total int64) {
 						if total > 0 {
@@ -132,14 +168,39 @@ func DownloadS3FileOrDir(
 					return fmt.Errorf("failed to download file: %w", err)
 				}
 			} else {
-				// silenzioso dopo il banner iniziale
-				if err := s3Client.DownloadFile(ctx, bucket, key, targetPath); err != nil {
+				// non-verbose: progress GLOBALE su una riga
+				var prevWritten int64
+				hook := &s3client.ProgressHook{
+					OnProgress: func(k string, written, total int64) {
+						delta := written - prevWritten
+						if delta > 0 && gp != nil {
+							gp.add(delta)
+							gp.render(false)
+						}
+						prevWritten = written
+					},
+					OnDone: func(k string, total int64, took time.Duration) {
+						// in caso di arrotondamenti, assicurati di contare tutto il file
+						if total > prevWritten && gp != nil {
+							gp.add(total - prevWritten)
+							gp.render(true)
+						}
+					},
+				}
+				if err := s3Client.DownloadFileWithProgress(ctx, bucket, key, targetPath, hook); err != nil {
 					return fmt.Errorf("failed to download file: %w", err)
 				}
 			}
 
 			return nil
 		})
+		if err != nil {
+			return err
+		}
+		if !verbose && gp != nil {
+			gp.done()
+		}
+		return nil
 	}
 
 	// Singolo file
@@ -173,9 +234,34 @@ func DownloadS3FileOrDir(
 		return nil
 	}
 
-	// non-verbose: banner minimo + download silenzioso
+	// non-verbose: banner minimo + progress globale su una riga
 	infof("Preparing download s3://%s/%s → %s", bucket, key, displayPath(localPath))
-	if err := s3Client.DownloadFile(ctx, bucket, key, localPath); err != nil {
+	var gp globalProgress
+	var prevWritten int64
+	hook := &s3client.ProgressHook{
+		OnStart: func(k string, total int64) {
+			if total > 0 {
+				gp.totalKnown = true
+				gp.totalBytes = total
+			}
+		},
+		OnProgress: func(k string, written, total int64) {
+			delta := written - prevWritten
+			if delta > 0 {
+				gp.add(delta)
+				gp.render(false)
+			}
+			prevWritten = written
+		},
+		OnDone: func(k string, total int64, took time.Duration) {
+			if total > prevWritten {
+				gp.add(total - prevWritten)
+			}
+			gp.render(true)
+			gp.done()
+		},
+	}
+	if err := s3Client.DownloadFileWithProgress(ctx, bucket, key, localPath, hook); err != nil {
 		return fmt.Errorf("S3 download failed: %w", err)
 	}
 	return nil
