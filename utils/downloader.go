@@ -80,6 +80,7 @@ func DownloadS3FileOrDir(
 	localPath string,
 	verbose bool,
 ) error {
+
 	bucket := parsedPath.Host
 	// normalizza: rimuovi eventuale leading "/" (alcuni artifact salvano "/xxx/..")
 	path := strings.TrimPrefix(parsedPath.Path, "/")

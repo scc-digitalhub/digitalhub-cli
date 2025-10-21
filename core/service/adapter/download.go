@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package adapter
 
 import (
@@ -6,6 +10,7 @@ import (
 	"dhcli/sdk"
 	"dhcli/utils"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,6 +20,12 @@ import (
 )
 
 func DownloadHandler(env string, destination string, output string, project string, name string, resource string, id string, verbose bool) error {
+
+	endpoint := utils.TranslateEndpoint(resource)
+	if endpoint != "projects" && project == "" {
+		return errors.New("project is mandatory for non-project resources")
+	}
+
 	// Traduce viper -> sdk.Config (INI/ENV/flags già caricati nel PersistentPreRunE)
 	cfg := sdk.Config{
 		Core: sdk.CoreConfig{
@@ -36,16 +47,14 @@ func DownloadHandler(env string, destination string, output string, project stri
 		return fmt.Errorf("sdk init failed: %w", err)
 	}
 
-	req := sdk.DownloadRequest{
+	infos, err := svc.Download(context.Background(), endpoint, sdk.DownloadRequest{
 		Project:     project,
-		Resource:    utils.TranslateEndpoint(resource),
+		Resource:    resource,
 		ID:          id,
 		Name:        name,
 		Destination: destination,
 		Verbose:     verbose,
-	}
-
-	infos, err := svc.Download(context.Background(), req)
+	})
 	if err != nil {
 		return err
 	}

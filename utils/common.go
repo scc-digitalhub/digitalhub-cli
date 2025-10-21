@@ -302,3 +302,11 @@ func PrintResponseState(resp []byte) error {
 	log.Println("WARNING: core response successful, but unable to confirm new state.")
 	return nil
 }
+
+func PrettyJSON(b []byte) string {
+	var out bytes.Buffer
+	if err := json.Indent(&out, b, "", "  "); err != nil {
+		return string(b) // fallback non indentato
+	}
+	return out.String()
+}

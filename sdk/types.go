@@ -4,18 +4,35 @@
 
 package sdk
 
-// Richiesta/risposta per download (usata dall’SDK e dall’adapter)
 type DownloadRequest struct {
 	Project     string
-	Resource    string // canonical (es: "artifacts")
-	ID          string // opzionale
-	Name        string // usato se ID vuoto
-	Destination string // file o directory
-	Verbose     bool   // abilita progress/hook nel download S3
+	Resource    string
+	ID          string
+	Name        string
+	Destination string
+	Verbose     bool
 }
 
 type DownloadInfo struct {
 	Filename string `json:"filename" yaml:"filename"`
 	Size     int64  `json:"size"     yaml:"size"`
 	Path     string `json:"path"     yaml:"path"`
+}
+
+// -------- Upload --------
+
+type UploadRequest struct {
+	Project  string
+	Resource string
+	ID       string // opzionale; se vuoto -> crea nuovo artefatto
+	Name     string // obbligatorio se ID vuoto (creazione)
+	Input    string // file o directory locale (obbligatorio)
+	Verbose  bool
+	// Opzionale: override del bucket (default = "datalake" per compatibilità)
+	Bucket string
+}
+
+type UploadResult struct {
+	ArtifactID string
+	Files      []map[string]interface{} // come in READY.status.files
 }

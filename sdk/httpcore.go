@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package sdk
 
 import (
@@ -15,19 +19,19 @@ type CoreHTTP interface {
 }
 
 type httpCore struct {
-	h   *http.Client
-	cfg CoreConfig
+	httpClient *http.Client
+	coreConfig CoreConfig
 }
 
-func newHTTPCore(h *http.Client, cfg CoreConfig) CoreHTTP {
-	if h == nil {
-		h = http.DefaultClient
+func newHTTPCore(httpClient *http.Client, coreConfig CoreConfig) CoreHTTP {
+	if httpClient == nil {
+		httpClient = http.DefaultClient
 	}
-	return &httpCore{h: h, cfg: cfg}
+	return &httpCore{httpClient: httpClient, coreConfig: coreConfig}
 }
 
-func (a *httpCore) BuildURL(project, resource, id string, params map[string]string) string {
-	base := fmt.Sprintf("%s/api/%s", a.cfg.BaseURL, a.cfg.APIVersion)
+func (httpCore *httpCore) BuildURL(project, resource, id string, params map[string]string) string {
+	base := fmt.Sprintf("%s/api/%s", httpCore.coreConfig.BaseURL, httpCore.coreConfig.APIVersion)
 	if resource != "projects" && project != "" {
 		base += "/-/" + project
 	}
@@ -51,7 +55,7 @@ func (a *httpCore) BuildURL(project, resource, id string, params map[string]stri
 	return base
 }
 
-func (a *httpCore) Do(ctx context.Context, method, url string, data []byte) ([]byte, int, error) {
+func (httpCore *httpCore) Do(ctx context.Context, method, url string, data []byte) ([]byte, int, error) {
 	var body io.Reader
 	if data != nil {
 		body = bytes.NewReader(data)
@@ -63,18 +67,17 @@ func (a *httpCore) Do(ctx context.Context, method, url string, data []byte) ([]b
 	if data != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	if tok := a.cfg.AccessToken; tok != "" {
+	if tok := httpCore.coreConfig.AccessToken; tok != "" {
 		req.Header.Set("Authorization", "Bearer "+tok)
 	}
 
-	resp, err := a.h.Do(req)
+	resp, err := httpCore.httpClient.Do(req)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer resp.Body.Close()
 
 	b, rerr := io.ReadAll(resp.Body)
-	// Replica del comportamento originale: su non-200 includi "message"
 	if resp.StatusCode != 200 {
 		var m map[string]any
 		if json.Unmarshal(b, &m) == nil {

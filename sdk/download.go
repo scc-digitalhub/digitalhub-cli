@@ -39,7 +39,7 @@ func NewDownloadService(ctx context.Context, conf Config) (*DownloadService, err
 	return &DownloadService{http: httpc, s3: s3c}, nil
 }
 
-func (s *DownloadService) Download(ctx context.Context, req DownloadRequest) ([]DownloadInfo, error) {
+func (s *DownloadService) Download(ctx context.Context, endpoint string, req DownloadRequest) ([]DownloadInfo, error) {
 	if req.Resource != "projects" && req.Project == "" {
 		return nil, errors.New("project is mandatory for non-project resources")
 	}
@@ -54,7 +54,7 @@ func (s *DownloadService) Download(ctx context.Context, req DownloadRequest) ([]
 		params["versions"] = "latest"
 	}
 
-	url := s.http.BuildURL(req.Project, req.Resource, id, params)
+	url := s.http.BuildURL(req.Project, endpoint, id, params)
 	body, _, err := s.http.Do(ctx, "GET", url, nil)
 	if err != nil {
 		// httpcore.Do già restituisce errore formattato come l’originale
