@@ -283,8 +283,11 @@ func bootstrapFromWellKnownAndWrite(iniPath string, optionalEnv ...string) (stri
 	if err != nil {
 		return "", fmt.Errorf("fetch configuration failed: %w", err)
 	}
+
 	for k, v := range coreCfg {
-		viper.Set(k, ReflectValue(v))
+		if !viper.IsSet(k) {
+			viper.SetDefault(k, ReflectValue(v))
+		}
 	}
 
 	// env selection: --env > dhcore_name > default
@@ -299,8 +302,11 @@ func bootstrapFromWellKnownAndWrite(iniPath string, optionalEnv ...string) (stri
 	if err != nil {
 		return "", fmt.Errorf("fetch openid-configuration failed: %w", err)
 	}
+
 	for k, v := range oidcCfg {
-		viper.Set(k, ReflectValue(v))
+		if !viper.IsSet(k) {
+			viper.SetDefault(k, ReflectValue(v))
+		}
 	}
 
 	viper.Set(CurrentEnvironment, envName)
