@@ -239,7 +239,7 @@ func RegisterIniCfgWithViper(optionalEnv ...string) error {
 	cfg, err := ini.Load(iniPath)
 	if err != nil {
 		fmt.Println("INI not found; bootstrapping from well-known…")
-		envName, bootErr := bootstrapFromWellKnownAndWrite(iniPath, optionalEnv...)
+		envName, bootErr := bootstrapFromEnv(iniPath, optionalEnv...)
 		if bootErr != nil {
 			fmt.Printf("Bootstrap failed: %v\n", bootErr)
 			if envName == "" {
@@ -271,43 +271,55 @@ func RegisterIniCfgWithViper(optionalEnv ...string) error {
 	return nil
 }
 
-// Bootstrap (when INI is missing): read well-known, pick envName, write INI once.
-func bootstrapFromWellKnownAndWrite(iniPath string, optionalEnv ...string) (string, error) {
+// Bootstrap (when INI is missing): read all variables from OS envs using Config struct.
+// - NO well-known fetch
+// - honors `bind:"false"` (skip ENV read for that key)
+// - applies `default:"..."` only if key is unset
+func bootstrapFromEnv(iniPath string, optionalEnv ...string) (string, error) {
+
+	rt := reflect.TypeOf(Config{})
+	for i := 0; i < rt.NumField(); i++ {
+		f := rt.Field(i)
+
+		vkey := f.Tag.Get("vkey")
+		if vkey == "" {
+			continue
+		}
+
+		if strings.EqualFold(f.Tag.Get("bind"), "false") {
+			if def := f.Tag.Get("default"); def != "" && !viper.IsSet(vkey) {
+				viper.SetDefault(vkey, def)
+			}
+			continue
+		}
+
+		envName := f.Tag.Get("env")
+		if envName == "" {
+			envName = strings.ToUpper(strings.ReplaceAll(vkey, ".", "_"))
+		}
+
+		if val, ok := os.LookupEnv(envName); ok {
+			viper.Set(vkey, val)
+			continue
+		}
+
+		// Se non è presente in ENV ma c'è un default e la chiave non è settata, applica default
+		if def := f.Tag.Get("default"); def != "" && !viper.IsSet(vkey) {
+			viper.SetDefault(vkey, def)
+		}
+	}
+
 	baseEndpoint := viper.GetString(DhCoreEndpoint)
 	if baseEndpoint == "" {
 		return "", fmt.Errorf("missing %s: set it in env or run 'dhcli register'", DhCoreEndpoint)
 	}
 
-	coreCfg, err := FetchConfig(baseEndpoint + "/.well-known/configuration")
-	if err != nil {
-		return "", fmt.Errorf("fetch configuration failed: %w", err)
-	}
-
-	for k, v := range coreCfg {
-		if !viper.IsSet(k) {
-			viper.SetDefault(k, ReflectValue(v))
-		}
-	}
-
-	// env selection: --env > dhcore_name > default
 	envName := resolveEnvName(optionalEnv...)
 	if envName == "default" {
 		if nm := viper.GetString(DhCoreName); nm != "" {
 			envName = nm
 		}
 	}
-
-	oidcCfg, err := FetchConfig(baseEndpoint + "/.well-known/openid-configuration")
-	if err != nil {
-		return "", fmt.Errorf("fetch openid-configuration failed: %w", err)
-	}
-
-	for k, v := range oidcCfg {
-		if !viper.IsSet(k) {
-			viper.SetDefault(k, ReflectValue(v))
-		}
-	}
-
 	viper.Set(CurrentEnvironment, envName)
 
 	if err := WriteIniFromStruct(iniPath, envName); err != nil {
@@ -317,5 +329,6 @@ func bootstrapFromWellKnownAndWrite(iniPath string, optionalEnv ...string) (stri
 	if _, err := ini.Load(iniPath); err != nil {
 		return "", fmt.Errorf("ini written but cannot reload: %w", err)
 	}
+
 	return envName, nil
 }
