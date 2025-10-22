@@ -18,6 +18,11 @@ import (
 func CheckUpdateEnvironment() {
 	const key = UpdatedEnvKey
 
+	if viper.IsSet(IniSource) && viper.GetString(IniSource) == "env" {
+		fmt.Printf("INI file has been created from enviromental variables...skip update\n")
+		return
+	}
+
 	val := viper.GetString(key)
 	isSet := viper.IsSet(key)
 	fmt.Printf("Config freshness (%s): isSet=%v value=%q\n", key, isSet, val)
