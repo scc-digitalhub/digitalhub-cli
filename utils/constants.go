@@ -6,6 +6,7 @@ package utils
 
 const (
 	IniName            = ".dhcore.ini"
+	IniSource          = "ini_source"
 	CurrentEnvironment = "current_environment"
 	UpdatedEnvKey      = "updated_environment"
 	ApiLevelKey        = "dhcore_api_level"
