@@ -66,6 +66,9 @@ type Config struct {
 	TokenEndpointAuthMethodsSupported string `vkey:"token_endpoint_auth_methods_supported" env:"TOKEN_ENDPOINT_AUTH_METHODS_SUPPORTED" persist:"true"`
 	UserinfoEndpoint                  string `vkey:"userinfo_endpoint"                    env:"USERINFO_ENDPOINT"                    persist:"true"`
 
+	// Source
+	IniSource string `vkey:"ini_source"               env:"INI_SOURCE"               persist:"true"`
+
 	// Bookkeeping
 	UpdatedEnvironment string `vkey:"updated_environment" env:"UPDATED_ENVIRONMENT" persist:"true" bind:"false"`
 
@@ -238,7 +241,7 @@ func RegisterIniCfgWithViper(optionalEnv ...string) error {
 
 	cfg, err := ini.Load(iniPath)
 	if err != nil {
-		fmt.Println("INI not found; bootstrapping from well-known…")
+		fmt.Println("INI not found; Get information from Env variables")
 		envName, bootErr := bootstrapFromEnv(iniPath, optionalEnv...)
 		if bootErr != nil {
 			fmt.Printf("Bootstrap failed: %v\n", bootErr)
@@ -303,7 +306,6 @@ func bootstrapFromEnv(iniPath string, optionalEnv ...string) (string, error) {
 			continue
 		}
 
-		// Se non è presente in ENV ma c'è un default e la chiave non è settata, applica default
 		if def := f.Tag.Get("default"); def != "" && !viper.IsSet(vkey) {
 			viper.SetDefault(vkey, def)
 		}
@@ -321,6 +323,10 @@ func bootstrapFromEnv(iniPath string, optionalEnv ...string) (string, error) {
 		}
 	}
 	viper.Set(CurrentEnvironment, envName)
+
+	// Set source, this is needed to skip the CheckUpdateEnvironment from wellknown in case the ini file has been
+	// constructed from env
+	viper.Set(IniSource, "env")
 
 	if err := WriteIniFromStruct(iniPath, envName); err != nil {
 		return "", fmt.Errorf("write ini failed: %w", err)

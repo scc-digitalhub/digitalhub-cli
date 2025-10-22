@@ -96,7 +96,10 @@ func RegisterHandler(env string, endpoint string) error {
 	// 6. Add timestamp
 	section.NewKey(utils.UpdatedEnvKey, time.Now().UTC().Format(time.RFC3339))
 
-	// 7. Set default env if missing
+	// 7. Add ini_source
+	section.NewKey(utils.IniSource, "well-known")
+
+	// 8. Set default env if missing
 	defaultSection := cfg.Section("DEFAULT")
 	if !defaultSection.HasKey(utils.CurrentEnvironment) {
 		defaultSection.NewKey(utils.CurrentEnvironment, env)
