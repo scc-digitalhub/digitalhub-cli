@@ -115,7 +115,7 @@ func startAuthCodeServer(verifier string) (func(), error) {
 		}
 
 		tkn := exchangeAuthCode(
-			viper.GetString("token_endpoint"),
+			viper.GetString(utils.Oauth2TokenEndpoint),
 			viper.GetString(utils.DhCoreClientId),
 			verifier,
 			authCode,

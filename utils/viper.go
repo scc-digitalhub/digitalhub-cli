@@ -66,15 +66,21 @@ type Config struct {
 	TokenEndpoint                     string `vkey:"token_endpoint"                       env:"TOKEN_ENDPOINT"                       persist:"true"`
 	TokenEndpointAuthMethodsSupported string `vkey:"token_endpoint_auth_methods_supported" env:"TOKEN_ENDPOINT_AUTH_METHODS_SUPPORTED" persist:"true"`
 	UserinfoEndpoint                  string `vkey:"userinfo_endpoint"                    env:"USERINFO_ENDPOINT"                    persist:"true"`
+	IniSource                         string `vkey:"ini_source"               env:"INI_SOURCE"               persist:"true"`
+	UpdatedEnvironment                string `vkey:"updated_environment" env:"UPDATED_ENVIRONMENT" persist:"true" bind:"false"`
+	CurrentEnvironment                string `vkey:"current_environment" env:"CURRENT_ENVIRONMENT" persist:"false"`
 
-	// Source
-	IniSource string `vkey:"ini_source"               env:"INI_SOURCE"               persist:"true"`
-
-	// Bookkeeping
-	UpdatedEnvironment string `vkey:"updated_environment" env:"UPDATED_ENVIRONMENT" persist:"true" bind:"false"`
-
-	// Not persisted: only for convenience/logs
-	CurrentEnvironment string `vkey:"current_environment" env:"CURRENT_ENVIRONMENT" persist:"false"`
+	// Oauth2
+	Oauth2TokenEndpoint                     string `vkey:"oauth2_token_endpoint"                 env:"OAUTH2_TOKEN_ENDPOINT"                 persist:"true"`
+	Oauth2UserinfoEndpoint                  string `vkey:"oauth2_userinfo_endpoint"              env:"OAUTH2_USERINFO_ENDPOINT"              persist:"true"`
+	Oauth2AuthorizationEndpoint             string `vkey:"oauth2_authorization_endpoint"         env:"OAUTH2_AUTHORIZATION_ENDPOINT"         persist:"true"`
+	Oauth2ScopesSupported                   string `vkey:"oauth2_scopes_supported"               env:"OAUTH2_SCOPES_SUPPORTED"               persist:"true"`
+	Oauth2Issuer                            string `vkey:"oauth2_issuer"                        env:"OAUTH2_ISSUER"                        persist:"true"`
+	Oauth2ResponseTypesSupported            string `vkey:"oauth2_response_types_supported"        env:"OAUTH2_RESPONSE_TYPES_SUPPORTED"        persist:"true"`
+	Oauth2JwksUri                           string `vkey:"oauth2_jwks_uri"                       env:"OAUTH2_JWKS_URI"                       persist:"true"`
+	Oauth2GrantTypesSupported               string `vkey:"oauth2_grant_types_supported"           env:"OAUTH2_GRANT_TYPES_SUPPORTED"           persist:"true"`
+	Oauth2TokenEndpointAuthMethodsSupported string `vkey:"oauth2_token_endpoint_auth_methods_supported" env:"OAUTH2_TOKEN_ENDPOINT_AUTH_METHODS_SUPPORTED" persist:"true"`
+	RunId                                   string `vkey:"run_id" env:"RUN_ID" persist:"false"`
 }
 
 // resolveEnvName: --env > "default"

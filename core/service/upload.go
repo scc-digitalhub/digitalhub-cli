@@ -29,6 +29,60 @@ func UploadHandler(env, input, project, resource string, id string, name string,
 		return errors.New("project is mandatory for non-project resources")
 	}
 
+	// getRunKey func...retrieve the key from the run
+	getRunKey := func() (string, error) {
+		runID := viper.GetString(utils.RunId)
+		if runID == "" {
+			return "", nil
+		}
+
+		urlRun := utils.BuildCoreUrl(project, utils.TranslateEndpoint("run"), runID, nil)
+		reqRun := utils.PrepareRequest("GET", urlRun, nil, viper.GetString(utils.DhCoreAccessToken))
+		bodyRun, err := utils.DoRequest(reqRun)
+		if err != nil {
+			return "", err
+		}
+
+		var run map[string]interface{}
+		if err := json.Unmarshal(bodyRun, &run); err != nil {
+			return "", err
+		}
+
+		if v, ok := run["key"].(string); ok && v != "" {
+			return v, nil
+		}
+		return "", fmt.Errorf("run key not found in response")
+	}
+
+	// add a new relations in metadata
+	addRelationship := func(artifactMap map[string]interface{}, relType, dest string) {
+		// assicurati che metadata esista
+		meta, ok := artifactMap["metadata"].(map[string]interface{})
+		if !ok {
+			meta = make(map[string]interface{})
+			artifactMap["metadata"] = meta
+		}
+
+		// assicurati che relationships esista
+		rels, ok := meta["relationships"].([]map[string]interface{})
+		if !ok {
+			rels = []map[string]interface{}{}
+		}
+
+		// aggiungi nuova relazione
+		rels = append(rels, map[string]interface{}{
+			"type": relType,
+			"dest": dest,
+		})
+
+		meta["relationships"] = rels
+	}
+
+	runKey, err := getRunKey()
+	if err != nil {
+		return err
+	}
+
 	// If no ID is provided, generate a new one and then create the artifact
 	if id == "" {
 		// name is mandatory for new artifacts
@@ -116,6 +170,11 @@ func UploadHandler(env, input, project, resource string, id string, name string,
 	}
 	if parsedPath.Scheme != "s3" {
 		return fmt.Errorf("only s3 scheme is supported for upload")
+	}
+
+	// Add lineage relationship
+	if runKey != "" {
+		addRelationship(artifactMap, "produced_by", runKey)
 	}
 
 	// Build S3 client
