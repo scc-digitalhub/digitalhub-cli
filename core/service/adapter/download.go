@@ -21,6 +21,9 @@ import (
 
 func DownloadHandler(env string, destination string, output string, project string, name string, resource string, id string, verbose bool) error {
 
+	utils.CheckUpdateEnvironment()
+	utils.CheckApiLevel(utils.ApiLevelKey, utils.LoginMin, utils.LoginMax)
+
 	endpoint := utils.TranslateEndpoint(resource)
 	if endpoint != "projects" && project == "" {
 		return errors.New("project is mandatory for non-project resources")

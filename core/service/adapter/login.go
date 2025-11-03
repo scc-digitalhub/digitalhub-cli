@@ -26,7 +26,7 @@ import (
 
 const redirectURI = "http://localhost:4000/callback"
 
-var generatedState string // manteniamo il nome, ma lo gestisce l’SDK
+var generatedState string
 
 // Runs PKCE flow for authentication (stessa UX e stesso HTML di prima)
 func LoginHandler() error {
@@ -45,7 +45,7 @@ func LoginHandler() error {
 	// - logga "Login successful." e fa os.Exit(0)
 	stop, err := sdk.StartAuthCodeServer(
 		sdk.AuthConfig{
-			AuthorizationEndpoint: viper.GetString("authorization_endpoint"),
+			AuthorizationEndpoint: viper.GetString(utils.Oauth2AuthorizationEndpoint),
 			TokenEndpoint:         viper.GetString(utils.Oauth2TokenEndpoint),
 			ClientID:              viper.GetString(utils.DhCoreClientId),
 			RedirectURI:           redirectURI,
@@ -103,8 +103,8 @@ func LoginHandler() error {
 	// Build authorize URL (identico: stessi scope, stessi parametri)
 	authURL, err := buildAuthURLViaSDK(
 		sdk.AuthConfig{
-			AuthorizationEndpoint: viper.GetString("authorization_endpoint"),
-			TokenEndpoint:         viper.GetString("token_endpoint"),
+			AuthorizationEndpoint: viper.GetString(utils.Oauth2AuthorizationEndpoint),
+			TokenEndpoint:         viper.GetString(utils.Oauth2TokenEndpoint),
 			ClientID:              viper.GetString(utils.DhCoreClientId),
 			RedirectURI:           redirectURI,
 			Scopes:                normalizeScopes(viper.GetString("scopes_supported")),
