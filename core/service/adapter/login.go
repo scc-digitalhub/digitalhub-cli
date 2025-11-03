@@ -46,7 +46,7 @@ func LoginHandler() error {
 	stop, err := sdk.StartAuthCodeServer(
 		sdk.AuthConfig{
 			AuthorizationEndpoint: viper.GetString("authorization_endpoint"),
-			TokenEndpoint:         viper.GetString("token_endpoint"),
+			TokenEndpoint:         viper.GetString(utils.Oauth2TokenEndpoint),
 			ClientID:              viper.GetString(utils.DhCoreClientId),
 			RedirectURI:           redirectURI,
 			Scopes:                normalizeScopes(viper.GetString("scopes_supported")), // usato per URL

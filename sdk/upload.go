@@ -14,6 +14,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/spf13/viper"
 )
 
 // UploadService: estrazione 1:1 della semantica dell'UploadHandler originale.
@@ -50,6 +52,60 @@ func (s *UploadService) Upload(ctx context.Context, endpoint string, req UploadR
 	}
 	if endpoint != "projects" && req.Project == "" {
 		return nil, errors.New("project is mandatory for non-project resources")
+	}
+
+	// getRunKey func...retrieve the key from the run
+	getRunKey := func() (string, error) {
+		runID := viper.GetString(utils.RunId)
+		if runID == "" {
+			return "", nil
+		}
+
+		urlRun := utils.BuildCoreUrl(req.Project, utils.TranslateEndpoint("run"), runID, nil)
+		reqRun := utils.PrepareRequest("GET", urlRun, nil, viper.GetString(utils.DhCoreAccessToken))
+		bodyRun, err := utils.DoRequest(reqRun)
+		if err != nil {
+			return "", err
+		}
+
+		var run map[string]interface{}
+		if err := json.Unmarshal(bodyRun, &run); err != nil {
+			return "", err
+		}
+
+		if v, ok := run["key"].(string); ok && v != "" {
+			return v, nil
+		}
+		return "", fmt.Errorf("run key not found in response")
+	}
+
+	// add a new relations in metadata
+	addRelationship := func(artifactMap map[string]interface{}, relType, dest string) {
+		// assicurati che metadata esista
+		meta, ok := artifactMap["metadata"].(map[string]interface{})
+		if !ok {
+			meta = make(map[string]interface{})
+			artifactMap["metadata"] = meta
+		}
+
+		// assicurati che relationships esista
+		rels, ok := meta["relationships"].([]map[string]interface{})
+		if !ok {
+			rels = []map[string]interface{}{}
+		}
+
+		// aggiungi nuova relazione
+		rels = append(rels, map[string]interface{}{
+			"type": relType,
+			"dest": dest,
+		})
+
+		meta["relationships"] = rels
+	}
+
+	runKey, err := getRunKey()
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve run: %w", err)
 	}
 
 	// 1) Se ID vuoto: creare l'artefatto
@@ -134,6 +190,11 @@ func (s *UploadService) Upload(ctx context.Context, endpoint string, req UploadR
 	}
 	if parsedPath.Scheme != "s3" {
 		return nil, fmt.Errorf("only s3 scheme is supported for upload")
+	}
+
+	// Add lineage relationship
+	if runKey != "" {
+		addRelationship(artifact, "produced_by", runKey)
 	}
 
 	// 5) Helper: update status sul Core (merge preservando altri campi)

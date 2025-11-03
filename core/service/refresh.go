@@ -24,7 +24,7 @@ func RefreshHandler() error {
 	data.Set("client_id", viper.GetString(utils.DhCoreClientId))
 	data.Set("refresh_token", viper.GetString(utils.DhCoreRefreshToken))
 
-	resp, err := http.Post(viper.GetString("token_endpoint"), "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
+	resp, err := http.Post(viper.GetString(utils.Oauth2TokenEndpoint), "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
 	if err != nil {
 		return err
 	}
