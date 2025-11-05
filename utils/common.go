@@ -18,7 +18,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/spf13/viper"
 	"gopkg.in/ini.v1"
@@ -207,9 +206,9 @@ func WaitForConfirmation(msg string) {
 }
 
 func PrintCommentForYaml(args ...string) {
-	fmt.Printf("# Generated on: %v\n", time.Now().Round(0))
-	fmt.Printf("#   from environment: %v (core version %v)\n", viper.GetString(DhCoreName), viper.GetString("dhcore_version"))
-	fmt.Printf("#   found at: %v\n", viper.GetString(DhCoreEndpoint))
+	// fmt.Printf("# Generated on: %v\n", time.Now().Round(0))
+	// fmt.Printf("#   from environment: %v (core version %v)\n", viper.GetString(DhCoreName), viper.GetString("dhcore_version"))
+	// fmt.Printf("#   found at: %v\n", viper.GetString(DhCoreEndpoint))
 	var parts []string
 	for _, s := range args {
 		if s != "" {

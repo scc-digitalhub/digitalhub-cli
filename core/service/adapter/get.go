@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package service
+package adapter
 
 import (
 	"bytes"
@@ -11,16 +11,16 @@ import (
 	"fmt"
 
 	"github.com/spf13/viper"
-
 	"sigs.k8s.io/yaml"
 
+	"dhcli/sdk"
 	"dhcli/utils"
 )
 
 func GetHandler(env string, output string, project string, name string, resource string, id string) error {
-
 	endpoint := utils.TranslateEndpoint(resource)
 
+	// Stessa logica esistente
 	utils.CheckUpdateEnvironment()
 	utils.CheckApiLevel(utils.ApiLevelKey, utils.GetMin, utils.GetMax)
 
@@ -30,18 +30,22 @@ func GetHandler(env string, output string, project string, name string, resource
 		return errors.New("Project is mandatory when performing this operation on resources other than projects.")
 	}
 
-	params := map[string]string{}
-	if id == "" {
-		if name == "" {
-			return errors.New("you must specify id or name")
-		}
-		params["name"] = name
-		params["versions"] = "latest"
+	// Adapter: viper/ini/env -> sdk.Config
+	cfg := sdk.Config{
+		Core: sdk.CoreConfig{
+			BaseURL:     viper.GetString(utils.DhCoreEndpoint),
+			APIVersion:  viper.GetString(utils.DhCoreApiVersion),
+			AccessToken: viper.GetString(utils.DhCoreAccessToken),
+		},
 	}
 
-	url := utils.BuildCoreUrl(project, endpoint, id, params)
-	req := utils.PrepareRequest("GET", url, nil, viper.GetString(utils.DhCoreAccessToken))
-	body, err := utils.DoRequest(req)
+	svc, err := sdk.NewGetService(nil, cfg)
+	if err != nil {
+		return fmt.Errorf("sdk init failed: %w", err)
+	}
+
+	// Chiamata SDK (replica: se manca id usa name + versions=latest)
+	body, _, err := svc.Get(project, endpoint, id, name)
 	if err != nil {
 		return fmt.Errorf("error in request: %w", err)
 	}
@@ -107,7 +111,6 @@ func printJson(id string, src []byte) error {
 		if err != nil {
 			return err
 		}
-
 		jsonData = out
 	}
 
@@ -137,7 +140,6 @@ func printYaml(id string, src []byte) error {
 		if err != nil {
 			return err
 		}
-
 		yamlData = out
 	} else {
 		out, err := yaml.JSONToYAML(src)
