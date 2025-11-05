@@ -7,7 +7,7 @@ package commands
 import (
 	"dhcli/core"
 	"dhcli/core/flags"
-	"dhcli/core/service"
+	"dhcli/core/service/adapter"
 	"log"
 
 	"github.com/spf13/cobra"
@@ -23,7 +23,7 @@ var updateCmd = func() *cobra.Command {
 		Short: "Update a specific resource using data from a YAML file",
 		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
-			err := service.UpdateHandler(
+			err := adapter.UpdateHandler(
 				*envFlag.Value,
 				*projectFlag.Value,
 				*fileFlag.Value,
