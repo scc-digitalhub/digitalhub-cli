@@ -19,7 +19,7 @@ func ResumeHandler(env string, project string, resource string, id string) error
 	utils.CheckApiLevel(utils.ApiLevelKey, utils.ResumeMin, utils.ResumeMax)
 
 	if project == "" {
-		return errors.New("Project not specified.")
+		return errors.New("project not specified")
 	}
 
 	// Request

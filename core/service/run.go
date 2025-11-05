@@ -58,6 +58,9 @@ func RunHandler(env string, project string, functionName string, functionId stri
 
 		// Convert YAML to JSON
 		jsonBytes, err := yaml.YAMLToJSON(file)
+		if err != nil {
+			return err
+		}
 
 		// Convert to map
 		var inputJson map[string]interface{}
@@ -130,7 +133,7 @@ func getFunctionKey(project string, id string, name string) (string, string, err
 		}
 		function = latest
 	} else {
-		return "", "", errors.New("You must provide the name or ID of the function to run.")
+		return "", "", errors.New("you must provide the name or ID of the function to run")
 	}
 
 	if kind, ok := function["kind"]; ok {
@@ -141,7 +144,7 @@ func getFunctionKey(project string, id string, name string) (string, string, err
 		}
 	}
 
-	return "", "", errors.New("Unable to obtain function key.")
+	return "", "", errors.New("unable to obtain function key")
 }
 
 func getTaskKey(project string, functionKey string, task string) (string, error) {
@@ -172,7 +175,7 @@ func getTaskKey(project string, functionKey string, task string) (string, error)
 			}
 		}
 	}
-	return "", errors.New("Unable to obtain task key.")
+	return "", errors.New("unable to obtain task key")
 }
 
 func createTask(project string, function string, task string) (string, error) {
@@ -216,5 +219,5 @@ func createTask(project string, function string, task string) (string, error) {
 		}
 	}
 
-	return "", errors.New("Unable to obtain task key.")
+	return "", errors.New("unable to obtain task key")
 }

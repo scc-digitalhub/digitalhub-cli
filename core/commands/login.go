@@ -7,7 +7,7 @@ package commands
 import (
 	"dhcli/core"
 	"dhcli/core/flags"
-	"dhcli/core/service/adapter"
+	"dhcli/core/service"
 	"log"
 
 	"github.com/spf13/cobra"
@@ -23,7 +23,7 @@ var loginCmd = func() *cobra.Command {
 		Long:  "Authenticate the user using OAuth2 PKCE flow with the specified environment.",
 		Run: func(cmd *cobra.Command, args []string) {
 			// Pass the dereferenced envFlag value if needed in service.LoginHandler (adjust if required)
-			if err := adapter.LoginHandler(); err != nil {
+			if err := service.LoginHandler(); err != nil {
 				log.Fatalf("Login failed: %v", err)
 			}
 		},
