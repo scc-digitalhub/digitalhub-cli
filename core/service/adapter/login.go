@@ -26,8 +26,6 @@ import (
 
 const redirectURI = "http://localhost:4000/callback"
 
-var generatedState string
-
 // Runs PKCE flow for authentication (stessa UX e stesso HTML di prima)
 func LoginHandler() error {
 	// Ensure environment is up-to-date and compatible
@@ -36,7 +34,6 @@ func LoginHandler() error {
 
 	// PKCE (SDK)
 	pkce := sdk.NewPKCE()
-	generatedState = pkce.State
 
 	// Server locale (SDK) con callback che:
 	// - stampa HTML con token pretty
