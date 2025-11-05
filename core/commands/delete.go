@@ -7,7 +7,7 @@ package commands
 import (
 	"dhcli/core"
 	"dhcli/core/flags"
-	"dhcli/core/service"
+	"dhcli/core/service/adapter"
 	"errors"
 	"log"
 
@@ -37,7 +37,7 @@ var deleteCmd = func() *cobra.Command {
 				id = args[1]
 			}
 
-			err := service.DeleteHandler(
+			err := adapter.DeleteHandler(
 				*envFlag.Value,
 				*projectFlag.Value,
 				*nameFlag.Value,
