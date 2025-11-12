@@ -7,7 +7,7 @@ package commands
 import (
 	"dhcli/core"
 	"dhcli/core/flags"
-	"dhcli/core/service"
+	"dhcli/core/service/adapter"
 	"log"
 
 	"github.com/spf13/cobra"
@@ -16,8 +16,8 @@ import (
 var runCmd = func() *cobra.Command {
 	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	projectFlag := flags.NewStringFlag("project", "p", "Mandatory", "")
-	fnNameFlag := flags.NewStringFlag("fn-name", "n", "name of the function to run, alternative to ID", "")
-	fnIDFlag := flags.NewStringFlag("fn-id", "i", "ID of the function to run, alternative to name", "")
+	fnNameFlag := flags.NewStringFlag("fn-name", "n", "name of the function to run, alternative to Id", "")
+	fnIDFlag := flags.NewStringFlag("fn-id", "i", "Id of the function to run, alternative to name", "")
 	filePathFlag := flags.NewStringFlag("file", "f", "path to a YAML file containing the resource definition", "")
 
 	cmd := &cobra.Command{
@@ -25,7 +25,7 @@ var runCmd = func() *cobra.Command {
 		Short: "Runs a function",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			err := service.RunHandler(
+			err := adapter.RunHandler(
 				*envFlag.Value,
 				*projectFlag.Value,
 				*fnNameFlag.Value,
