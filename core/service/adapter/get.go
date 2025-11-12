@@ -6,6 +6,7 @@ package adapter
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -27,7 +28,7 @@ func GetHandler(env string, output string, project string, name string, resource
 	format := utils.TranslateFormat(output)
 
 	if endpoint != "projects" && project == "" {
-		return errors.New("Project is mandatory when performing this operation on resources other than projects.")
+		return errors.New("project is mandatory when performing this operation on resources other than projects")
 	}
 
 	// Adapter: viper/ini/env -> sdk.Config
@@ -39,7 +40,7 @@ func GetHandler(env string, output string, project string, name string, resource
 		},
 	}
 
-	svc, err := sdk.NewGetService(nil, cfg)
+	svc, err := sdk.NewGetService(context.Background(), cfg)
 	if err != nil {
 		return fmt.Errorf("sdk init failed: %w", err)
 	}

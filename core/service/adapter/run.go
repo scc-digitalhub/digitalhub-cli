@@ -24,7 +24,7 @@ func RunHandler(env string, project string, functionName string, functionId stri
 	utils.CheckApiLevel(utils.ApiLevelKey, utils.CreateMin, utils.CreateMax)
 
 	if project == "" {
-		return errors.New("Project not specified.")
+		return errors.New("project not specified")
 	}
 
 	var inputSpec map[string]interface{}

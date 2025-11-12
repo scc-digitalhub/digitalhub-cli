@@ -5,6 +5,7 @@
 package adapter
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -40,7 +41,7 @@ func ListResourcesHandler(env string, output string, project string, name string
 		},
 	}
 
-	cl, err := sdk.NewListService(nil, cfg)
+	cl, err := sdk.NewListService(context.Background(), cfg)
 	if err != nil {
 		return fmt.Errorf("sdk init failed: %w", err)
 	}

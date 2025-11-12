@@ -5,6 +5,7 @@
 package adapter
 
 import (
+	"context"
 	"dhcli/sdk"
 	"dhcli/utils"
 	"fmt"
@@ -43,7 +44,7 @@ func CreateHandler(env string, project string, name string, filePath string, res
 		},
 	}
 
-	svc, err := sdk.NewCreateService(nil, cfg)
+	svc, err := sdk.NewCreateService(context.Background(), cfg)
 	if err != nil {
 		return fmt.Errorf("sdk init failed: %w", err)
 	}
