@@ -2,9 +2,11 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package service
+package adapter
 
 import (
+	"context"
+	"dhcli/sdk"
 	"dhcli/utils"
 	"encoding/base64"
 	"encoding/json"
@@ -22,17 +24,32 @@ import (
 func LogHandler(env string, project string, container string, follow bool, resource string, id string) error {
 	endpoint := utils.TranslateEndpoint(resource)
 
-	// Load environment and check API level requirements
 	utils.CheckUpdateEnvironment()
 	utils.CheckApiLevel(utils.ApiLevelKey, utils.LogMin, utils.LogMax)
 
 	if project == "" {
-		return errors.New("Project not specified.")
+		return errors.New("project not specified")
+	}
+
+	cfg := sdk.Config{
+		Core: sdk.CoreConfig{
+			BaseURL:     viper.GetString(utils.DhCoreEndpoint),
+			APIVersion:  viper.GetString(utils.DhCoreApiVersion),
+			AccessToken: viper.GetString(utils.DhCoreAccessToken),
+		},
+	}
+
+	svc, err := sdk.NewLogService(context.Background(), cfg)
+	if err != nil {
+		return err
 	}
 
 	// Loop requests if following
 	for {
-		containerLog, err := GetContainerLog(project, endpoint, id, container)
+		containerLog, err := getContainerLogAdapter(context.Background(), svc, project, endpoint, id, container)
+		if err != nil {
+			return err
+		}
 
 		logContents, err := base64.StdEncoding.DecodeString(containerLog["content"].(string))
 		if err != nil {
@@ -45,6 +62,7 @@ func LogHandler(env string, project string, container string, follow bool, resou
 		}
 
 		time.Sleep(5 * time.Second)
+
 		var cmd *exec.Cmd
 		if runtime.GOOS == "windows" {
 			cmd = exec.Command("cmd", "/c", "cls")
@@ -52,39 +70,51 @@ func LogHandler(env string, project string, container string, follow bool, resou
 			cmd = exec.Command("clear")
 		}
 		cmd.Stdout = os.Stdout
-		cmd.Run()
+		_ = cmd.Run()
 	}
 }
 
-func GetContainerLog(project string, endpoint string, id string, container string) (map[string]interface{}, error) {
-	method := "GET"
-	url := utils.BuildCoreUrl(project, endpoint, id, nil) + "/logs"
-	req := utils.PrepareRequest(method, url, nil, viper.GetString(utils.DhCoreAccessToken))
+// same semantics as old GetContainerLog, but using sdk.LogService
+func getContainerLogAdapter(
+	ctx context.Context,
+	svc *sdk.LogService,
+	project string,
+	endpoint string,
+	id string,
+	container string,
+) (map[string]interface{}, error) {
 
-	body, err := utils.DoRequest(req)
+	// GET /logs
+	logBody, _, err := svc.GetLogs(ctx, sdk.LogRequest{
+		Project:  project,
+		Endpoint: endpoint,
+		ID:       id,
+	})
 	if err != nil {
 		return nil, err
 	}
+
 	logs := []interface{}{}
-	if err := json.Unmarshal(body, &logs); err != nil {
+	if err := json.Unmarshal(logBody, &logs); err != nil {
 		return nil, fmt.Errorf("json parsing failed: %w", err)
 	}
 
-	// Name of the container to read logs from
+	// Determine container name
 	containerName := container
 	if containerName == "" {
-		// If container is not specified, print main container's logs
-		// Get resource to figure out the main container's name
-		method := "GET"
-		url := utils.BuildCoreUrl(project, endpoint, id, nil)
-		req := utils.PrepareRequest(method, url, nil, viper.GetString(utils.DhCoreAccessToken))
-		body, err := utils.DoRequest(req)
+		// If container is not specified, compute "main" container as in old code.
+
+		resBody, _, err := svc.GetResource(ctx, sdk.LogRequest{
+			Project:  project,
+			Endpoint: endpoint,
+			ID:       id,
+		})
 		if err != nil {
 			return nil, err
 		}
 
 		var m map[string]interface{}
-		if err := json.Unmarshal(body, &m); err != nil {
+		if err := json.Unmarshal(resBody, &m); err != nil {
 			return nil, err
 		}
 
@@ -107,5 +137,5 @@ func GetContainerLog(project string, endpoint string, id string, container strin
 		}
 	}
 
-	return nil, fmt.Errorf("Container not found.")
+	return nil, fmt.Errorf("container not found")
 }

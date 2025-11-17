@@ -7,7 +7,7 @@ package commands
 import (
 	"dhcli/core"
 	"dhcli/core/flags"
-	"dhcli/core/service"
+	"dhcli/core/service/adapter"
 	"log"
 
 	"github.com/spf13/cobra"
@@ -23,13 +23,13 @@ var metricsCmd = func() *cobra.Command {
 		Short: "Read metrics",
 		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
-			err := service.MetricsHandler(
+			err := adapter.MetricsHandler(
 				*envFlag.Value,
 				*projectFlag.Value,
 				*containerFlag.Value,
 				args[0],
-				args[1])
-
+				args[1],
+			)
 			if err != nil {
 				log.Fatalf("Failed: %v", err)
 			}

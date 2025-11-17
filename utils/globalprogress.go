@@ -45,7 +45,7 @@ func (gp *globalProgress) human(n int64) string {
 }
 
 func (gp *globalProgress) render(force bool) {
-	// throttling: aggiorna ~10 volte al secondo per non “spammare”
+	// throttling: update ~10 times each seconds to avoid “spamming”
 	if !force && time.Since(gp.lastTick) < 100*time.Millisecond {
 		return
 	}
@@ -67,7 +67,6 @@ func (gp *globalProgress) render(force bool) {
 }
 
 func (gp *globalProgress) done() {
-	// stampa finale con newline
 	gp.render(true)
 	fmt.Fprintln(os.Stderr)
 }
