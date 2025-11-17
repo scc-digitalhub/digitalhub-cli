@@ -2,9 +2,11 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package service
+package adapter
 
 import (
+	"context"
+	"dhcli/sdk"
 	"dhcli/utils"
 	"errors"
 
@@ -14,7 +16,7 @@ import (
 func ResumeHandler(env string, project string, resource string, id string) error {
 	endpoint := utils.TranslateEndpoint(resource)
 
-	// Load environment and check API level requirements
+	// Preserve original guards / API level checks
 	utils.CheckUpdateEnvironment()
 	utils.CheckApiLevel(utils.ApiLevelKey, utils.ResumeMin, utils.ResumeMax)
 
@@ -22,21 +24,27 @@ func ResumeHandler(env string, project string, resource string, id string) error
 		return errors.New("project not specified")
 	}
 
-	// Request
-	method := "POST"
-	url := utils.BuildCoreUrl(project, endpoint, id, nil) + "/resume"
-	req := utils.PrepareRequest(method, url, nil, viper.GetString(utils.DhCoreAccessToken))
+	cfg := sdk.Config{
+		Core: sdk.CoreConfig{
+			BaseURL:     viper.GetString(utils.DhCoreEndpoint),
+			APIVersion:  viper.GetString(utils.DhCoreApiVersion),
+			AccessToken: viper.GetString(utils.DhCoreAccessToken),
+		},
+	}
 
-	_, err := utils.DoRequest(req)
+	svc, err := sdk.NewResumeService(context.Background(), cfg)
 	if err != nil {
 		return err
 	}
 
-	resp, err := utils.DoRequest(req)
+	respBody, _, err := svc.Resume(context.Background(), sdk.ResumeRequest{
+		Project:  project,
+		Endpoint: endpoint,
+		ID:       id,
+	})
 	if err != nil {
 		return err
 	}
 
-	// Parse response to check new state
-	return utils.PrintResponseState(resp)
+	return utils.PrintResponseState(respBody)
 }

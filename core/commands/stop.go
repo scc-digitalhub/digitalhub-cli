@@ -7,7 +7,7 @@ package commands
 import (
 	"dhcli/core"
 	"dhcli/core/flags"
-	"dhcli/core/service"
+	"dhcli/core/service/adapter"
 	"log"
 
 	"github.com/spf13/cobra"
@@ -22,7 +22,7 @@ var stopCmd = func() *cobra.Command {
 		Short: "Stop a resource",
 		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
-			err := service.StopHandler(
+			err := adapter.StopHandler(
 				*envFlag.Value,
 				*projectFlag.Value,
 				args[0],
