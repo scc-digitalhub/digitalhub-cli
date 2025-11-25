@@ -6,7 +6,7 @@ package commands
 
 import (
 	"dhcli/core"
-	"dhcli/core/service"
+	"dhcli/core/facade"
 
 	"github.com/spf13/cobra"
 )
@@ -16,7 +16,7 @@ var removeCmd = &cobra.Command{
 	Short: "Remove an environment from the configuration",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		service.RemoveHandler(args[0])
+		facade.RemoveHandler(args[0])
 	},
 }
 

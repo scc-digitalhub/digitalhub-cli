@@ -6,8 +6,8 @@ package commands
 
 import (
 	"dhcli/core"
+	"dhcli/core/facade"
 	"dhcli/core/flags"
-	"dhcli/core/service"
 	"log"
 
 	"github.com/spf13/cobra"
@@ -22,7 +22,7 @@ var refreshCmd = func() *cobra.Command {
 		Short: "Refresh access token",
 		Long:  "Refresh the access token of a given environment.",
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := service.RefreshHandler(); err != nil {
+			if err := facade.RefreshHandler(); err != nil {
 				log.Fatalf("Refresh failed: %v", err)
 			}
 		},

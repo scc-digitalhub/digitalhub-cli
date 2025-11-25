@@ -6,8 +6,8 @@ package commands
 
 import (
 	"dhcli/core"
+	"dhcli/core/facade/adapter"
 	"dhcli/core/flags"
-	"dhcli/core/service/adapter"
 	"errors"
 	"log"
 

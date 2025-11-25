@@ -5,8 +5,8 @@ package commands
 
 import (
 	"dhcli/core"
+	"dhcli/core/facade"
 	"dhcli/core/flags"
-	"dhcli/core/service"
 	"log"
 
 	"github.com/spf13/cobra"
@@ -22,7 +22,7 @@ var registerCmd = func() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			endpoint := args[0]
 
-			if err := service.RegisterHandler(*envFlag.Value, endpoint); err != nil {
+			if err := facade.RegisterHandler(*envFlag.Value, endpoint); err != nil {
 				log.Fatalf("Registration failed: %v", err)
 			}
 		},
