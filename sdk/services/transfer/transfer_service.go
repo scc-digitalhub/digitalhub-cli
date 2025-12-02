@@ -6,23 +6,23 @@ package transfer
 
 import (
 	"context"
-	s3client "dhcli/configs"
 	"dhcli/sdk/config"
+
 	"fmt"
 )
 
 type TransferService struct {
 	http config.CoreHTTP
-	s3   *s3client.Client
+	s3   *config.S3Client
 }
 
 func NewTransferService(ctx context.Context, conf config.Config) (*TransferService, error) {
 	httpc := config.NewHTTPCore(nil, conf.Core)
 
-	s3c, err := s3client.NewClient(ctx, s3client.Config{
+	s3c, err := config.NewS3Client(ctx, config.S3Config{
 		AccessKey:   conf.S3.AccessKey,
 		SecretKey:   conf.S3.SecretKey,
-		AccessToken: conf.S3.SessionToken,
+		AccessToken: conf.S3.AccessToken,
 		Region:      conf.S3.Region,
 		EndpointURL: conf.S3.EndpointURL,
 	})

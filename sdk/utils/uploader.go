@@ -6,7 +6,7 @@ package utils
 
 import (
 	"context"
-	s3client "dhcli/configs"
+	"dhcli/sdk/config"
 	"fmt"
 	"io"
 	"net/http"
@@ -29,7 +29,7 @@ func upWarnf(format string, a ...any) {
 
 /* ------------ FILE SINGOLO ------------ */
 
-func UploadS3File(client *s3client.Client, ctx context.Context, bucket, key, localPath string, verbose bool) (map[string]interface{}, []map[string]interface{}, error) {
+func UploadS3File(client *config.S3Client, ctx context.Context, bucket, key, localPath string, verbose bool) (map[string]interface{}, []map[string]interface{}, error) {
 	file, err := os.Open(localPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to open local file: %w", err)
@@ -50,7 +50,7 @@ func UploadS3File(client *s3client.Client, ctx context.Context, bucket, key, loc
 	// Upload
 	var output interface{}
 	if verbose {
-		hook := &s3client.ProgressHook{
+		hook := &config.ProgressHook{
 			OnStart: func(k string, total int64) {
 				if total > 0 {
 					fmt.Fprintf(os.Stderr, "   size: %.2f MB\n", float64(total)/(1024*1024))
@@ -93,7 +93,7 @@ func UploadS3File(client *s3client.Client, ctx context.Context, bucket, key, loc
 		}
 
 		var prevWritten int64
-		hook := &s3client.ProgressHook{
+		hook := &config.ProgressHook{
 			OnStart: func(k string, tot int64) {
 				if tot > 0 && !gp.totalKnown {
 					gp.totalKnown = true
@@ -149,7 +149,7 @@ func UploadS3File(client *s3client.Client, ctx context.Context, bucket, key, loc
 
 /* ------------ DIRECTORY ------------ */
 
-func UploadS3Dir(client *s3client.Client, ctx context.Context, parsedPath *ParsedPath, localPath string, verbose bool) ([]map[string]interface{}, []map[string]interface{}, error) {
+func UploadS3Dir(client *config.S3Client, ctx context.Context, parsedPath *ParsedPath, localPath string, verbose bool) ([]map[string]interface{}, []map[string]interface{}, error) {
 	bucket := parsedPath.Host
 	prefix := parsedPath.Path
 
@@ -218,7 +218,7 @@ func UploadS3Dir(client *s3client.Client, ctx context.Context, parsedPath *Parse
 
 		if verbose {
 			fmt.Fprintf(os.Stderr, "   [%d/%d] %s → s3://%s/%s\n", i+1, total, relPath, bucket, s3Key)
-			hook := &s3client.ProgressHook{
+			hook := &config.ProgressHook{
 				OnStart: func(k string, total int64) {
 					if total > 0 {
 						fmt.Fprintf(os.Stderr, "      └─ size: %.2f MB\n", float64(total)/(1024*1024))
@@ -252,7 +252,7 @@ func UploadS3Dir(client *s3client.Client, ctx context.Context, parsedPath *Parse
 		} else {
 			// non-verbose: aggiorna la progress BAR GLOBALE con un hook per-file
 			var prevWritten int64
-			hook := &s3client.ProgressHook{
+			hook := &config.ProgressHook{
 				OnProgress: func(k string, written, total int64) {
 					delta := written - prevWritten
 					if delta > 0 && gp != nil {

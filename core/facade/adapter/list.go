@@ -18,7 +18,7 @@ import (
 	"github.com/spf13/viper"
 	"sigs.k8s.io/yaml"
 
-	"dhcli/utils"
+	"dhcli/sdk/utils"
 )
 
 func ListResourcesHandler(env string, output string, project string, name string, kind string, state string, resource string) error {

@@ -6,7 +6,7 @@ package core
 
 import (
 	"context"
-	"dhcli/utils"
+	"dhcli/sdk/utils"
 	"fmt"
 	"os"
 	"slices"

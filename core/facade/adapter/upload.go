@@ -8,7 +8,7 @@ import (
 	"context"
 	"dhcli/sdk/config"
 	"dhcli/sdk/services/transfer"
-	"dhcli/utils"
+	"dhcli/sdk/utils"
 	"errors"
 	"fmt"
 
@@ -37,11 +37,11 @@ func UploadHandler(env string, input string, project string, resource string, id
 			AccessToken: viper.GetString(utils.DhCoreAccessToken),
 		},
 		S3: config.S3Config{
-			AccessKey:    viper.GetString("aws_access_key_id"),
-			SecretKey:    viper.GetString("aws_secret_access_key"),
-			SessionToken: viper.GetString("aws_session_token"),
-			Region:       viper.GetString("aws_region"),
-			EndpointURL:  viper.GetString("aws_endpoint_url"),
+			AccessKey:   viper.GetString("aws_access_key_id"),
+			SecretKey:   viper.GetString("aws_secret_access_key"),
+			AccessToken: viper.GetString("aws_session_token"),
+			Region:      viper.GetString("aws_region"),
+			EndpointURL: viper.GetString("aws_endpoint_url"),
 		},
 	}
 

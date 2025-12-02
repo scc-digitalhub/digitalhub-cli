@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package s3client
+package config
 
 import (
 	"context"
@@ -22,19 +22,11 @@ import (
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
-type Client struct {
+type S3Client struct {
 	s3 *s3.Client
 }
 
-type Config struct {
-	AccessKey   string
-	SecretKey   string
-	AccessToken string
-	Region      string
-	EndpointURL string
-}
-
-func NewClient(ctx context.Context, cfgCreds Config) (*Client, error) {
+func NewS3Client(ctx context.Context, cfgCreds S3Config) (*S3Client, error) {
 	creds := aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(
 		cfgCreds.AccessKey,
 		cfgCreds.SecretKey,
@@ -56,7 +48,7 @@ func NewClient(ctx context.Context, cfgCreds Config) (*Client, error) {
 		}
 	}
 
-	return &Client{
+	return &S3Client{
 		s3: s3.NewFromConfig(cfg, s3Options),
 	}, nil
 }
@@ -70,7 +62,7 @@ type S3File struct {
 
 /* -------------------- LIST (paginata) -------------------- */
 
-func (c *Client) ListFilesPaged(
+func (c *S3Client) ListFilesPaged(
 	ctx context.Context,
 	bucket string,
 	prefix string,
@@ -106,7 +98,7 @@ func (c *Client) ListFilesPaged(
 	return files, resp.NextContinuationToken, nil
 }
 
-func (c *Client) ListFilesAll(ctx context.Context, bucket string, prefix string) ([]S3File, error) {
+func (c *S3Client) ListFilesAll(ctx context.Context, bucket string, prefix string) ([]S3File, error) {
 	var allFiles []S3File
 	var token *string
 	max := int32(1000)
@@ -126,14 +118,14 @@ func (c *Client) ListFilesAll(ctx context.Context, bucket string, prefix string)
 }
 
 // compat (una sola pagina)
-func (c *Client) ListFiles(ctx context.Context, bucket string, prefix string, maxKeys *int32) ([]S3File, error) {
+func (c *S3Client) ListFiles(ctx context.Context, bucket string, prefix string, maxKeys *int32) ([]S3File, error) {
 	files, _, err := c.ListFilesPaged(ctx, bucket, prefix, maxKeys, nil)
 	return files, err
 }
 
 /* -------------------- WALK (paginato + callback) -------------------- */
 
-func (c *Client) WalkPrefix(
+func (c *S3Client) WalkPrefix(
 	ctx context.Context,
 	bucket string,
 	prefix string,
@@ -202,7 +194,7 @@ func (pw *progressWriter) Write(p []byte) (int, error) {
 
 /* -------------------- DOWNLOAD -------------------- */
 
-func (c *Client) DownloadFile(ctx context.Context, bucket, key, localPath string) error {
+func (c *S3Client) DownloadFile(ctx context.Context, bucket, key, localPath string) error {
 	out, err := c.s3.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: &bucket,
 		Key:    &key,
@@ -224,7 +216,7 @@ func (c *Client) DownloadFile(ctx context.Context, bucket, key, localPath string
 	return nil
 }
 
-func (c *Client) DownloadFileWithProgress(
+func (c *S3Client) DownloadFileWithProgress(
 	ctx context.Context,
 	bucket, key, localPath string,
 	hook *ProgressHook,
@@ -276,7 +268,7 @@ func (c *Client) DownloadFileWithProgress(
 /* -------------------- UPLOAD -------------------- */
 
 // Compat: upload senza progress (non tocco il tuo codice esistente)
-func (c *Client) UploadFile(ctx context.Context, bucket, key string, file *os.File) (interface{}, error) {
+func (c *S3Client) UploadFile(ctx context.Context, bucket, key string, file *os.File) (interface{}, error) {
 	const threshold = 100 * 1024 * 1024
 
 	info, err := file.Stat()
@@ -315,7 +307,7 @@ func (c *Client) UploadFile(ctx context.Context, bucket, key string, file *os.Fi
 }
 
 // Nuovo: upload con progress (usa lo stesso threshold/strategy)
-func (c *Client) UploadFileWithProgress(
+func (c *S3Client) UploadFileWithProgress(
 	ctx context.Context,
 	bucket, key string,
 	file *os.File,

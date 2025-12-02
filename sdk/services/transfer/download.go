@@ -6,7 +6,7 @@ package transfer
 
 import (
 	"context"
-	"dhcli/utils"
+	"dhcli/sdk/utils"
 	"encoding/json"
 	"errors"
 	"fmt"

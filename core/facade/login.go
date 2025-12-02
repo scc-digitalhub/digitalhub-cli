@@ -26,7 +26,7 @@ import (
 
 	"github.com/spf13/viper"
 
-	"dhcli/utils"
+	"dhcli/sdk/utils"
 )
 
 const redirectURI = "http://localhost:4000/callback"

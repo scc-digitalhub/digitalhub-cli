@@ -6,7 +6,7 @@ package utils
 
 import (
 	"context"
-	s3client "dhcli/configs"
+	"dhcli/sdk/config"
 	"fmt"
 	"io"
 	"net/http"
@@ -74,7 +74,7 @@ func DownloadHTTPFile(url string, destination string) error {
 /* ------------ S3: file o directory (with continuation token) ------------ */
 
 func DownloadS3FileOrDir(
-	s3Client *s3client.Client,
+	s3Client *config.S3Client,
 	ctx context.Context,
 	parsedPath *ParsedPath,
 	localPath string,
@@ -144,7 +144,7 @@ func DownloadS3FileOrDir(
 				}
 
 				// barra di avanzamento per-file (già presente)
-				hook := &s3client.ProgressHook{
+				hook := &config.ProgressHook{
 					OnStart: func(k string, total int64) {
 						if total > 0 {
 							fmt.Fprintf(os.Stderr, "      └─ size: %.2f MB\n", float64(total)/(1024*1024))
@@ -171,7 +171,7 @@ func DownloadS3FileOrDir(
 			} else {
 				// non-verbose: progress GLOBALE su una riga
 				var prevWritten int64
-				hook := &s3client.ProgressHook{
+				hook := &config.ProgressHook{
 					OnProgress: func(k string, written, total int64) {
 						delta := written - prevWritten
 						if delta > 0 && gp != nil {
@@ -208,7 +208,7 @@ func DownloadS3FileOrDir(
 	key := path
 	if verbose {
 		infof("Preparing download s3://%s/%s → %s", bucket, key, displayPath(localPath))
-		hook := &s3client.ProgressHook{
+		hook := &config.ProgressHook{
 			OnStart: func(k string, total int64) {
 				if total > 0 {
 					fmt.Fprintf(os.Stderr, "   size: %.2f MB\n", float64(total)/(1024*1024))
@@ -239,7 +239,7 @@ func DownloadS3FileOrDir(
 	infof("Preparing download s3://%s/%s → %s", bucket, key, displayPath(localPath))
 	var gp globalProgress
 	var prevWritten int64
-	hook := &s3client.ProgressHook{
+	hook := &config.ProgressHook{
 		OnStart: func(k string, total int64) {
 			if total > 0 {
 				gp.totalKnown = true

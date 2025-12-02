@@ -9,7 +9,7 @@ import (
 	"context"
 	"dhcli/sdk/config"
 	"dhcli/sdk/services/transfer"
-	"dhcli/utils"
+	"dhcli/sdk/utils"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -38,11 +38,11 @@ func DownloadHandler(env string, destination string, output string, project stri
 			AccessToken: viper.GetString(utils.DhCoreAccessToken),
 		},
 		S3: config.S3Config{
-			AccessKey:    viper.GetString("aws_access_key_id"),
-			SecretKey:    viper.GetString("aws_secret_access_key"),
-			SessionToken: viper.GetString("aws_session_token"),
-			Region:       viper.GetString("aws_region"),
-			EndpointURL:  viper.GetString("aws_endpoint_url"),
+			AccessKey:   viper.GetString("aws_access_key_id"),
+			SecretKey:   viper.GetString("aws_secret_access_key"),
+			AccessToken: viper.GetString("aws_session_token"),
+			Region:      viper.GetString("aws_region"),
+			EndpointURL: viper.GetString("aws_endpoint_url"),
 		},
 	}
 

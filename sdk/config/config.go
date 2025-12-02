@@ -17,9 +17,9 @@ type CoreConfig struct {
 }
 
 type S3Config struct {
-	AccessKey    string
-	SecretKey    string
-	SessionToken string
-	Region       string
-	EndpointURL  string
+	AccessKey   string
+	SecretKey   string
+	AccessToken string
+	Region      string
+	EndpointURL string
 }

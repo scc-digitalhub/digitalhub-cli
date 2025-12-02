@@ -5,7 +5,7 @@
 package facade
 
 import (
-	"dhcli/utils"
+	"dhcli/sdk/utils"
 	"log"
 	"os"
 )

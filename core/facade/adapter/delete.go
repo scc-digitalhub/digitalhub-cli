@@ -8,7 +8,7 @@ import (
 	"context"
 	"dhcli/sdk/config"
 	crudsvc "dhcli/sdk/services/crud"
-	"dhcli/utils"
+	"dhcli/sdk/utils"
 	"fmt"
 	"log"
 	"os"

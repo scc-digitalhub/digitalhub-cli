@@ -8,7 +8,7 @@ import (
 	"context"
 	"dhcli/sdk/config"
 	runsvc "dhcli/sdk/services/run"
-	"dhcli/utils"
+	"dhcli/sdk/utils"
 	"errors"
 
 	"github.com/spf13/viper"
