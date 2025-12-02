@@ -15,8 +15,6 @@ import (
 	"strings"
 )
 
-// Service di download focalizzato sugli artifacts/path remoti (S3/HTTP)
-
 func (s *TransferService) Download(ctx context.Context, endpoint string, req DownloadRequest) ([]DownloadInfo, error) {
 	if req.Resource != "projects" && req.Project == "" {
 		return nil, errors.New("project is mandatory for non-project resources")
@@ -35,7 +33,6 @@ func (s *TransferService) Download(ctx context.Context, endpoint string, req Dow
 	url := s.http.BuildURL(req.Project, endpoint, id, params)
 	body, _, err := s.http.Do(ctx, "GET", url, nil)
 	if err != nil {
-		// httpcore.Do già restituisce errore formattato come l’originale
 		return nil, err
 	}
 
@@ -48,21 +45,19 @@ func (s *TransferService) Download(ctx context.Context, endpoint string, req Dow
 	for _, p := range paths {
 		pp, err := utils.ParsePath(p)
 		if err != nil {
-			// comportamento originale: skip elemento malformato
 			continue
 		}
 		target, createdDir, err := chooseLocalTarget(req.Destination, pp.Filename)
 		if err != nil {
-			// skip come l’originale in caso di path locale non creabile
 			continue
 		}
-		_ = createdDir // non serve usarlo ora, ma è allineato al comportamento di creazione
+		_ = createdDir
 
 		switch pp.Scheme {
 		case "s3":
 			key := strings.TrimPrefix(pp.Path, "/")
 			if strings.HasSuffix(key, "/") {
-				// Directory (paginata): in caso di errore, NON fallire tutto → skip (come original)
+				// Directory (paginata): in caso di errore, NON fallire tutto → skip
 				if derr := utils.DownloadS3FileOrDir(s.s3, ctx, pp, target, req.Verbose); derr != nil {
 					// skip dir (log a livello CLI se vuoi)
 					continue
@@ -85,7 +80,7 @@ func (s *TransferService) Download(ctx context.Context, endpoint string, req Dow
 					}
 				}
 			} else {
-				// File singolo: su errore, NON fallire → skip (come original)
+				// File singolo: su errore, NON fallire → skip
 				if ferr := utils.DownloadS3FileOrDir(s.s3, ctx, pp, target, req.Verbose); ferr != nil {
 					continue
 				}

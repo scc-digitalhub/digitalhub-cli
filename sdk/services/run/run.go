@@ -12,10 +12,6 @@ import (
 	"strings"
 )
 
-//
-// RUN CREATION
-//
-
 // taskToRunKind converte task kind ("python+job", "python+job:task")
 // nel corrispondente run kind ("python+job:run").
 func taskToRunKind(task string) string {
