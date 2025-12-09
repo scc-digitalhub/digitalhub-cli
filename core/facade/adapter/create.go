@@ -6,11 +6,13 @@ package adapter
 
 import (
 	"context"
-	"dhcli/sdk/config"
-	crudsvc "dhcli/sdk/services/crud"
-	"dhcli/sdk/utils"
 	"log"
 	"os"
+
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
+
+	crudsvc "github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/services/crud"
 
 	"github.com/spf13/viper"
 )

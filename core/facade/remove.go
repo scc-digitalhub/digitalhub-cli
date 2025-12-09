@@ -5,9 +5,10 @@
 package facade
 
 import (
-	"dhcli/sdk/utils"
 	"log"
 	"os"
+
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
 )
 
 func RemoveHandler(env string) {

@@ -5,7 +5,6 @@
 package facade
 
 import (
-	"dhcli/sdk/utils"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +12,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
 
 	"github.com/spf13/viper"
 )

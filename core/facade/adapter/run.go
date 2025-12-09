@@ -6,13 +6,16 @@ package adapter
 
 import (
 	"context"
-	"dhcli/sdk/config"
-	sdk "dhcli/sdk/services/run"
-	"dhcli/sdk/utils"
 	"encoding/json"
 	"errors"
 	"log"
 	"os"
+
+	sdk "github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/services/run"
+
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
+
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
 
 	"github.com/spf13/viper"
 	"sigs.k8s.io/yaml"

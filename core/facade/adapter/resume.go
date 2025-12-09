@@ -6,10 +6,13 @@ package adapter
 
 import (
 	"context"
-	"dhcli/sdk/config"
-	runsvc "dhcli/sdk/services/run"
-	"dhcli/sdk/utils"
 	"errors"
+
+	runsvc "github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/services/run"
+
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
+
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
 
 	"github.com/spf13/viper"
 )

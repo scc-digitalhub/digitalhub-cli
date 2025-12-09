@@ -7,14 +7,17 @@ package adapter
 import (
 	"bytes"
 	"context"
-	"dhcli/sdk/config"
-	"dhcli/sdk/services/transfer"
-	"dhcli/sdk/utils"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
+
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
+
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/services/transfer"
 
 	"github.com/spf13/viper"
 	"sigs.k8s.io/yaml"

@@ -6,11 +6,14 @@ package adapter
 
 import (
 	"context"
-	"dhcli/sdk/config"
-	"dhcli/sdk/services/transfer"
-	"dhcli/sdk/utils"
 	"errors"
 	"fmt"
+
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/services/transfer"
+
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
+
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
 
 	"github.com/spf13/viper"
 )

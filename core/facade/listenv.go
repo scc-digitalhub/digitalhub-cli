@@ -5,9 +5,10 @@
 package facade
 
 import (
-	"dhcli/sdk/utils"
 	"fmt"
 	"log"
+
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
 )
 
 func ListEnvHandler() {

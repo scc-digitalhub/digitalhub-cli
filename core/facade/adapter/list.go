@@ -6,8 +6,6 @@ package adapter
 
 import (
 	"context"
-	"dhcli/sdk/config"
-	crudsvc "dhcli/sdk/services/crud"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,10 +13,14 @@ import (
 	"os"
 	"strings"
 
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
+
+	crudsvc "github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/services/crud"
+
 	"github.com/spf13/viper"
 	"sigs.k8s.io/yaml"
 
-	"dhcli/sdk/utils"
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
 )
 
 func ListResourcesHandler(env string, output string, project string, name string, kind string, state string, resource string) error {

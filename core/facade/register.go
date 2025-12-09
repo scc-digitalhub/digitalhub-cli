@@ -5,13 +5,14 @@
 package facade
 
 import (
-	"dhcli/sdk/utils"
 	"fmt"
 	"log"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
 )
 
 func RegisterHandler(env string, endpoint string) error {

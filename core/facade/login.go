@@ -26,7 +26,7 @@ import (
 
 	"github.com/spf13/viper"
 
-	"dhcli/sdk/utils"
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
 )
 
 const redirectURI = "http://localhost:4000/callback"

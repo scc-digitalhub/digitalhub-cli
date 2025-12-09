@@ -7,16 +7,18 @@ package adapter
 import (
 	"bytes"
 	"context"
-	"dhcli/sdk/config"
-	crudsvc "dhcli/sdk/services/crud"
 	"encoding/json"
 	"errors"
 	"fmt"
 
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
+
+	crudsvc "github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/services/crud"
+
 	"github.com/spf13/viper"
 	"sigs.k8s.io/yaml"
 
-	"dhcli/sdk/utils"
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
 )
 
 func GetHandler(env string, output string, project string, name string, resource string, id string) error {
