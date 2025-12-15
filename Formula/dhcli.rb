@@ -5,20 +5,20 @@
 class Dhcli < Formula
   desc "A command-line tool for DigitalHub platform."
   homepage "https://scc-digitalhub.github.io/"
-  version "0.14.0"
+  version "0.14.1"
 
   on_macos do
     if Hardware::CPU.intel?
-      url "https://github.com/scc-digitalhub/digitalhub-cli/releases/download/0.14.0/dhcli-darwin-amd64.tar.gz"
-      sha256 "424eddd3de32c8d8ceda09b6f0190360d799fbbd3a15957b5dafb6e1484291f7"
+      url "https://github.com/scc-digitalhub/digitalhub-cli/releases/download/0.14.1/dhcli-darwin-amd64.tar.gz"
+      sha256 "54a50155f7ee1702dad86f418fa11a935554d50124a19254e515390b3c1e6e5e"
 
       def install
         bin.install "dhcli"
       end
     end
     if Hardware::CPU.arm?
-      url "https://github.com/scc-digitalhub/digitalhub-cli/releases/download/0.14.0/dhcli-darwin-arm64.tar.gz"
-      sha256 "037b030bc8c8a17ab4b0781a98724d1d3d4b760646fe0c1d7870330fe51f2d87"
+      url "https://github.com/scc-digitalhub/digitalhub-cli/releases/download/0.14.1/dhcli-darwin-arm64.tar.gz"
+      sha256 "b84abc03b35eebe7dc796f8af95a881e3b47464a1552754b53fa37ef3662a532"
 
       def install
         bin.install "dhcli"
@@ -28,15 +28,15 @@ class Dhcli < Formula
 
   on_linux do
     if Hardware::CPU.intel? && Hardware::CPU.is_64_bit?
-      url "https://github.com/scc-digitalhub/digitalhub-cli/releases/download/0.14.0/dhcli-linux-amd64.tar.gz"
-      sha256 "be2381098195af7daad559f3e3e1cc70bceb47dbbd79d27dbef8172c79e53bab"
+      url "https://github.com/scc-digitalhub/digitalhub-cli/releases/download/0.14.1/dhcli-linux-amd64.tar.gz"
+      sha256 "c729f30191301d90a0b0241101022b6599d8305bc62afb861e376a0d1ff59eb9"
       def install
         bin.install "dhcli"
       end
     end
     if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-      url "https://github.com/scc-digitalhub/digitalhub-cli/releases/download/0.14.0/dhcli-linux-arm64.tar.gz"
-      sha256 "1fd125831e0eeaa41326dafdb431f75ffe14a365a6b085996aa0a763d998fa4d"
+      url "https://github.com/scc-digitalhub/digitalhub-cli/releases/download/0.14.1/dhcli-linux-arm64.tar.gz"
+      sha256 "71457dc9b5fe8a49886afc748be87510a99fbe28361a5293f6320c3f89802737"
       def install
         bin.install "dhcli"
       end
