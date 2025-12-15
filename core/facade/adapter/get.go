@@ -2,46 +2,64 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package service
+package adapter
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 
-	"github.com/spf13/viper"
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
 
+	crudsvc "github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/services/crud"
+
+	"github.com/spf13/viper"
 	"sigs.k8s.io/yaml"
 
-	"dhcli/utils"
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
 )
 
 func GetHandler(env string, output string, project string, name string, resource string, id string) error {
-
 	endpoint := utils.TranslateEndpoint(resource)
 
+	// Stessa logica esistente
 	utils.CheckUpdateEnvironment()
 	utils.CheckApiLevel(utils.ApiLevelKey, utils.GetMin, utils.GetMax)
 
 	format := utils.TranslateFormat(output)
 
 	if endpoint != "projects" && project == "" {
-		return errors.New("Project is mandatory when performing this operation on resources other than projects.")
+		return errors.New("project is mandatory when performing this operation on resources other than projects")
 	}
 
-	params := map[string]string{}
-	if id == "" {
-		if name == "" {
-			return errors.New("you must specify id or name")
-		}
-		params["name"] = name
-		params["versions"] = "latest"
+	// Adapter: viper/ini/env -> sdk.Config
+	cfg := config.Config{
+		Core: config.CoreConfig{
+			BaseURL:     viper.GetString(utils.DhCoreEndpoint),
+			APIVersion:  viper.GetString(utils.DhCoreApiVersion),
+			AccessToken: viper.GetString(utils.DhCoreAccessToken),
+		},
 	}
 
-	url := utils.BuildCoreUrl(project, endpoint, id, params)
-	req := utils.PrepareRequest("GET", url, nil, viper.GetString(utils.DhCoreAccessToken))
-	body, err := utils.DoRequest(req)
+	ctx := context.Background()
+
+	// Nuovo CrudService al posto del vecchio GetService
+	crud, err := crudsvc.NewCrudService(ctx, cfg)
+	if err != nil {
+		return fmt.Errorf("sdk init failed: %w", err)
+	}
+
+	// Chiamata SDK (replica: se manca id usa name + versions=latest)
+	body, _, err := crud.Get(ctx, crudsvc.GetRequest{
+		ResourceRequest: crudsvc.ResourceRequest{
+			Project:  project,
+			Endpoint: endpoint,
+		},
+		ID:   id,
+		Name: name,
+	})
 	if err != nil {
 		return fmt.Errorf("error in request: %w", err)
 	}
@@ -107,7 +125,6 @@ func printJson(id string, src []byte) error {
 		if err != nil {
 			return err
 		}
-
 		jsonData = out
 	}
 

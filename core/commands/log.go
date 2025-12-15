@@ -6,8 +6,8 @@ package commands
 
 import (
 	"dhcli/core"
+	"dhcli/core/facade/adapter"
 	"dhcli/core/flags"
-	"dhcli/core/service"
 	"log"
 
 	"github.com/spf13/cobra"
@@ -24,7 +24,7 @@ var logCmd = func() *cobra.Command {
 		Short: "Read logs",
 		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
-			err := service.LogHandler(
+			err := adapter.LogHandler(
 				*envFlag.Value,
 				*projectFlag.Value,
 				*containerFlag.Value,

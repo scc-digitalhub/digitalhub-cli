@@ -6,8 +6,8 @@ package commands
 
 import (
 	"dhcli/core"
+	"dhcli/core/facade/adapter"
 	"dhcli/core/flags"
-	"dhcli/core/service"
 	"errors"
 	"log"
 
@@ -36,7 +36,7 @@ var getCmd = func() *cobra.Command {
 				id = args[1]
 			}
 
-			err := service.GetHandler(
+			err := adapter.GetHandler(
 				*envFlag.Value,
 				*outFlag.Value,
 				*projectFlag.Value,

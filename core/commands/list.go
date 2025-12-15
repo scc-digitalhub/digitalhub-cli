@@ -6,8 +6,8 @@ package commands
 
 import (
 	"dhcli/core"
+	"dhcli/core/facade/adapter"
 	"dhcli/core/flags"
-	"dhcli/core/service"
 	"log"
 
 	"github.com/spf13/cobra"
@@ -28,7 +28,7 @@ var listCmd = func() *cobra.Command {
 		Short: "List resources",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := service.ListResourcesHandler(
+			if err := adapter.ListResourcesHandler(
 				*envFlag.Value,
 				*outFlag.Value,
 				*projectFlag.Value,

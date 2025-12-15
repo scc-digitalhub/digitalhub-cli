@@ -2,18 +2,18 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package service
+package facade
 
 import (
-	"dhcli/utils"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
 
 	"github.com/spf13/viper"
 )
@@ -36,7 +36,7 @@ func RefreshHandler() error {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return errors.New(fmt.Sprintf("Token server error: %s %s", resp.Status, string(body)))
+		return fmt.Errorf("token server error: %s %s", resp.Status, string(body))
 	}
 
 	var responseJson map[string]interface{}

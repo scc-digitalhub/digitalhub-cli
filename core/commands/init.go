@@ -6,8 +6,8 @@ package commands
 
 import (
 	"dhcli/core"
+	"dhcli/core/facade"
 	"dhcli/core/flags"
-	"dhcli/core/service"
 	"log"
 
 	"github.com/spf13/cobra"
@@ -22,7 +22,7 @@ var initCmd = func() *cobra.Command {
 		Use:   "init",
 		Short: "Install python packages for an environment",
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := service.InitEnvironmentHandler(*preFlag.Value); err != nil {
+			if err := facade.InitEnvironmentHandler(*preFlag.Value); err != nil {
 				log.Fatalf("Init failed: %v", err)
 			}
 		},

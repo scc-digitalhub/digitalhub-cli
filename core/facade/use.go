@@ -2,12 +2,13 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package service
+package facade
 
 import (
-	"dhcli/utils"
 	"log"
 	"os"
+
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
 )
 
 func UseHandler(env string) {

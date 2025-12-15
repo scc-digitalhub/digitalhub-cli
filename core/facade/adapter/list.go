@@ -2,23 +2,25 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package service
+package adapter
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"os"
-	"reflect"
-	"strconv"
 	"strings"
 
-	"github.com/spf13/viper"
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
 
+	crudsvc "github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/services/crud"
+
+	"github.com/spf13/viper"
 	"sigs.k8s.io/yaml"
 
-	"dhcli/utils"
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
 )
 
 func ListResourcesHandler(env string, output string, project string, name string, kind string, state string, resource string) error {
@@ -30,10 +32,27 @@ func ListResourcesHandler(env string, output string, project string, name string
 	format := utils.TranslateFormat(output)
 
 	if endpoint != "projects" && project == "" {
-		return errors.New("Project is mandatory when performing this operation on resources other than projects.")
+		return errors.New("project is mandatory when performing this operation on resources other than projects")
 	}
 
-	// Build query params
+	// Config SDK (retrocompatibile: legge da viper/ini/env)
+	cfg := config.Config{
+		Core: config.CoreConfig{
+			BaseURL:     viper.GetString(utils.DhCoreEndpoint),
+			APIVersion:  viper.GetString(utils.DhCoreApiVersion),
+			AccessToken: viper.GetString(utils.DhCoreAccessToken),
+		},
+	}
+
+	ctx := context.Background()
+
+	// Nuovo CrudService
+	crud, err := crudsvc.NewCrudService(ctx, cfg)
+	if err != nil {
+		return fmt.Errorf("sdk init failed: %w", err)
+	}
+
+	// Query params => identici all’originale
 	params := map[string]string{
 		"name":  name,
 		"kind":  kind,
@@ -45,13 +64,19 @@ func ListResourcesHandler(env string, output string, project string, name string
 		params["versions"] = "all"
 	}
 
-	// Fetch first page
-	elements, _, err := fetchAllPages(project, endpoint, params)
+	// Paging identico: FetchAllPages diventa ListAllPages
+	elements, _, err := crud.ListAllPages(ctx, crudsvc.ListRequest{
+		ResourceRequest: crudsvc.ResourceRequest{
+			Project:  project,
+			Endpoint: endpoint,
+		},
+		Params: params,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to fetch list: %w", err)
 	}
 
-	// Output
+	// Output IDENTICO
 	switch format {
 	case "short":
 		printShortList(elements)
@@ -65,42 +90,6 @@ func ListResourcesHandler(env string, output string, project string, name string
 	}
 
 	return nil
-}
-
-func fetchAllPages(project, endpoint string, params map[string]string) ([]interface{}, int, error) {
-	var (
-		elements   []interface{}
-		currentPg  int
-		totalPages int
-	)
-
-	for {
-		url := utils.BuildCoreUrl(project, endpoint, "", params)
-		req := utils.PrepareRequest("GET", url, nil, viper.GetString(utils.DhCoreAccessToken))
-		body, err := utils.DoRequest(req)
-		if err != nil {
-			return nil, 0, err
-		}
-
-		m := map[string]interface{}{}
-		if err := json.Unmarshal(body, &m); err != nil {
-			return nil, 0, fmt.Errorf("json parsing failed: %w", err)
-		}
-
-		pageList := m["content"].([]interface{})
-		elements = append(elements, pageList...)
-
-		pg := m["pageable"].(map[string]interface{})
-		currentPg = int(reflect.ValueOf(pg["pageNumber"]).Float())
-		totalPages = int(reflect.ValueOf(m["totalPages"]).Float())
-
-		if currentPg >= totalPages-1 {
-			break
-		}
-		params["page"] = strconv.Itoa(currentPg + 1)
-	}
-
-	return elements, totalPages, nil
 }
 
 func printShortList(resources []interface{}) {

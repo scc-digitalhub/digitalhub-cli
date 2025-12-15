@@ -6,8 +6,8 @@ package commands
 
 import (
 	"dhcli/core"
+	"dhcli/core/facade/adapter"
 	"dhcli/core/flags"
-	"dhcli/core/service"
 	"errors"
 	"log"
 
@@ -22,7 +22,7 @@ var downloadCmd = func() *cobra.Command {
 	destinationFlag := flags.NewStringFlag("destination", "d", "output filename or directory", "")
 	outFlag := flags.NewStringFlag("out", "o", "Output format (short, json, yaml)", "")
 	verboseFlag := flags.NewBoolFlag("verbose", "v", "Verbose progress/logging", false)
-	
+
 	cmd := &cobra.Command{
 		Use:   "download <resource> [<id>]",
 		Short: "Download a resource from the S3 aws",
@@ -39,7 +39,7 @@ var downloadCmd = func() *cobra.Command {
 				id = args[1]
 			}
 
-			if err := service.DownloadHandler(
+			if err := adapter.DownloadHandler(
 				*envFlag.Value,
 				*destinationFlag.Value,
 				*outFlag.Value,

@@ -6,15 +6,14 @@ package commands
 
 import (
 	"dhcli/core"
+	"dhcli/core/facade/adapter"
 	"dhcli/core/flags"
-	"dhcli/core/service"
 	"log"
 
 	"github.com/spf13/cobra"
 )
 
 var resumeCmd = func() *cobra.Command {
-	// Define local env flag
 	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	projectFlag := flags.NewStringFlag("project", "p", "Mandatory", "")
 
@@ -23,7 +22,7 @@ var resumeCmd = func() *cobra.Command {
 		Short: "Resume a resource",
 		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
-			err := service.ResumeHandler(
+			err := adapter.ResumeHandler(
 				*envFlag.Value,
 				*projectFlag.Value,
 				args[0],
@@ -35,7 +34,6 @@ var resumeCmd = func() *cobra.Command {
 		},
 	}
 
-	// Add the local env flag
 	flags.AddFlag(cmd, &envFlag)
 	flags.AddFlag(cmd, &projectFlag)
 

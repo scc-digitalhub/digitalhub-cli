@@ -6,10 +6,11 @@ package core
 
 import (
 	"context"
-	"dhcli/utils"
 	"fmt"
 	"os"
 	"slices"
+
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
 
 	"github.com/charmbracelet/fang"
 	"github.com/spf13/cobra"
