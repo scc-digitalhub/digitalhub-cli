@@ -55,7 +55,7 @@ func GetHandler(env string, output string, project string, name string, resource
 	body, _, err := crud.Get(ctx, crudsvc.GetRequest{
 		ResourceRequest: crudsvc.ResourceRequest{
 			Project:  project,
-			Endpoint: endpoint,
+			Resource: endpoint,
 		},
 		ID:   id,
 		Name: name,

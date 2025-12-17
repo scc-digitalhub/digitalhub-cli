@@ -48,7 +48,7 @@ func ResumeHandler(env string, project string, resource string, id string) error
 	respBody, _, err := svc.Resume(ctx, runsvc.ResumeRequest{
 		RunResourceRequest: runsvc.RunResourceRequest{
 			Project:  project,
-			Endpoint: endpoint,
+			Resource: endpoint,
 			ID:       id,
 		},
 	})

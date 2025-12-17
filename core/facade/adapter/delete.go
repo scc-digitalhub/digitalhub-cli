@@ -91,7 +91,7 @@ func DeleteHandler(env string, project string, name string, confirm bool, cascad
 	req := crudsvc.DeleteRequest{
 		ResourceRequest: crudsvc.ResourceRequest{
 			Project:  project,
-			Endpoint: endpoint,
+			Resource: endpoint,
 		},
 		ID:      delID,
 		Name:    delName,

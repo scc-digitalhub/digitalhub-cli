@@ -57,7 +57,7 @@ func CreateHandler(env string, project string, name string, filePath string, res
 	req := crudsvc.CreateRequest{
 		ResourceRequest: crudsvc.ResourceRequest{
 			Project:  project,
-			Endpoint: endpoint,
+			Resource: endpoint,
 		},
 		Name:     name,
 		FilePath: filePath,

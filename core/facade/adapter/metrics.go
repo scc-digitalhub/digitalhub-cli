@@ -49,7 +49,7 @@ func MetricsHandler(env string, project string, container string, resource strin
 	req := runsvc.MetricsRequest{
 		RunResourceRequest: runsvc.RunResourceRequest{
 			Project:  project,
-			Endpoint: endpoint,
+			Resource: endpoint,
 			ID:       id,
 		},
 		Container: container,

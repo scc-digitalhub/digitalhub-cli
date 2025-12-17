@@ -49,7 +49,7 @@ func StopHandler(env string, project string, resource string, id string) error {
 	respBody, _, err := svc.Stop(ctx, runsvc.StopRequest{
 		RunResourceRequest: runsvc.RunResourceRequest{
 			Project:  project,
-			Endpoint: endpoint,
+			Resource: endpoint,
 			ID:       id,
 		},
 	})

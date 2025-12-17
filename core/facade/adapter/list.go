@@ -68,7 +68,7 @@ func ListResourcesHandler(env string, output string, project string, name string
 	elements, _, err := crud.ListAllPages(ctx, crudsvc.ListRequest{
 		ResourceRequest: crudsvc.ResourceRequest{
 			Project:  project,
-			Endpoint: endpoint,
+			Resource: endpoint,
 		},
 		Params: params,
 	})

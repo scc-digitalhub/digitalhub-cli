@@ -92,7 +92,7 @@ func UpdateHandler(env string, project string, filePath string, resource string,
 	req := crudsvc.UpdateRequest{
 		ResourceRequest: crudsvc.ResourceRequest{
 			Project:  project,
-			Endpoint: endpoint,
+			Resource: endpoint,
 		},
 		ID:   id,
 		Body: body,

@@ -101,7 +101,7 @@ func getContainerLogAdapter(
 	logBody, _, err := svc.GetLogs(ctx, runsvc.LogRequest{
 		RunResourceRequest: runsvc.RunResourceRequest{
 			Project:  project,
-			Endpoint: endpoint,
+			Resource: endpoint,
 			ID:       id,
 		},
 	})
@@ -122,7 +122,7 @@ func getContainerLogAdapter(
 		resBody, _, err := svc.GetResource(ctx, runsvc.LogRequest{
 			RunResourceRequest: runsvc.RunResourceRequest{
 				Project:  project,
-				Endpoint: endpoint,
+				Resource: endpoint,
 				ID:       id,
 			},
 		})
