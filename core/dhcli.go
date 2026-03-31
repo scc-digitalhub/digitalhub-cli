@@ -16,6 +16,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var version string
+
 var dhcli = &cobra.Command{
 	Use:   "dhcli",
 	Short: "dhcli is a tool for managing resource in core platform",
@@ -45,7 +47,11 @@ var dhcli = &cobra.Command{
 }
 
 func Execute() {
-	if err := fang.Execute(context.Background(), dhcli); err != nil {
+	var opts []fang.Option
+	if version != "" {
+		opts = append(opts, fang.WithVersion(version))
+	}
+	if err := fang.Execute(context.Background(), dhcli, opts...); err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

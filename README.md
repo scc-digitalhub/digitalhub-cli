@@ -24,9 +24,9 @@ brew install dhcli
 ## Development
 
 - `core/commands` contains the definition of available commands and what flags they accept
-- `core/flags` lists common flags
-- `core/service` contains the actual logic to handle each command
-- `utils` contains common methods and values
+- `core/flags` contains the generic flag handling system
+- `core/facade` contains the business logic handlers for each command
+- `core/facade/adapter` bridges CLI commands to the SDK services
 
 ### Build from source
 
@@ -34,6 +34,12 @@ If you wish to build the executable from source, run the following:
 
 ``` sh
 go build
+```
+
+To build with a specific version:
+
+``` sh
+go build -ldflags "-X dhcli/core.version=0.15.0"
 ```
 
 It will generate an executable named `dhcli` for your operating system and architecture. To change the target OS or architecture, you need to set the `GOOS` and `GOARCH` variables and build it. Some examples:
@@ -51,13 +57,15 @@ For a complete list of available values, run `go tool dist list`, which will ret
 
 ### Publish a new release
 
-A GitHub Actions workflow is set to be triggered upon pushing a new tag and will automatically create a new release through GoReleaser.
+A GitHub Actions workflow is set to be triggered upon pushing a new tag and will automatically create a new release through GoReleaser. The version is injected automatically from the tag.
 
-Simply push a new tag to have the corresponding release generated:
+Tags must use the `v` prefix (required by Go modules):
 
 ``` sh
-git tag -a X.Y.Z -m "Some release" && git push origin X.Y.Z
+git tag -a vX.Y.Z -m "Some release" && git push origin vX.Y.Z
 ```
+
+A versioned Homebrew formula (`dhcli@X.Y.rb`) is also created automatically.
 
 ## Security Policy
 

@@ -32,6 +32,22 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      -
+        name: Create versioned Brew formula
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          MINOR="${VERSION%.*}"
+          CLASS_SUFFIX=$(echo "${MINOR}" | tr -d '.')
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git checkout main
+          git pull origin main
+          cp Formula/dhcli.rb "Formula/dhcli@${MINOR}.rb"
+          sed -i "s/class Dhcli < Formula/class DhcliAT${CLASS_SUFFIX} < Formula/" "Formula/dhcli@${MINOR}.rb"
+          git add "Formula/dhcli@${MINOR}.rb"
+          git commit -m "Brew formula for dhcli@${MINOR}" || true
+          git push origin main
 
   build-and-push-image:
     runs-on: ubuntu-latest

@@ -6,6 +6,8 @@ builds:
   - id: dhcli
     env:
       - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X dhcli/core.version={{.Version}}
     goos: [linux, windows, darwin]
     goarch: [amd64, arm64]
     # (optional) main: ./cmd/dhcli
