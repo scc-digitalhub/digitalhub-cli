@@ -5,7 +5,7 @@
 class DhcliAT013 < Formula
   desc "A command-line tool for DigitalHub platform."
   homepage "https://scc-digitalhub.github.io/"
-  version ""
+  version "0.13.8"
 
   on_macos do
     if Hardware::CPU.intel?
