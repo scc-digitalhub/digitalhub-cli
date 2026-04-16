@@ -40,7 +40,7 @@ type OAuthResult struct {
 	Err         error
 }
 
-var logger = utils.CreateStepLogger()
+var logger = utils.GetGlobalLogger()
 
 // ==========================
 // PUBLIC ENTRY POINT

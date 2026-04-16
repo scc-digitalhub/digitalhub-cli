@@ -23,6 +23,14 @@ var dhcli = &cobra.Command{
 	Short: "dhcli is a tool for managing resource in core platform",
 	Long:  `dhcli is a command-line utility for downloading, uploading, and managing core platform entity`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Set logger mode based on verbose flag
+		verboseFlag := cmd.Flags().Lookup("verbose")
+		if verboseFlag != nil && verboseFlag.Value.String() == "true" {
+			utils.GetGlobalLogger().SetMode(utils.ModeVerbose)
+		} else {
+			utils.GetGlobalLogger().SetMode(utils.ModeQuiet)
+		}
+
 		envFlag := cmd.Flags().Lookup("env")
 		var env string
 		if envFlag != nil && envFlag.Value.String() != "" {
@@ -44,6 +52,11 @@ var dhcli = &cobra.Command{
 
 		return nil
 	},
+}
+
+func init() {
+	// Add persistent verbose flag to root command
+	dhcli.PersistentFlags().BoolP("verbose", "v", false, "enable verbose output")
 }
 
 func Execute() {

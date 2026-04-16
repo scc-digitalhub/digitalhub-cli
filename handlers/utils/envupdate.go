@@ -6,7 +6,6 @@ package utils
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/spf13/viper"
@@ -20,23 +19,24 @@ func CheckUpdateEnvironment() {
 	const key = UpdatedEnvKey
 
 	if viper.IsSet(IniSource) && viper.GetString(IniSource) == "env" {
-		log.Printf("INI file has been created from enviromental variables...skip update\n")
+		logger.Info("INI file has been created from enviromental variables...skip update")
+
 		return
 	}
 
 	val := viper.GetString(key)
 	isSet := viper.IsSet(key)
-	log.Printf("Config freshness (%s): isSet=%v value=%q\n", key, isSet, val)
+	logger.Step(fmt.Sprintf("Config freshness (%s): isSet=%v value=%q", key, isSet, val))
 
 	if !isSet || val == "" {
-		log.Println("Update: no timestamp.")
+		logger.Warn("Update: no timestamp.")
 		updateEnvironment()
 		return
 	}
 
 	t, err := time.Parse(time.RFC3339, val)
 	if err != nil {
-		log.Printf("Update: invalid timestamp (%v).\n", err)
+		logger.Warn(fmt.Sprintf("Update: invalid timestamp (%v).", err))
 		updateEnvironment()
 		return
 	}
@@ -46,26 +46,26 @@ func CheckUpdateEnvironment() {
 	ttl := time.Duration(outdatedAfterHours) * time.Hour
 
 	if age >= ttl {
-		log.Printf("Update: outdated (age %s ≥ TTL %s).\n", age, ttl)
+		logger.Step(fmt.Sprintf("Update: outdated (age %s ≥ TTL %s).", age, ttl))
 		updateEnvironment()
 		return
 	}
 
-	log.Printf("Fresh: age %s < TTL %s.\n", age, ttl)
+	logger.Step(fmt.Sprintf("Fresh: age %s < TTL %s.", age, ttl))
 }
 
 // Fetch well-known, update Viper, bump timestamp, persist allowlisted keys.
 func updateEnvironment() {
-	fmt.Println("Updating environment…")
+	logger.Info("Updating environment…")
 	baseEndpoint := viper.GetString(DhCoreEndpoint)
 	if baseEndpoint == "" {
-		fmt.Println("Skip: dhcore_endpoint is empty.")
+		logger.Warn("Skip: dhcore_endpoint is empty.")
 		return
 	}
 
 	cfg, err := FetchConfig(baseEndpoint + "/.well-known/configuration")
 	if err != nil {
-		fmt.Printf("Config fetch failed: %v\n", err)
+		logger.Error(fmt.Sprintf("Config fetch failed: %v", err))
 		return
 	}
 	for k, v := range cfg {
@@ -74,7 +74,7 @@ func updateEnvironment() {
 
 	oidc, err := FetchConfig(baseEndpoint + "/.well-known/openid-configuration")
 	if err != nil {
-		fmt.Printf("OpenID fetch failed: %v\n", err)
+		logger.Error(fmt.Sprintf("OpenID fetch failed: %v", err))
 		return
 	}
 	for k, v := range oidc {
@@ -83,17 +83,17 @@ func updateEnvironment() {
 
 	ts := time.Now().UTC().Format(time.RFC3339)
 	viper.Set(UpdatedEnvKey, ts)
-	fmt.Printf("Set %s=%s\n", UpdatedEnvKey, ts)
+	logger.Info(fmt.Sprintf("Set %s=%s", UpdatedEnvKey, ts))
 
 	env := viper.GetString(CurrentEnvironment)
 	if env == "" {
 		env = resolveEnvName()
 	}
 	if err := UpdateIniFromStruct(getIniPath(), env); err != nil {
-		fmt.Printf("Persist failed: %v\n", err)
+		logger.Error(fmt.Sprintf("Persist failed: %v", err))
 		return
 	}
-	fmt.Printf("Persisted to [%s].\n", env)
+	logger.Info(fmt.Sprintf("Persisted to [%s].", env))
 }
 
 // Backward-compat wrapper.
@@ -105,6 +105,6 @@ func UpdateIniSectionFromViper(_ []string) error {
 	if err := UpdateIniFromStruct(getIniPath(), env); err != nil {
 		return fmt.Errorf("failed to save ini: %w", err)
 	}
-	log.Printf("Updated section [%s] in %s\n", env, getIniPath())
+	logger.Info(fmt.Sprintf("Updated section [%s] in %s", env, getIniPath()))
 	return nil
 }

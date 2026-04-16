@@ -23,6 +23,8 @@ import (
 	"gopkg.in/ini.v1"
 )
 
+var logger = GetGlobalLogger()
+
 func getIniPath() string {
 	// Check if DH_CONFIG environment variable is set
 	if configPath := os.Getenv("DH_CONFIG"); configPath != "" {
@@ -41,7 +43,7 @@ func LoadIni(createOnMissing bool) *ini.File {
 	cfg, err := ini.Load(getIniPath())
 	if err != nil {
 		if !createOnMissing {
-			log.Printf("Failed to read ini file: %v\n", err)
+			logger.Error(fmt.Sprintf("Failed to read ini file: %v", err))
 			os.Exit(1)
 		}
 		return ini.Empty()
@@ -51,7 +53,7 @@ func LoadIni(createOnMissing bool) *ini.File {
 
 func SaveIni(cfg *ini.File) {
 	if err := cfg.SaveTo(getIniPath()); err != nil {
-		log.Printf("Failed to update ini file: %v\n", err)
+		logger.Error(fmt.Sprintf("Failed to update ini file: %v", err))
 		os.Exit(1)
 	}
 }
@@ -100,7 +102,7 @@ func TranslateEndpoint(resource string) string {
 			return key
 		}
 	}
-	log.Printf("Resource '%v' is not supported.\n", resource)
+	logger.Error(fmt.Sprintf("Resource '%v' is not supported.", resource))
 	os.Exit(1)
 	return ""
 }
@@ -154,17 +156,17 @@ func PrintCommentForYaml(args ...string) {
 }
 
 func CheckApiLevel(apiLevelKey string, min, max int) {
-	log.Printf("Checking API level for %v command...\n", viper.GetString(apiLevelKey))
+	logger.Info(fmt.Sprintf("Checking API level for %v command...", viper.GetString(apiLevelKey)))
 
 	apiLevelStr := viper.GetString(apiLevelKey)
 	if apiLevelStr == "" {
-		log.Println("ERROR: Unable to check compatibility, environment does not specify API level.")
+		logger.Error("Unable to check compatibility, environment does not specify API level.")
 		os.Exit(1)
 	}
 
 	apiLevel, err := strconv.Atoi(apiLevelStr)
 	if err != nil {
-		log.Printf("ERROR: API level %v is not an integer.\n", apiLevelStr)
+		logger.Error(fmt.Sprintf("API level %v is not an integer.", apiLevelStr))
 		os.Exit(1)
 	}
 
@@ -183,7 +185,7 @@ func CheckApiLevel(apiLevelKey string, min, max int) {
 		if max != 0 {
 			interval = fmt.Sprintf("%s <= %v", interval, max)
 		}
-		log.Printf("ERROR: API level %v is not within the supported interval: %v\n", apiLevel, interval)
+		logger.Error(fmt.Sprintf("API level %v is not within the supported interval: %v", apiLevel, interval))
 		os.Exit(1)
 	}
 }
@@ -227,11 +229,11 @@ func PrintResponseState(resp []byte) error {
 	}
 	if status, ok := m["status"].(map[string]interface{}); ok {
 		if state, ok := status["state"].(string); ok {
-			log.Printf("Core response successful, new state: %v\n", state)
+			logger.Success(fmt.Sprintf("Core response successful, new state: %v", state))
 			return nil
 		}
 	}
-	log.Println("WARNING: core response successful, but unable to confirm new state.")
+	logger.Warn("Core response successful, but unable to confirm new state.")
 	return nil
 }
 
