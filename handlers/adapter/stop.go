@@ -17,8 +17,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-func StopHandler(env string, project string, resource string, id string) error {
-	endpoint := utils.TranslateEndpoint(resource)
+func StopHandler(env string, project string, id string) error {
+	endpoint := "runs"
 
 	// Preserve original guards/compat behavior
 	utils.CheckUpdateEnvironment()

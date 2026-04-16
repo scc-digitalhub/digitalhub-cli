@@ -5,8 +5,8 @@
 package cmd
 
 import (
-	"dhcli/pkg"
 	"dhcli/handlers/adapter"
+	"dhcli/pkg"
 	"dhcli/pkg/flags"
 	"log"
 
@@ -18,15 +18,14 @@ var stopCmd = func() *cobra.Command {
 	projectFlag := flags.NewStringFlag("project", "p", "Mandatory", "")
 
 	cmd := &cobra.Command{
-		Use:   "stop <resource> <id>",
-		Short: "Stop a resource",
-		Args:  cobra.ExactArgs(2),
+		Use:   "stop <id>",
+		Short: "Stop a run",
+		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			err := adapter.StopHandler(
 				*envFlag.Value,
 				*projectFlag.Value,
 				args[0],
-				args[1],
 			)
 			if err != nil {
 				log.Fatalf("Failed: %v", err)
