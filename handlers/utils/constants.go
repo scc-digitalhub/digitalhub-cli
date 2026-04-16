@@ -19,6 +19,7 @@ const (
 	DhCoreUser                              = "dhcore_user"
 	DhCorePassword                          = "dhcore_password"
 	DhCoreRefreshToken                      = "dhcore_refresh_token"
+	DhCoreProxy                             = "dhcore_proxy"
 	Oauth2TokenEndpoint                     = "oauth2_token_endpoint"
 	Oauth2UserinfoEndpoint                  = "oauth2_userinfo_endpoint"
 	Oauth2AuthorizationEndpoint             = "oauth2_authorization_endpoint"

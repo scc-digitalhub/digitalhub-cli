@@ -50,6 +50,10 @@ func (s *StepLogger) GetMode() LogMode {
 	return s.mode
 }
 
+func (s *StepLogger) IsVerbose() bool {
+	return s.mode == ModeVerbose
+}
+
 func (s *StepLogger) Step(msg string) {
 	// Skip in quiet mode
 	if s.mode == ModeQuiet {
