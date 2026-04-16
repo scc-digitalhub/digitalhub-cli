@@ -8,7 +8,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
+	"dhcli/handlers/utils"
 )
 
 func UseHandler(env string) {

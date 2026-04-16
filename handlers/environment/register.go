@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
+	"dhcli/handlers/utils"
 )
 
 func RegisterHandler(env string, endpoint string) error {

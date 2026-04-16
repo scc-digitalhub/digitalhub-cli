@@ -10,7 +10,7 @@ import (
 	"os"
 
 	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
-	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
+	"dhcli/handlers/utils"
 
 	crudsvc "github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/services/crud"
 

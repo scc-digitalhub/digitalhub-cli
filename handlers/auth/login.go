@@ -28,7 +28,7 @@ import (
 
 	"github.com/spf13/viper"
 
-	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
+	"dhcli/handlers/utils"
 )
 
 //go:embed callback.html

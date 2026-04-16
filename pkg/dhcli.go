@@ -10,7 +10,7 @@ import (
 	"os"
 	"slices"
 
-	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
+	"dhcli/handlers/utils"
 
 	"github.com/charmbracelet/fang"
 	"github.com/spf13/cobra"

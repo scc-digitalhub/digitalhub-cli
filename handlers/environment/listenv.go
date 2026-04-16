@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
+	"dhcli/handlers/utils"
 )
 
 func ListEnvHandler() {

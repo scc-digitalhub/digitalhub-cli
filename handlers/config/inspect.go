@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
+	"dhcli/handlers/utils"
 	"sigs.k8s.io/yaml"
 )
 

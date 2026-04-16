@@ -15,7 +15,7 @@ import (
 
 	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
 
-	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
+	"dhcli/handlers/utils"
 
 	"github.com/spf13/viper"
 	"sigs.k8s.io/yaml"

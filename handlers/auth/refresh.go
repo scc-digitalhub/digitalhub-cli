@@ -13,7 +13,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
+	"dhcli/handlers/utils"
 
 	"github.com/spf13/viper"
 )

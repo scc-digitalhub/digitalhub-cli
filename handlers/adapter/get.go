@@ -18,7 +18,7 @@ import (
 	"github.com/spf13/viper"
 	"sigs.k8s.io/yaml"
 
-	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
+	"dhcli/handlers/utils"
 )
 
 func GetHandler(env string, output string, project string, name string, resource string, id string) error {
