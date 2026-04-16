@@ -24,7 +24,13 @@ func RefreshHandler() error {
 	data.Set("client_id", viper.GetString(utils.DhCoreClientId))
 	data.Set("refresh_token", viper.GetString(utils.DhCoreRefreshToken))
 
-	resp, err := http.Post(viper.GetString(utils.Oauth2TokenEndpoint), "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
+	// Use debug HTTP client if available, otherwise use default
+	client := utils.GetDebugHTTPClient()
+	if client == nil {
+		client = &http.Client{}
+	}
+
+	resp, err := client.Post(viper.GetString(utils.Oauth2TokenEndpoint), "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
 	if err != nil {
 		return err
 	}

@@ -46,6 +46,7 @@ func UploadHandler(env string, input string, project string, resource string, id
 			Region:      viper.GetString("aws_region"),
 			EndpointURL: viper.GetString("aws_endpoint_url"),
 		},
+		HTTPClient: utils.GetDebugHTTPClient(),
 	}
 
 	// bucket override da viper, "datalake" di default.

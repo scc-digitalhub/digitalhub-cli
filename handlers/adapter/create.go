@@ -9,8 +9,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
 	"dhcli/handlers/utils"
+
+	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
 
 	crudsvc "github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/services/crud"
 
@@ -44,6 +45,7 @@ func CreateHandler(env string, project string, name string, filePath string, res
 			APIVersion:  viper.GetString(utils.DhCoreApiVersion),
 			AccessToken: viper.GetString(utils.DhCoreAccessToken),
 		},
+		HTTPClient: utils.GetDebugHTTPClient(),
 	}
 
 	// ctx per il CrudService e per la Create

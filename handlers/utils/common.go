@@ -200,7 +200,13 @@ func GetStringValue(m map[string]interface{}, key string) string {
 }
 
 func FetchConfig(configURL string) (map[string]interface{}, error) {
-	resp, err := http.Get(configURL)
+	// Use debug HTTP client if available, otherwise use default
+	client := GetDebugHTTPClient()
+	if client == nil {
+		client = &http.Client{}
+	}
+
+	resp, err := client.Get(configURL)
 	if err != nil {
 		return nil, err
 	}

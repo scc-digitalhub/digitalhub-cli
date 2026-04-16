@@ -23,12 +23,23 @@ var dhcli = &cobra.Command{
 	Short: "dhcli is a tool for managing resource in core platform",
 	Long:  `dhcli is a command-line utility for downloading, uploading, and managing core platform entity`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		// Set logger mode based on verbose flag
+		// Set logger mode and debug mode based on flags
 		verboseFlag := cmd.Flags().Lookup("verbose")
-		if verboseFlag != nil && verboseFlag.Value.String() == "true" {
+		debugFlag := cmd.Flags().Lookup("debug")
+
+		// Debug flag enables verbose mode automatically
+		isVerbose := (verboseFlag != nil && verboseFlag.Value.String() == "true") ||
+			(debugFlag != nil && debugFlag.Value.String() == "true")
+
+		if isVerbose {
 			utils.GetGlobalLogger().SetMode(utils.ModeVerbose)
 		} else {
 			utils.GetGlobalLogger().SetMode(utils.ModeQuiet)
+		}
+
+		// Enable debug HTTP transport if flag is set
+		if debugFlag != nil && debugFlag.Value.String() == "true" {
+			utils.EnableDebugMode()
 		}
 
 		envFlag := cmd.Flags().Lookup("env")
@@ -57,6 +68,7 @@ var dhcli = &cobra.Command{
 func init() {
 	// Add persistent verbose flag to root command
 	dhcli.PersistentFlags().BoolP("verbose", "v", false, "enable verbose output")
+	dhcli.PersistentFlags().Bool("debug", false, "enable HTTP debug logging")
 }
 
 func Execute() {

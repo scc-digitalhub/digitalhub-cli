@@ -47,6 +47,7 @@ func DownloadHandler(env string, destination string, output string, project stri
 			Region:      viper.GetString("aws_region"),
 			EndpointURL: viper.GetString("aws_endpoint_url"),
 		},
+		HTTPClient: utils.GetDebugHTTPClient(),
 	}
 
 	svc, err := transfer.NewTransferService(context.Background(), cfg)

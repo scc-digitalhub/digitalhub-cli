@@ -79,6 +79,7 @@ func UpdateHandler(env string, project string, filePath string, resource string,
 			APIVersion:  viper.GetString(utils.DhCoreApiVersion),
 			AccessToken: viper.GetString(utils.DhCoreAccessToken),
 		},
+		HTTPClient: utils.GetDebugHTTPClient(),
 	}
 
 	ctx := context.Background()

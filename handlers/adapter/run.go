@@ -60,6 +60,7 @@ func RunHandler(env string, project string, functionName string, functionId stri
 			APIVersion:  viper.GetString(utils.DhCoreApiVersion),
 			AccessToken: viper.GetString(utils.DhCoreAccessToken),
 		},
+		HTTPClient: utils.GetDebugHTTPClient(),
 	}
 
 	svc, err := sdk.NewRunService(context.Background(), cfg)

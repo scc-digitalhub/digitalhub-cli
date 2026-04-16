@@ -289,7 +289,11 @@ func exchangeAuthCode(tokenURL, clientID, verifier, redirectURI, code string) []
 		"redirect_uri":  {redirectURI},
 	}
 
-	client := &http.Client{Timeout: 15 * time.Second}
+	// Use debug HTTP client if available, otherwise use default
+	client := utils.GetDebugHTTPClient()
+	if client == nil {
+		client = &http.Client{Timeout: 15 * time.Second}
+	}
 
 	resp, err := client.PostForm(tokenURL, v)
 	if err != nil {

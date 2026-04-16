@@ -35,6 +35,7 @@ func MetricsHandler(env string, project string, container string, resource strin
 			APIVersion:  viper.GetString(utils.DhCoreApiVersion),
 			AccessToken: viper.GetString(utils.DhCoreAccessToken),
 		},
+		HTTPClient: utils.GetDebugHTTPClient(),
 	}
 
 	ctx := context.Background()

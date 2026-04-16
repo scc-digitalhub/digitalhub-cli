@@ -42,6 +42,7 @@ func LogHandler(env string, project string, container string, follow bool, resou
 			APIVersion:  viper.GetString(utils.DhCoreApiVersion),
 			AccessToken: viper.GetString(utils.DhCoreAccessToken),
 		},
+		HTTPClient: utils.GetDebugHTTPClient(),
 	}
 
 	ctx := context.Background()

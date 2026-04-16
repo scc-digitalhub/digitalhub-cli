@@ -69,18 +69,30 @@ func (s *StepLogger) Info(msg string) {
 		return
 	}
 	if supportsColor() {
-		log.Println(DarkGray + " ℹ " + msg + Reset)
+		log.Println(DarkGray + "ℹ " + msg + Reset)
 	} else {
-		log.Println(" ℹ " + msg)
+		log.Println("ℹ " + msg)
+	}
+}
+
+func (s *StepLogger) Debug(msg string) {
+	// Skip in quiet mode
+	if s.mode == ModeQuiet {
+		return
+	}
+	if supportsColor() {
+		log.Println(DarkGray + "DEBUG " + msg + Reset)
+	} else {
+		log.Println("DEBUG " + msg)
 	}
 }
 
 func (s *StepLogger) Success(msg string) {
 	// Always show
 	if supportsColor() {
-		log.Println(Green + " ✔ " + msg + Reset)
+		log.Println(Green + "✔ " + msg + Reset)
 	} else {
-		log.Println(" ✔ " + msg)
+		log.Println("✔ " + msg)
 	}
 }
 
@@ -90,18 +102,18 @@ func (s *StepLogger) Warn(msg string) {
 		return
 	}
 	if supportsColor() {
-		log.Println(Yellow + " ⚠ " + msg + Reset)
+		log.Println(Yellow + "⚠ " + msg + Reset)
 	} else {
-		log.Println(" ⚠ " + msg)
+		log.Println("⚠ " + msg)
 	}
 }
 
 func (s *StepLogger) Error(msg string) {
 	// Always show
 	if supportsColor() {
-		log.Println(Red + " ✖ " + msg + Reset)
+		log.Println(Red + "✖ " + msg + Reset)
 	} else {
-		log.Println(" ✖ " + msg)
+		log.Println("✖ " + msg)
 	}
 }
 

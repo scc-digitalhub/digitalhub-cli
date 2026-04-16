@@ -35,6 +35,7 @@ func StopHandler(env string, project string, resource string, id string) error {
 			APIVersion:  viper.GetString(utils.DhCoreApiVersion),
 			AccessToken: viper.GetString(utils.DhCoreAccessToken),
 		},
+		HTTPClient: utils.GetDebugHTTPClient(),
 	}
 
 	ctx := context.Background()

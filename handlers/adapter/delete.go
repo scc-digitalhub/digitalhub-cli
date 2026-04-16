@@ -77,6 +77,7 @@ func DeleteHandler(env string, project string, name string, confirm bool, cascad
 			APIVersion:  viper.GetString(utils.DhCoreApiVersion),
 			AccessToken: viper.GetString(utils.DhCoreAccessToken),
 		},
+		HTTPClient: utils.GetDebugHTTPClient(),
 	}
 
 	ctx := context.Background()
