@@ -1,0 +1,57 @@
+// SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
+//
+// SPDX-License-Identifier: Apache-2.0
+
+package commands
+
+import (
+	"dhcli/pkg"
+	"dhcli/handlers/adapter"
+	"dhcli/pkg/flags"
+	"log"
+
+	"github.com/spf13/cobra"
+)
+
+var createCmd = func() *cobra.Command {
+
+	// Declare cmd all flags
+
+	envFlag := flags.NewStringFlag("env", "e", "environment", "")
+	projectFlag := flags.NewStringFlag("project", "p", "Mandatory for resources other than projects", "")
+	nameFlag := flags.NewStringFlag("name", "n", "Projects may be created with name alone", "")
+	resetIdFlag := flags.NewBoolFlag("reset-id", "r", "If set, removes the id field from the file to ensure the server assigns a new one", false)
+	fileFlag := flags.NewStringFlag("file", "f", "Path to a YAML file containing the resource definition, mandatory for resources other than projects", "")
+
+	cmd := &cobra.Command{
+		Use:   "create <resource>",
+		Short: "Creates a new resource from a YAML file (or a name for projects)",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			err := adapter.CreateHandler(
+				*envFlag.Value,
+				*projectFlag.Value,
+				*nameFlag.Value,
+				*fileFlag.Value,
+				*resetIdFlag.Value,
+				args[0],
+			)
+			if err != nil {
+				log.Fatalf("Create failed: %v", err)
+			}
+		},
+	}
+
+	// Add all flags
+	flags.AddFlag(cmd, &envFlag)
+	flags.AddFlag(cmd, &projectFlag)
+	flags.AddFlag(cmd, &nameFlag)
+	flags.AddFlag(cmd, &resetIdFlag)
+	flags.AddFlag(cmd, &fileFlag)
+
+	return cmd
+}()
+
+func init() {
+	core.RegisterCommand(createCmd)
+}

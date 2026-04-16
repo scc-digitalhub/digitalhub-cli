@@ -5,8 +5,8 @@
 package main
 
 import (
-	"dhcli/core"
-	_ "dhcli/core/commands"
+	"dhcli/pkg"
+	_ "dhcli/pkg/cmd"
 	"log"
 
 	"gopkg.in/ini.v1"
