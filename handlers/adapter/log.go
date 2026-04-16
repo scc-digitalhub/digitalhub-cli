@@ -10,9 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"os/exec"
-	"runtime"
 	"strings"
 	"time"
 
@@ -25,8 +22,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-func LogHandler(env string, project string, container string, follow bool, resource string, id string) error {
-	endpoint := utils.TranslateEndpoint(resource)
+func LogHandler(env string, project string, container string, follow bool, id string) error {
+	endpoint := utils.TranslateEndpoint("run")
 
 	utils.CheckUpdateEnvironment()
 	utils.CheckApiLevel(utils.ApiLevelKey, utils.LogMin, utils.LogMax)
@@ -53,6 +50,11 @@ func LogHandler(env string, project string, container string, follow bool, resou
 		return err
 	}
 
+	// Track the last printed tail of the log to handle circular buffers
+	// We'll search for this tail in new logs to find where we left off
+	var lastPrintedTail string
+	const tailSize = 200 // track last 200 chars to find in new logs
+
 	// Loop requests if following
 	for {
 		containerLog, err := getContainerLogAdapter(ctx, svc, project, endpoint, id, container)
@@ -69,22 +71,43 @@ func LogHandler(env string, project string, container string, follow bool, resou
 		if err != nil {
 			return err
 		}
-		fmt.Printf("%v\n", string(logContents))
+
+		logStr := string(logContents)
+
+		if lastPrintedTail == "" {
+			// First iteration - print all and save the tail
+			fmt.Print(logStr)
+			if len(logStr) > tailSize {
+				lastPrintedTail = logStr[len(logStr)-tailSize:]
+			} else {
+				lastPrintedTail = logStr
+			}
+		} else {
+			// Find where we left off by searching for the tail
+			idx := strings.Index(logStr, lastPrintedTail)
+			if idx != -1 {
+				// Found the tail, print only new content after it
+				newContent := logStr[idx+len(lastPrintedTail):]
+				fmt.Print(newContent)
+			} else {
+				// Tail not found - circular buffer wrapped around
+				// Print all new logs (might have small duplication but ensures we don't lose logs)
+				fmt.Print(logStr)
+			}
+
+			// Update tail for next iteration
+			if len(logStr) > tailSize {
+				lastPrintedTail = logStr[len(logStr)-tailSize:]
+			} else {
+				lastPrintedTail = logStr
+			}
+		}
 
 		if !follow {
 			return nil
 		}
 
 		time.Sleep(5 * time.Second)
-
-		var cmd *exec.Cmd
-		if runtime.GOOS == "windows" {
-			cmd = exec.Command("cmd", "/c", "cls")
-		} else {
-			cmd = exec.Command("clear")
-		}
-		cmd.Stdout = os.Stdout
-		_ = cmd.Run()
 	}
 }
 
