@@ -1,5 +1,4 @@
 // SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
-//
 // SPDX-License-Identifier: Apache-2.0
 
 package auth
@@ -14,7 +13,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"io"
 	"log"
 	"net"
@@ -24,6 +22,8 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
+	"text/template"
 	"time"
 
 	"github.com/spf13/viper"
@@ -34,59 +34,72 @@ import (
 //go:embed callback.html
 var callbackFS embed.FS
 
-var generatedState string
+type OAuthResult struct {
+	TokenJSON   []byte
+	RedirectURI string
+	Err         error
+}
 
-// Runs PKCE flow for authentication
+var logger = utils.CreateStepLogger()
+
+// ==========================
+// PUBLIC ENTRY POINT
+// ==========================
 func LoginHandler() error {
-	// Ensure environment is up-to-date and compatible
 	utils.CheckUpdateEnvironment()
 	utils.CheckApiLevel(utils.ApiLevelKey, utils.LoginMin, utils.LoginMax)
 
-	// PKCE
 	verifier, challenge := generatePKCE()
-	generatedState = randomString(32)
+	state := randomString(32)
 
-	// Start local callback server with random port
-	sendChan := make(chan string, 1) // Channel to receive the redirect URI
-	stop, err := startAuthCodeServer(verifier, sendChan)
+	ctx := context.Background()
+	timeout := 180 * time.Second
+
+	redirectURI, resultCh, stop, err := startAuthCodeServer(ctx, verifier, state, timeout)
 	if err != nil {
 		return fmt.Errorf("impossibile avviare il server locale: %w", err)
 	}
 	defer stop()
 
-	// Wait for the server to report its actual address
-	redirectURI := <-sendChan
-
-	// Build authorize URL
-	authURL, err := buildAuthURL(challenge, generatedState, redirectURI)
+	authURL, err := buildAuthURL(challenge, state, redirectURI)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("─────────────────────────────────────────────────────────────────────")
-	fmt.Println("  The following URL will be opened in your browser to authenticate:  ")
-	fmt.Println("─────────────────────────────────────────────────────────────────────")
+	fmt.Println("────────────────────────────────────────────────────────────")
+	fmt.Println("  The following URL will be opened in your browser:        ")
+	fmt.Println("────────────────────────────────────────────────────────────")
 	fmt.Println(authURL)
-	fmt.Println("─────────────────────────────────────────────────────────────────────")
+	fmt.Println("────────────────────────────────────────────────────────────")
 	fmt.Print("Press Enter to continue... ")
 
-	if _, err := bufio.NewReader(os.Stdin).ReadBytes('\n'); err != nil {
-		return fmt.Errorf("errore lettura input: %w", err)
-	}
+	_, _ = bufio.NewReader(os.Stdin).ReadBytes('\n')
 
 	if err := openBrowser(authURL); err != nil {
-		log.Printf("Error opening browser: %v", err)
+		logger.Error(fmt.Sprintf("browser open error: %v", err))
 	}
 
-	// Block until callback handler exits the process (or server is stopped)
-	select {}
+	// Wait for result (no select loop hacks)
+	res := <-resultCh
+	if res.Err != nil {
+		return res.Err
+	}
+
+	logger.Success("Login successful")
+	return nil
 }
 
+// ==========================
+// PKCE
+// ==========================
 func generatePKCE() (verifier, challenge string) {
-	const cs = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
-	verifier = randomStringCharset(64, cs)
+	const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
+
+	verifier = randomStringCharset(64, charset)
+
 	h := sha256.Sum256([]byte(verifier))
 	challenge = base64.RawURLEncoding.EncodeToString(h[:])
+
 	return
 }
 
@@ -94,101 +107,32 @@ func randomString(n int) string {
 	return randomStringCharset(n, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
 }
 
-func randomStringCharset(n int, cs string) string {
+func randomStringCharset(n int, charset string) string {
 	b := make([]byte, n)
 	for i := range b {
 		_, _ = rand.Read(b[i : i+1])
-		b[i] = cs[int(b[i])%len(cs)]
+		b[i] = charset[int(b[i])%len(charset)]
 	}
 	return string(b)
 }
 
-// Starts http callback with random available port and returns a stop() func to shutdown.
-// Minimal timeouts and context to avoid hanging.
-func startAuthCodeServer(verifier string, uriChan chan<- string) (func(), error) {
-	// Use :0 to let the OS assign a random available port
-	ln, err := net.Listen("tcp", ":0")
-	if err != nil {
-		return nil, err
-	}
+// ==========================
+// OAUTH SERVER CORE
+// ==========================
+func startAuthCodeServer(
+	ctx context.Context,
+	verifier string,
+	state string,
+	timeout time.Duration,
+) (string, <-chan OAuthResult, func(), error) {
 
-	// Extract the actual port assigned and construct redirect URI
-	tcpAddr := ln.Addr().(*net.TCPAddr)
-	port := tcpAddr.Port
-	redirectURI := fmt.Sprintf("http://localhost:%d/callback", port)
+	const maxPortRetries = 5
+
+	out := make(chan OAuthResult, 1)
+
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 
 	mux := http.NewServeMux()
-
-	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
-		authCode := r.URL.Query().Get("code")
-		state := r.URL.Query().Get("state")
-
-		if state != generatedState {
-			http.Error(w, "Invalid state", http.StatusBadRequest)
-			log.Fatalf("State mismatch: got %q", state)
-		}
-		if authCode == "" {
-			http.Error(w, "Missing code", http.StatusBadRequest)
-			return
-		}
-
-		// Use the captured redirectURI from closure
-		tkn := exchangeAuthCode(
-			viper.GetString(utils.Oauth2TokenEndpoint),
-			viper.GetString(utils.DhCoreClientId),
-			verifier,
-			redirectURI,
-			authCode,
-		)
-		if tkn == nil {
-			http.Error(w, "Failed token exchange", http.StatusInternalServerError)
-			return
-		}
-
-		var prettyJSON bytes.Buffer
-		if err := json.Indent(&prettyJSON, tkn, "", "  "); err != nil {
-			prettyJSON.Write(tkn)
-		}
-
-		// Load and render callback template
-		w.Header().Set("Content-Type", "text/html")
-
-		tmpl, err := template.ParseFS(callbackFS, "callback.html")
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Template error: %v", err), http.StatusInternalServerError)
-			return
-		}
-
-		data := map[string]string{
-			"TokenData": prettyJSON.String(),
-		}
-
-		if err := tmpl.Execute(w, data); err != nil {
-			log.Printf("template execute error: %v", err)
-			return
-		}
-
-		// Map token response into Viper
-		var m map[string]interface{}
-		if err := json.Unmarshal(tkn, &m); err != nil {
-			log.Printf("json parse error: %v", err)
-		}
-		for k, v := range m {
-			key := k
-			if mapped, ok := utils.DhCoreMap[k]; ok {
-				key = mapped
-			}
-			viper.Set(key, fmt.Sprint(v))
-		}
-
-		// I can also pass just some specific config keys
-		if err := utils.UpdateIniSectionFromViper(viper.AllKeys()); err != nil {
-			log.Printf("persist error: %v", err)
-		}
-
-		log.Println("Login successful.")
-		go os.Exit(0)
-	})
 
 	srv := &http.Server{
 		Handler:           mux,
@@ -197,24 +141,145 @@ func startAuthCodeServer(verifier string, uriChan chan<- string) (func(), error)
 		ReadTimeout:       15 * time.Second,
 	}
 
-	go func() {
-		if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
-			log.Printf("auth server error: %v", err)
+	// -------------------------
+	// PORT BINDING (retry safe)
+	// -------------------------
+	var ln net.Listener
+	var err error
+
+	for i := 0; i < maxPortRetries; i++ {
+		ln, err = net.Listen("tcp", ":0")
+		if err == nil {
+			break
 		}
-	}()
-
-	// Send the redirect URI to the caller
-	uriChan <- redirectURI
-
-	stop := func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer cancel()
-		_ = srv.Shutdown(ctx)
+		time.Sleep(50 * time.Millisecond)
 	}
 
-	return stop, nil
+	if ln == nil {
+		cancel()
+		return "", nil, nil, fmt.Errorf("failed to bind local port")
+	}
+
+	port := ln.Addr().(*net.TCPAddr).Port
+	redirectURI := fmt.Sprintf("http://localhost:%d/callback", port)
+
+	// -------------------------
+	// CLEAN STOP FUNCTION
+	// -------------------------
+	stopOnce := sync.Once{}
+	stop := func() {
+		stopOnce.Do(func() {
+			cancel()
+
+			shutdownCtx, cancel2 := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel2()
+
+			_ = srv.Shutdown(shutdownCtx)
+			close(out)
+		})
+	}
+
+	// -------------------------
+	// CALLBACK HANDLER
+	// -------------------------
+	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
+
+		// avoid late execution after timeout
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		if r.URL.Query().Get("state") != state {
+			http.Error(w, "invalid state", http.StatusBadRequest)
+			select {
+			case out <- OAuthResult{Err: fmt.Errorf("state mismatch")}:
+			default:
+			}
+			stop()
+			return
+		}
+
+		code := r.URL.Query().Get("code")
+		if code == "" {
+			http.Error(w, "missing code", http.StatusBadRequest)
+			return
+		}
+
+		token := exchangeAuthCode(
+			viper.GetString(utils.Oauth2TokenEndpoint),
+			viper.GetString(utils.DhCoreClientId),
+			verifier,
+			redirectURI,
+			code,
+		)
+
+		if token == nil {
+			http.Error(w, "token exchange failed", http.StatusInternalServerError)
+			select {
+			case out <- OAuthResult{Err: fmt.Errorf("token exchange failed")}:
+			default:
+			}
+			stop()
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html")
+
+		tmpl, err := template.ParseFS(callbackFS, "callback.html")
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Template error: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		var prettyJSON bytes.Buffer
+		if err := json.Indent(&prettyJSON, token, "", "  "); err != nil {
+			prettyJSON.Write(token)
+		}
+
+		data := map[string]string{
+			"TokenData": prettyJSON.String(),
+		}
+
+		if err := tmpl.Execute(w, data); err != nil {
+			log.Printf("template execute error: %v", err)
+		}
+		select {
+		case out <- OAuthResult{
+			TokenJSON:   token,
+			RedirectURI: redirectURI,
+		}:
+		default:
+		}
+
+		stop()
+	})
+
+	// -------------------------
+	// SERVER START (race-safe)
+	// -------------------------
+	ready := make(chan struct{})
+
+	go func() {
+		close(ready)
+		_ = srv.Serve(ln)
+	}()
+
+	<-ready
+
+	// auto-stop on timeout
+	go func() {
+		<-ctx.Done()
+		stop()
+	}()
+
+	return redirectURI, out, stop, nil
 }
 
+// ==========================
+// TOKEN EXCHANGE
+// ==========================
 func exchangeAuthCode(tokenURL, clientID, verifier, redirectURI, code string) []byte {
 	v := url.Values{
 		"grant_type":    {"authorization_code"},
@@ -224,37 +289,45 @@ func exchangeAuthCode(tokenURL, clientID, verifier, redirectURI, code string) []
 		"redirect_uri":  {redirectURI},
 	}
 
-	// HTTP client with timeout
 	client := &http.Client{Timeout: 15 * time.Second}
+
 	resp, err := client.PostForm(tokenURL, v)
 	if err != nil {
-		log.Printf("Token request error: %v", err)
+		log.Printf("token request error: %v", err)
 		return nil
 	}
 	defer resp.Body.Close()
 
+	body, _ := io.ReadAll(resp.Body)
+
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		log.Printf("Token error %s: %s", resp.Status, body)
+		log.Printf("token error: %s - %s", resp.Status, string(body))
 		return nil
 	}
-	tkn, _ := io.ReadAll(resp.Body)
-	return tkn
+
+	return body
 }
 
+// ==========================
+// AUTH URL BUILDER
+// ==========================
 func buildAuthURL(chal, state, redirectURI string) (string, error) {
-	// Robust scope normalization (commas/spaces → single space)
 	raw := viper.GetString("scopes_supported")
+
 	var scopes []string
 	if raw != "" {
-		split := strings.FieldsFunc(raw, func(r rune) bool { return r == ',' || r == ' ' || r == '\t' || r == '\n' })
+		split := strings.FieldsFunc(raw, func(r rune) bool {
+			return r == ',' || r == ' ' || r == '\n' || r == '\t'
+		})
+
 		for _, s := range split {
 			if s != "" {
 				scopes = append(scopes, s)
 			}
 		}
 	}
-	scope := url.QueryEscape(strings.Join(scopes, " "))
+
+	scope := strings.Join(scopes, " ")
 
 	v := url.Values{
 		"response_type":         {"code"},
@@ -264,15 +337,21 @@ func buildAuthURL(chal, state, redirectURI string) (string, error) {
 		"code_challenge_method": {"S256"},
 		"state":                 {state},
 	}
+
 	base := viper.GetString("authorization_endpoint")
 	if base == "" {
-		return "", fmt.Errorf("authorization_endpoint non configurato")
+		return "", fmt.Errorf("authorization_endpoint missing")
 	}
-	return base + "?" + v.Encode() + "&scope=" + scope, nil
+
+	return base + "?" + v.Encode() + "&scope=" + url.QueryEscape(scope), nil
 }
 
+// ==========================
+// BROWSER OPEN
+// ==========================
 func openBrowser(u string) error {
 	var cmd *exec.Cmd
+
 	switch runtime.GOOS {
 	case "windows":
 		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", u)
@@ -281,5 +360,6 @@ func openBrowser(u string) error {
 	default:
 		cmd = exec.Command("xdg-open", u)
 	}
+
 	return cmd.Start()
 }
