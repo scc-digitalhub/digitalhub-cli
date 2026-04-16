@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
 
@@ -93,7 +94,11 @@ func ListResourcesHandler(env string, output string, project string, name string
 }
 
 func printShortList(resources []interface{}) {
-	printShortLineList("NAME", "ID", "KIND", "UPDATED", "STATE", "LABELS")
+	// Create tabwriter with proper spacing
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+
+	// Print header
+	fmt.Fprintln(w, "NAME\tID\tKIND\tUPDATED\tSTATE\tLABELS")
 
 	for _, ri := range resources {
 		m := ri.(map[string]interface{})
@@ -123,12 +128,10 @@ func printShortList(resources []interface{}) {
 			}
 		}
 
-		printShortLineList(name, id, kind, updated, state, labels)
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n", name, id, kind, updated, state, labels)
 	}
-}
 
-func printShortLineList(rName string, rId string, rKind string, rUpdated string, rState string, rLabels string) {
-	fmt.Printf("%-36s%-36s%-24s%-30s%-12s%s\n", rName, rId, rKind, rUpdated, rState, rLabels)
+	w.Flush()
 }
 
 func printJSONList(resources []interface{}) {
