@@ -85,6 +85,25 @@ func LoginHandler() error {
 		return res.Err
 	}
 
+	// Map token response into Viper and persist to config file
+	var m map[string]interface{}
+	if err := json.Unmarshal(res.TokenJSON, &m); err != nil {
+		logger.Error(fmt.Sprintf("json parse error: %v", err))
+	} else {
+		for k, v := range m {
+			key := k
+			if mapped, ok := utils.DhCoreMap[k]; ok {
+				key = mapped
+			}
+			viper.Set(key, fmt.Sprint(v))
+		}
+
+		// Persist config keys to ini file
+		if err := utils.UpdateIniSectionFromViper(viper.AllKeys()); err != nil {
+			logger.Error(fmt.Sprintf("persist error: %v", err))
+		}
+	}
+
 	logger.Success("Login successful")
 	return nil
 }
