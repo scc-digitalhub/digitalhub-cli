@@ -31,12 +31,10 @@ import (
 	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
 )
 
-const redirectURI = "http://localhost:4000/callback"
-
-var generatedState string
-
 //go:embed callback.html
 var callbackFS embed.FS
+
+var generatedState string
 
 // Runs PKCE flow for authentication
 func LoginHandler() error {
@@ -48,15 +46,19 @@ func LoginHandler() error {
 	verifier, challenge := generatePKCE()
 	generatedState = randomString(32)
 
-	// Start local callback server
-	stop, err := startAuthCodeServer(verifier)
+	// Start local callback server with random port
+	sendChan := make(chan string, 1) // Channel to receive the redirect URI
+	stop, err := startAuthCodeServer(verifier, sendChan)
 	if err != nil {
 		return fmt.Errorf("impossibile avviare il server locale: %w", err)
 	}
 	defer stop()
 
+	// Wait for the server to report its actual address
+	redirectURI := <-sendChan
+
 	// Build authorize URL
-	authURL, err := buildAuthURL(challenge, generatedState)
+	authURL, err := buildAuthURL(challenge, generatedState, redirectURI)
 	if err != nil {
 		return err
 	}
@@ -101,9 +103,20 @@ func randomStringCharset(n int, cs string) string {
 	return string(b)
 }
 
-// Starts http://localhost:4000/callback and returns a stop() func to shutdown.
+// Starts http callback with random available port and returns a stop() func to shutdown.
 // Minimal timeouts and context to avoid hanging.
-func startAuthCodeServer(verifier string) (func(), error) {
+func startAuthCodeServer(verifier string, uriChan chan<- string) (func(), error) {
+	// Use :0 to let the OS assign a random available port
+	ln, err := net.Listen("tcp", ":0")
+	if err != nil {
+		return nil, err
+	}
+
+	// Extract the actual port assigned and construct redirect URI
+	tcpAddr := ln.Addr().(*net.TCPAddr)
+	port := tcpAddr.Port
+	redirectURI := fmt.Sprintf("http://localhost:%d/callback", port)
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
@@ -119,10 +132,12 @@ func startAuthCodeServer(verifier string) (func(), error) {
 			return
 		}
 
+		// Use the captured redirectURI from closure
 		tkn := exchangeAuthCode(
 			viper.GetString(utils.Oauth2TokenEndpoint),
 			viper.GetString(utils.DhCoreClientId),
 			verifier,
+			redirectURI,
 			authCode,
 		)
 		if tkn == nil {
@@ -176,16 +191,10 @@ func startAuthCodeServer(verifier string) (func(), error) {
 	})
 
 	srv := &http.Server{
-		Addr:              ":4000",
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
 		WriteTimeout:      15 * time.Second,
 		ReadTimeout:       15 * time.Second,
-	}
-
-	ln, err := net.Listen("tcp", srv.Addr)
-	if err != nil {
-		return nil, err
 	}
 
 	go func() {
@@ -193,6 +202,9 @@ func startAuthCodeServer(verifier string) (func(), error) {
 			log.Printf("auth server error: %v", err)
 		}
 	}()
+
+	// Send the redirect URI to the caller
+	uriChan <- redirectURI
 
 	stop := func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -203,7 +215,7 @@ func startAuthCodeServer(verifier string) (func(), error) {
 	return stop, nil
 }
 
-func exchangeAuthCode(tokenURL, clientID, verifier, code string) []byte {
+func exchangeAuthCode(tokenURL, clientID, verifier, redirectURI, code string) []byte {
 	v := url.Values{
 		"grant_type":    {"authorization_code"},
 		"client_id":     {clientID},
@@ -230,7 +242,7 @@ func exchangeAuthCode(tokenURL, clientID, verifier, code string) []byte {
 	return tkn
 }
 
-func buildAuthURL(chal, state string) (string, error) {
+func buildAuthURL(chal, state, redirectURI string) (string, error) {
 	// Robust scope normalization (commas/spaces → single space)
 	raw := viper.GetString("scopes_supported")
 	var scopes []string
