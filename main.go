@@ -7,8 +7,9 @@ package main
 import (
 	"dhcli/core"
 	_ "dhcli/core/commands"
-	"gopkg.in/ini.v1"
 	"log"
+
+	"gopkg.in/ini.v1"
 )
 
 func main() {
