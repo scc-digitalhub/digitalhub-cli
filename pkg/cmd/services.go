@@ -10,6 +10,8 @@ import (
 	"dhcli/pkg/flags"
 	"log"
 
+	"dhcli/handlers/utils"
+
 	"github.com/spf13/cobra"
 )
 
@@ -28,10 +30,11 @@ var servicesCmd = func() *cobra.Command {
 		Short: "List services (runs with action=serve)",
 		Args:  cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
+			project := utils.ResolveProject(*projectFlag.Value)
 			if err := adapter.ListServicesHandler(
 				*envFlag.Value,
 				*outFlag.Value,
-				*projectFlag.Value,
+				project,
 				*nameFlag.Value,
 				*kindFlag.Value,
 				*stateFlag.Value,

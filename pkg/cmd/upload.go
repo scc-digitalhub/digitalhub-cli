@@ -5,11 +5,13 @@
 package cmd
 
 import (
-	"dhcli/pkg"
 	"dhcli/handlers/adapter"
+	"dhcli/pkg"
 	"dhcli/pkg/flags"
 	"errors"
 	"log"
+
+	"dhcli/handlers/utils"
 
 	"github.com/spf13/cobra"
 )
@@ -37,10 +39,11 @@ var uploadCmd = func() *cobra.Command {
 				id = args[1]
 			}
 
+			project := utils.ResolveProject(*projectFlag.Value)
 			err := adapter.UploadHandler(
 				*envFlag.Value,
 				*inputFlag.Value,
-				*projectFlag.Value,
+				project,
 				args[0],
 				id,
 				*nameFlag.Value,

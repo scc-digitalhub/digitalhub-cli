@@ -5,11 +5,13 @@
 package cmd
 
 import (
-	"dhcli/pkg"
 	"dhcli/handlers/adapter"
+	"dhcli/pkg"
 	"dhcli/pkg/flags"
 	"errors"
 	"log"
+
+	"dhcli/handlers/utils"
 
 	"github.com/spf13/cobra"
 )
@@ -39,11 +41,12 @@ var downloadCmd = func() *cobra.Command {
 				id = args[1]
 			}
 
+			project := utils.ResolveProject(*projectFlag.Value)
 			if err := adapter.DownloadHandler(
 				*envFlag.Value,
 				*destinationFlag.Value,
 				*outFlag.Value,
-				*projectFlag.Value,
+				project,
 				*nameFlag.Value,
 				args[0],
 				id,

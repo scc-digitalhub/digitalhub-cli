@@ -5,10 +5,12 @@
 package cmd
 
 import (
-	"dhcli/pkg"
 	"dhcli/handlers/adapter"
+	"dhcli/pkg"
 	"dhcli/pkg/flags"
 	"log"
+
+	"dhcli/handlers/utils"
 
 	"github.com/spf13/cobra"
 )
@@ -22,9 +24,10 @@ var resumeCmd = func() *cobra.Command {
 		Short: "Resume a resource",
 		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
+			project := utils.ResolveProject(*projectFlag.Value)
 			err := adapter.ResumeHandler(
 				*envFlag.Value,
-				*projectFlag.Value,
+				project,
 				args[0],
 				args[1],
 			)

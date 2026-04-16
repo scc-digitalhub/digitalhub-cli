@@ -5,10 +5,12 @@
 package cmd
 
 import (
-	"dhcli/pkg"
 	"dhcli/handlers/adapter"
+	"dhcli/pkg"
 	"dhcli/pkg/flags"
 	"log"
+
+	"dhcli/handlers/utils"
 
 	"github.com/spf13/cobra"
 )
@@ -25,9 +27,10 @@ var runCmd = func() *cobra.Command {
 		Short: "Runs a function",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
+			project := utils.ResolveProject(*projectFlag.Value)
 			err := adapter.RunHandler(
 				*envFlag.Value,
-				*projectFlag.Value,
+				project,
 				*fnNameFlag.Value,
 				*fnIDFlag.Value,
 				*filePathFlag.Value,

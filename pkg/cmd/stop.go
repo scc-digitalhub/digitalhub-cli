@@ -10,6 +10,8 @@ import (
 	"dhcli/pkg/flags"
 	"log"
 
+	"dhcli/handlers/utils"
+
 	"github.com/spf13/cobra"
 )
 
@@ -22,9 +24,10 @@ var stopCmd = func() *cobra.Command {
 		Short: "Stop a run",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
+			project := utils.ResolveProject(*projectFlag.Value)
 			err := adapter.StopHandler(
 				*envFlag.Value,
-				*projectFlag.Value,
+				project,
 				args[0],
 			)
 			if err != nil {

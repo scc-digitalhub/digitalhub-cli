@@ -10,6 +10,8 @@ import (
 	"dhcli/pkg/flags"
 	"log"
 
+	"dhcli/handlers/utils"
+
 	"github.com/spf13/cobra"
 )
 
@@ -24,9 +26,10 @@ var logCmd = func() *cobra.Command {
 		Short: "Read logs",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
+			project := utils.ResolveProject(*projectFlag.Value)
 			err := adapter.LogHandler(
 				*envFlag.Value,
-				*projectFlag.Value,
+				project,
 				*containerFlag.Value,
 				*followFlag.Value,
 				args[0],
