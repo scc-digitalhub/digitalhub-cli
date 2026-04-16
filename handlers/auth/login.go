@@ -10,9 +10,11 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"embed"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"io"
 	"log"
 	"net"
@@ -32,6 +34,9 @@ import (
 const redirectURI = "http://localhost:4000/callback"
 
 var generatedState string
+
+//go:embed callback.html
+var callbackFS embed.FS
 
 // Runs PKCE flow for authentication
 func LoginHandler() error {
@@ -130,14 +135,23 @@ func startAuthCodeServer(verifier string) (func(), error) {
 			prettyJSON.Write(tkn)
 		}
 
+		// Load and render callback template
 		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprintln(w, "<div style=\"margin: 24px 0px 0px 24px;\">")
-		fmt.Fprintln(w, "<h1>Authorization successful</h1>")
-		fmt.Fprintln(w, "<h3>You may now close this window.</h3>")
-		fmt.Fprintln(w, "<h3>Token response:</h3>")
-		fmt.Fprintln(w, "<button style=\"position: absolute;left: 810px;padding: 10px;opacity: 0.90;cursor: pointer;\" onclick=\"navigator.clipboard.writeText(document.getElementById('resp').innerHTML)\">Copy</button>")
-		fmt.Fprintf(w, "<pre id=\"resp\" style=\"background:#f6f8fa;border:1px solid #ccc;padding:16px;width:800px;min-height:400px;overflow:auto;\">%s</pre>", prettyJSON.String())
-		fmt.Fprintln(w, "</div>")
+
+		tmpl, err := template.ParseFS(callbackFS, "callback.html")
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Template error: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		data := map[string]string{
+			"TokenData": prettyJSON.String(),
+		}
+
+		if err := tmpl.Execute(w, data); err != nil {
+			log.Printf("template execute error: %v", err)
+			return
+		}
 
 		// Map token response into Viper
 		var m map[string]interface{}

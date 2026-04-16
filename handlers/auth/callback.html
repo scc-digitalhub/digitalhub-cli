@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Authorization Successful</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+          Cantarell, sans-serif;
+        background: rgb(0, 2, 59);
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        padding: 40px;
+        max-width: 900px;
+        width: 90%;
+      }
+      h1 {
+        color: rgb(6, 45, 75);
+        margin: 0 0 10px 0;
+        font-size: 28px;
+      }
+      h3 {
+        color: rgb(6, 45, 75);
+        margin: 20px 0 15px 0;
+        font-size: 16px;
+      }
+      .success-message {
+        color: #666;
+        font-size: 14px;
+        margin-bottom: 30px;
+      }
+      .button-container {
+        position: relative;
+        margin-bottom: 15px;
+      }
+      .copy-btn {
+        padding: 10px 20px;
+        background-color: #e0701b;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: background-color 0.3s ease;
+      }
+      .copy-btn:hover {
+        background-color: #9c3b15;
+      }
+      .copy-btn:active {
+        background-color: #6b2a0f;
+      }
+      pre {
+        background: #f5f5f5;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 16px;
+        overflow: auto;
+        max-height: 400px;
+        font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+        font-size: 12px;
+        color: #333;
+        margin: 0;
+        margin-bottom: 10px;
+      }
+      .footer {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+        color: #999;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>✓ Authorization Successful</h1>
+      <p class="success-message">
+        You have been successfully authenticated.
+        <br />
+        You may now close this window and return to your terminal.
+      </p>
+
+      <h3>Token Response:</h3>
+      <pre id="tokenData">{{ .TokenData }}</pre>
+
+      <div class="button-container">
+        <button
+          class="copy-btn"
+          onclick="
+            navigator.clipboard.writeText(
+              document.getElementById('tokenData').textContent,
+            );
+            alert('Token copied to clipboard!');
+          "
+        >
+          Copy to Clipboard
+        </button>
+      </div>
+
+      <div class="footer">
+        <p>DigitalHub CLI Authentication</p>
+      </div>
+    </div>
+  </body>
+</html>
