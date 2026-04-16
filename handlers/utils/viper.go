@@ -7,6 +7,7 @@ package utils
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"os"
 	"reflect"
 	"strings"
@@ -213,11 +214,11 @@ func loadIniSectionIntoViper(cfg *ini.File, env string) error {
 	selected := def
 	if env != "" && cfg.HasSection(env) {
 		selected = cfg.Section(env)
-		fmt.Printf("Using env: [%s]\n", env)
+		log.Printf("Using env: [%s]\n", env)
 	} else if env == "" || strings.EqualFold(env, "DEFAULT") {
-		fmt.Println("Using env: [DEFAULT]")
+		log.Println("Using env: [DEFAULT]")
 	} else {
-		fmt.Println("Env not found, falling back to [DEFAULT]")
+		log.Println("Env not found, falling back to [DEFAULT]")
 	}
 
 	merged := make(map[string]string)
@@ -250,10 +251,10 @@ func RegisterIniCfgWithViper(optionalEnv ...string) error {
 
 	cfg, err := ini.Load(iniPath)
 	if err != nil {
-		fmt.Println("INI not found; Get information from Env variables")
+		log.Println("INI not found; Get information from Env variables")
 		envName, bootErr := bootstrapFromEnv(iniPath, optionalEnv...)
 		if bootErr != nil {
-			fmt.Printf("Bootstrap failed: %v\n", bootErr)
+			log.Printf("Bootstrap failed: %v\n", bootErr)
 			if envName == "" {
 				envName = resolveEnvName(optionalEnv...)
 			}
@@ -262,7 +263,7 @@ func RegisterIniCfgWithViper(optionalEnv ...string) error {
 		}
 		cfg, err = ini.Load(iniPath)
 		if err != nil {
-			fmt.Printf("INI written but cannot reload: %v (ENV-only mode)\n", err)
+			log.Printf("INI written but cannot reload: %v (ENV-only mode)\n", err)
 			viper.Set(CurrentEnvironment, viper.GetString(CurrentEnvironment))
 			return nil
 		}

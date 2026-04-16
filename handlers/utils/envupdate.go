@@ -6,6 +6,7 @@ package utils
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/spf13/viper"
@@ -19,23 +20,23 @@ func CheckUpdateEnvironment() {
 	const key = UpdatedEnvKey
 
 	if viper.IsSet(IniSource) && viper.GetString(IniSource) == "env" {
-		fmt.Printf("INI file has been created from enviromental variables...skip update\n")
+		log.Printf("INI file has been created from enviromental variables...skip update\n")
 		return
 	}
 
 	val := viper.GetString(key)
 	isSet := viper.IsSet(key)
-	fmt.Printf("Config freshness (%s): isSet=%v value=%q\n", key, isSet, val)
+	log.Printf("Config freshness (%s): isSet=%v value=%q\n", key, isSet, val)
 
 	if !isSet || val == "" {
-		fmt.Println("Update: no timestamp.")
+		log.Println("Update: no timestamp.")
 		updateEnvironment()
 		return
 	}
 
 	t, err := time.Parse(time.RFC3339, val)
 	if err != nil {
-		fmt.Printf("Update: invalid timestamp (%v).\n", err)
+		log.Printf("Update: invalid timestamp (%v).\n", err)
 		updateEnvironment()
 		return
 	}
@@ -45,12 +46,12 @@ func CheckUpdateEnvironment() {
 	ttl := time.Duration(outdatedAfterHours) * time.Hour
 
 	if age >= ttl {
-		fmt.Printf("Update: outdated (age %s ≥ TTL %s).\n", age, ttl)
+		log.Printf("Update: outdated (age %s ≥ TTL %s).\n", age, ttl)
 		updateEnvironment()
 		return
 	}
 
-	fmt.Printf("Fresh: age %s < TTL %s.\n", age, ttl)
+	log.Printf("Fresh: age %s < TTL %s.\n", age, ttl)
 }
 
 // Fetch well-known, update Viper, bump timestamp, persist allowlisted keys.
@@ -104,6 +105,6 @@ func UpdateIniSectionFromViper(_ []string) error {
 	if err := UpdateIniFromStruct(getIniPath(), env); err != nil {
 		return fmt.Errorf("failed to save ini: %w", err)
 	}
-	fmt.Printf("Updated section [%s] in %s\n", env, getIniPath())
+	log.Printf("Updated section [%s] in %s\n", env, getIniPath())
 	return nil
 }

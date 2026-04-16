@@ -154,7 +154,7 @@ func PrintCommentForYaml(args ...string) {
 }
 
 func CheckApiLevel(apiLevelKey string, min, max int) {
-	fmt.Printf("Checking API level for %v command...\n", viper.GetString(apiLevelKey))
+	log.Printf("Checking API level for %v command...\n", viper.GetString(apiLevelKey))
 
 	apiLevelStr := viper.GetString(apiLevelKey)
 	if apiLevelStr == "" {
