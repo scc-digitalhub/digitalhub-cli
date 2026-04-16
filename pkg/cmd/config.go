@@ -2,12 +2,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package commands
+package cmd
 
 import (
+	"dhcli/handlers/config"
 	"dhcli/pkg"
 	"dhcli/pkg/flags"
-	"dhcli/handlers/resources"
 	"log"
 
 	"github.com/spf13/cobra"
@@ -22,7 +22,7 @@ var configCmd = func() *cobra.Command {
 		Short: "Print current environment configuration (non-secret values)",
 		Run: func(cmd *cobra.Command, args []string) {
 			_ = envFlag // env is handled by PersistentPreRunE
-			err := resources.ConfigHandler(*outFlag.Value)
+			err := config.ConfigHandler(*outFlag.Value)
 			if err != nil {
 				log.Fatalf("Config failed: %v", err)
 			}
@@ -36,5 +36,5 @@ var configCmd = func() *cobra.Command {
 }()
 
 func init() {
-	core.RegisterCommand(configCmd)
+	pkg.RegisterCommand(configCmd)
 }

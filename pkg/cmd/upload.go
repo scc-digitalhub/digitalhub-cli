@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package commands
+package cmd
 
 import (
 	"dhcli/pkg"
@@ -62,5 +62,5 @@ var uploadCmd = func() *cobra.Command {
 }()
 
 func init() {
-	core.RegisterCommand(uploadCmd)
+	pkg.RegisterCommand(uploadCmd)
 }

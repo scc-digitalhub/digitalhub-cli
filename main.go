@@ -16,5 +16,5 @@ func main() {
 
 	log.SetFlags(0)
 	ini.DefaultHeader = true
-	core.Execute()
+	pkg.Execute()
 }

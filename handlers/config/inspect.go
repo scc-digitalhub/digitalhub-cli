@@ -2,12 +2,13 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package resources
+package config
 
 import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/utils"
 	"sigs.k8s.io/yaml"
@@ -49,7 +50,7 @@ func printEntries(entries map[string]string, format string) error {
 		}
 		sort.Strings(keys)
 		for _, k := range keys {
-			fmt.Printf("%s=%s\n", k, entries[k])
+			fmt.Printf("%s=%s\n", strings.ToUpper(k), entries[k])
 		}
 	}
 

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
 //
 // SPDX-License-Identifier: Apache-2.0
-package commands
+package cmd
 
 import (
 	"dhcli/pkg"
@@ -34,5 +34,5 @@ var registerCmd = func() *cobra.Command {
 }()
 
 func init() {
-	core.RegisterCommand(registerCmd)
+	pkg.RegisterCommand(registerCmd)
 }
