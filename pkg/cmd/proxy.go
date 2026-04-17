@@ -36,7 +36,7 @@ var proxyCmd = func() *cobra.Command {
 
 			project := utils.ResolveProject(*projectFlag.Value)
 			if project == "" {
-				log.Fatalf("Project flag is mandatory (use --project flag or set DH_PROJECT env variable)")
+				log.Fatalf("Project flag is mandatory (use --project flag or set PROJECT_NAME env variable)")
 			}
 
 			if err := utils.RegisterIniCfgWithViper(*envFlag.Value); err != nil {
@@ -68,7 +68,7 @@ var proxyCmd = func() *cobra.Command {
 			}()
 
 			// Start the proxy
-			if err := proxy.StartProxy(ctx, *projectFlag.Value, runID, localPort); err != nil {
+			if err := proxy.StartProxy(ctx, project, runID, localPort); err != nil {
 				// Graceful shutdown returns http.ErrServerClosed - this is expected
 				if !errors.Is(err, http.ErrServerClosed) {
 					log.Fatalf("Proxy error: %v", err)

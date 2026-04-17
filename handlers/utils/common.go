@@ -251,7 +251,7 @@ func PrettyJSON(b []byte) string {
 	return out.String()
 }
 
-// ResolveProject returns the project identifier, falling back to DH_PROJECT env var if empty
+// ResolveProject returns the project identifier, falling back to env var if empty
 func ResolveProject(project string) string {
 	if project != "" {
 		return project
