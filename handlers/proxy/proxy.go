@@ -67,17 +67,19 @@ func (dt *debugTransport) CloseIdleConnections() {
 	dt.transport.CloseIdleConnections()
 }
 
-// RunInfo holds the resolved run information
-type RunInfo struct {
-	BaseURL    string
-	FetchedAt  time.Time
-	HostHeader string
+// ServiceInfo holds the resolved run information
+type ServiceInfo struct {
+	BaseURL   string
+	FetchedAt time.Time
+	Host      string
 }
 
 // StartProxy starts a transparent HTTP proxy on a local port
 // that forwards requests to a baseUrl resolved from a run resource
 // If localPort is 0, a random port will be assigned
 func StartProxy(ctx context.Context, project string, runID string, localPort int) error {
+	logger := utils.GetGlobalLogger()
+
 	// Get proxy configuration from viper
 	proxyURLStr := viper.GetString(utils.DhCoreProxy)
 	if proxyURLStr == "" {
@@ -89,6 +91,9 @@ func StartProxy(ctx context.Context, project string, runID string, localPort int
 		return fmt.Errorf("invalid proxy URL: %w", err)
 	}
 
+	//log the proxy URL being used
+	logger.Step(fmt.Sprintf("Using proxy %s", proxyURL.String()))
+
 	// Get authorization token
 	authToken := viper.GetString(utils.DhCoreAccessToken)
 	if authToken == "" {
@@ -96,16 +101,14 @@ func StartProxy(ctx context.Context, project string, runID string, localPort int
 	}
 
 	// Initialize run info cache
-	runInfo := &RunInfo{}
+	service := &ServiceInfo{}
 
 	// Fetch run info immediately
-	if err := refreshRunInfo(runInfo, project, runID); err != nil {
+	if err := refreshServiceInfo(service, project, runID); err != nil {
 		return err
 	}
 
 	transport := &http.Transport{
-		Proxy: http.ProxyURL(proxyURL),
-
 		// IMPORTANT for streaming
 		DisableCompression:    true,
 		ForceAttemptHTTP2:     false,
@@ -115,7 +118,6 @@ func StartProxy(ctx context.Context, project string, runID string, localPort int
 	var httpTransport http.RoundTripper = transport
 
 	// Wrap with debug transport if in verbose mode
-	logger := utils.GetGlobalLogger()
 	if logger.IsVerbose() {
 		httpTransport = &debugTransport{
 			transport: transport,
@@ -130,15 +132,29 @@ func StartProxy(ctx context.Context, project string, runID string, localPort int
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		// Refresh run info if cache is stale
-		if time.Since(runInfo.FetchedAt) > cacheRefreshInterval {
-			if err := refreshRunInfo(runInfo, project, runID); err != nil {
+		if time.Since(service.FetchedAt) > cacheRefreshInterval {
+			if err := refreshServiceInfo(service, project, runID); err != nil {
 				http.Error(w, fmt.Sprintf("Failed to refresh run info: %v", err), 502)
 				return
 			}
 		}
 
-		// Build target URL using the resolved baseURL
-		targetURL := fmt.Sprintf("%s%s", runInfo.BaseURL, r.URL.Path)
+		// Build target URL using the proxy URL and add X-Proxy-Host header
+		// instead of using HTTP proxy mechanism
+		// Include original request path and query in the proxy request
+
+		// Parse BaseURL to extract the base path
+		baseURLParsed, err := url.Parse(service.BaseURL)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+
+		// Combine base path with request path
+		fullPath := strings.TrimSuffix(baseURLParsed.Path, "/") + r.URL.Path
+
+		// Build target URL
+		targetURL := strings.TrimSuffix(proxyURL.String(), "/") + fullPath
 		if r.URL.RawQuery != "" {
 			targetURL += "?" + r.URL.RawQuery
 		}
@@ -151,11 +167,23 @@ func StartProxy(ctx context.Context, project string, runID string, localPort int
 
 		req.Header = r.Header.Clone()
 
-		// Use the resolved hostname
-		req.Header.Set("Host", runInfo.HostHeader)
+		// Add custom header with original destination (hostname and port only)
+		req.Header.Set("X-Proxy-Host", service.Host)
+
+		// Set Host header to the proxy's hostname
+		proxyHost := proxyURL.Hostname()
+		if proxyURL.Port() != "" {
+			proxyHost = proxyURL.Hostname() + ":" + proxyURL.Port()
+		}
+		req.Header.Set("Host", proxyHost)
 
 		// Inject Authorization for remote proxy
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken))
+
+		// Explicitly set Content-Length if present in original request
+		if r.ContentLength > 0 {
+			req.ContentLength = r.ContentLength
+		}
 
 		resp, err := client.Do(req)
 		if err != nil {
@@ -187,7 +215,6 @@ func StartProxy(ctx context.Context, project string, runID string, localPort int
 			}
 			if err != nil {
 				if err != io.EOF {
-					logger := utils.GetGlobalLogger()
 					logger.Debug(fmt.Sprintf("stream error: %v", err))
 				}
 				break
@@ -222,7 +249,7 @@ func StartProxy(ctx context.Context, project string, runID string, localPort int
 
 	port := ln.Addr().(*net.TCPAddr).Port
 	logger.Success(fmt.Sprintf("Transparent proxy listening on localhost:%d", port))
-	logger.Info(fmt.Sprintf("Run ID: %s -> Base URL: %s", runID, runInfo.BaseURL))
+	logger.Info(fmt.Sprintf("Run ID: %s -> Base URL: %s", runID, service.BaseURL))
 	logger.Info(fmt.Sprintf("Configure clients to use http://localhost:%d", port))
 
 	// Handle context cancellation
@@ -235,8 +262,8 @@ func StartProxy(ctx context.Context, project string, runID string, localPort int
 	return server.Serve(ln)
 }
 
-// refreshRunInfo fetches the run resource and extracts the baseURL
-func refreshRunInfo(runInfo *RunInfo, project string, runID string) error {
+// refreshServiceInfo fetches the run resource and extracts the baseURL
+func refreshServiceInfo(service *ServiceInfo, project string, runID string) error {
 	logger := utils.GetGlobalLogger()
 	logger.Debug(fmt.Sprintf("Fetching run %s in project %s", runID, project))
 
@@ -295,9 +322,9 @@ func refreshRunInfo(runInfo *RunInfo, project string, runID string) error {
 		hostHeader = parsedURL.Hostname() + ":" + parsedURL.Port()
 	}
 
-	runInfo.BaseURL = baseURL
-	runInfo.HostHeader = hostHeader
-	runInfo.FetchedAt = time.Now()
+	service.BaseURL = baseURL
+	service.Host = hostHeader
+	service.FetchedAt = time.Now()
 
 	logger.Debug(fmt.Sprintf("Run baseURL resolved to: %s (host: %s)", baseURL, hostHeader))
 
