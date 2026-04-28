@@ -26,16 +26,10 @@ var initCmd = func() *cobra.Command {
 		Long:  "Creates or activates a Python virtual environment at the specified path (or current environment name) and installs dependencies. If no path is provided, uses the current environment name. If the path already contains a valid venv, dependencies are installed without recreating it.",
 		Args:  cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			// Load configuration to access current environment
-			if err := utils.RegisterIniCfgWithViper(*envFlag.Value); err != nil {
-				log.Fatalf("Failed to load configuration: %v", err)
-			}
-
 			venvPath := ""
 			if len(args) > 0 {
 				venvPath = args[0]
 			} else {
-				// If no path provided, use current environment name
 				venvPath = viper.GetString(utils.CurrentEnvironment)
 			}
 
