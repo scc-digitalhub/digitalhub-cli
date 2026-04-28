@@ -39,6 +39,10 @@ var proxyCmd = func() *cobra.Command {
 				log.Fatalf("Project flag is mandatory (use --project flag or set PROJECT_NAME env variable)")
 			}
 
+			if err := utils.RegisterIniCfgWithViper(*envFlag.Value); err != nil {
+				log.Fatalf("Failed to load configuration: %v", err)
+			}
+
 			// Parse local port
 			localPort := 0
 			if *localPortFlag.Value != "" {
