@@ -7,6 +7,8 @@ GO := go
 GOFLAGS := -v
 BUILD_DIR := bin
 OUTPUT := $(BUILD_DIR)/$(BINARY_NAME)
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+LDFLAGS := -s -w -X dhcli/pkg.version=$(VERSION)
 
 help:
 	@echo "Available targets:"
@@ -19,8 +21,8 @@ help:
 	@echo "  help       - Show this help message"
 
 build: clean
-	@echo "Building $(BINARY_NAME)..."
-	$(GO) build $(GOFLAGS) -o $(OUTPUT) .
+	@echo "Building $(BINARY_NAME) version $(VERSION)..."
+	$(GO) build $(GOFLAGS) -ldflags '$(LDFLAGS)' -o $(OUTPUT) .
 
 clean:
 	@echo "Cleaning build artifacts..."
@@ -36,8 +38,8 @@ test:
 	$(GO) test -v ./...
 
 dev:
-	@echo "Building $(BINARY_NAME) for development..."
-	$(GO) build -gcflags="all=-N -l" -o $(OUTPUT) .
+	@echo "Building $(BINARY_NAME) for development (version $(VERSION))..."
+	$(GO) build -gcflags="all=-N -l" -ldflags '$(LDFLAGS)' -o $(OUTPUT) .
 
 lint:
 	@command -v golangci-lint >/dev/null 2>&1 || { echo "golangci-lint not found. Install with: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"; exit 1; }
