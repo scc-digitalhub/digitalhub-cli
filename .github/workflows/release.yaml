@@ -41,7 +41,7 @@ jobs:
           CLASS_SUFFIX=$(echo "${MINOR}" | tr -d '.')
           FORMULA="Formula/dhcli@${MINOR}.rb"
 
-          sha_for() { grep " $1\$" dist/checksums.txt | awk '{print $1}'; }
+          sha_for() { sha256sum "dist/$1" | awk '{print $1}'; }
 
           SHA_DARWIN_AMD64=$(sha_for dhcli-darwin-amd64.tar.gz)
           SHA_DARWIN_ARM64=$(sha_for dhcli-darwin-arm64.tar.gz)
