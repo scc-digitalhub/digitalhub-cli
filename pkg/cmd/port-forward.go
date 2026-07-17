@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"context"
+	"dhcli/handlers/adapter"
 	"dhcli/handlers/proxy"
 	"dhcli/handlers/utils"
 	"dhcli/pkg"
@@ -25,15 +26,15 @@ var portForwardCmd = func() *cobra.Command {
 	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	projectFlag := flags.NewStringFlag("project", "p", "Mandatory", "")
 	localPortFlag := flags.NewStringFlag("local-port", "l", "Local port for listening (default: random)", "")
+	functionFlag := flags.NewStringFlag("function", "f", "Function name; if provided, the most recent RUNNING run for that function is used instead of a run ID", "")
+	nameFlag := flags.NewStringFlag("name", "n", "Run name; if provided, the most recent RUNNING run with that name is used instead of a run ID", "")
 
 	cmd := &cobra.Command{
-		Use:   "port-forward <run-id>",
+		Use:   "port-forward [run-id]",
 		Short: "Start local port-forward for a specific run",
 		Long:  "Starts a local port-forward that tunnels requests to the service URL resolved from the run resource, through the configured remote proxy with Authorization",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			runID := args[0]
-
 			project := utils.ResolveProject(*projectFlag.Value)
 			if project == "" {
 				log.Fatalf("Project flag is mandatory (use --project flag or set PROJECT_NAME env variable)")
@@ -41,6 +42,25 @@ var portForwardCmd = func() *cobra.Command {
 
 			if err := utils.RegisterIniCfgWithViper(*envFlag.Value); err != nil {
 				log.Fatalf("Failed to load configuration: %v", err)
+			}
+
+			var runID string
+			if *functionFlag.Value != "" {
+				id, err := adapter.ResolveRunIDByFunctionName(project, *functionFlag.Value, "RUNNING", "serve")
+				if err != nil {
+					log.Fatalf("Failed to resolve run ID for function %q: %v", *functionFlag.Value, err)
+				}
+				runID = id
+			} else if *nameFlag.Value != "" {
+				id, err := adapter.ResolveRunIDByName(project, *nameFlag.Value, "RUNNING", "serve")
+				if err != nil {
+					log.Fatalf("Failed to resolve run ID for name %q: %v", *nameFlag.Value, err)
+				}
+				runID = id
+			} else if len(args) == 1 {
+				runID = args[0]
+			} else {
+				log.Fatalf("Either a run ID argument, --function or --name flag must be provided")
 			}
 
 			// Parse local port
@@ -80,6 +100,8 @@ var portForwardCmd = func() *cobra.Command {
 	flags.AddFlag(cmd, &envFlag)
 	flags.AddFlag(cmd, &projectFlag)
 	flags.AddFlag(cmd, &localPortFlag)
+	flags.AddFlag(cmd, &functionFlag)
+	flags.AddFlag(cmd, &nameFlag)
 
 	return cmd
 }()

@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"dhcli/handlers/adapter"
 	"dhcli/handlers/proxy"
 	"dhcli/handlers/utils"
 	"dhcli/pkg"
@@ -22,9 +23,11 @@ import (
 var proxyCmd = func() *cobra.Command {
 	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	projectFlag := flags.NewStringFlag("project", "p", "Mandatory", "")
+	functionFlag := flags.NewStringFlag("function", "f", "Function name; if provided, the most recent RUNNING run for that function is used instead of a run ID", "")
+	nameFlag := flags.NewStringFlag("name", "n", "Run name; if provided, the most recent RUNNING run with that name is used instead of a run ID", "")
 
 	cmd := &cobra.Command{
-		Use:   "proxy <run-id>",
+		Use:   "proxy [run-id]",
 		Short: "Open browser with authenticated access to a remote service",
 		Long: `Bootstraps an authenticated browser session to the service exposed by the given run.
 
@@ -34,10 +37,8 @@ endpoint. The browser then communicates directly with the remote service.
 
 Unlike port-forward, no HTTP traffic is proxied through the CLI. This command
 is intended for browser access (WebSockets, SSE, cookies all work naturally).`,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			runID := args[0]
-
 			project := utils.ResolveProject(*projectFlag.Value)
 			if project == "" {
 				log.Fatalf("Project flag is mandatory (use --project flag or set PROJECT_NAME env variable)")
@@ -45,6 +46,25 @@ is intended for browser access (WebSockets, SSE, cookies all work naturally).`,
 
 			if err := utils.RegisterIniCfgWithViper(*envFlag.Value); err != nil {
 				log.Fatalf("Failed to load configuration: %v", err)
+			}
+
+			var runID string
+			if *functionFlag.Value != "" {
+				id, err := adapter.ResolveRunIDByFunctionName(project, *functionFlag.Value, "RUNNING", "serve")
+				if err != nil {
+					log.Fatalf("Failed to resolve run ID for function %q: %v", *functionFlag.Value, err)
+				}
+				runID = id
+			} else if *nameFlag.Value != "" {
+				id, err := adapter.ResolveRunIDByName(project, *nameFlag.Value, "RUNNING", "serve")
+				if err != nil {
+					log.Fatalf("Failed to resolve run ID for name %q: %v", *nameFlag.Value, err)
+				}
+				runID = id
+			} else if len(args) == 1 {
+				runID = args[0]
+			} else {
+				log.Fatalf("Either a run ID argument, --function or --name flag must be provided")
 			}
 
 			ctx, cancel := context.WithCancel(context.Background())
@@ -67,6 +87,8 @@ is intended for browser access (WebSockets, SSE, cookies all work naturally).`,
 
 	flags.AddFlag(cmd, &envFlag)
 	flags.AddFlag(cmd, &projectFlag)
+	flags.AddFlag(cmd, &functionFlag)
+	flags.AddFlag(cmd, &nameFlag)
 
 	return cmd
 }()
