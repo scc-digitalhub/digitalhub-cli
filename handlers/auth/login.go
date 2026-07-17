@@ -19,8 +19,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
-	"runtime"
 	"strings"
 	"sync"
 	"text/template"
@@ -75,7 +73,7 @@ func LoginHandler() error {
 
 	_, _ = bufio.NewReader(os.Stdin).ReadBytes('\n')
 
-	if err := openBrowser(authURL); err != nil {
+	if err := utils.OpenBrowser(authURL); err != nil {
 		logger.Error(fmt.Sprintf("browser open error: %v", err))
 	}
 
@@ -367,22 +365,4 @@ func buildAuthURL(chal, state, redirectURI string) (string, error) {
 	}
 
 	return base + "?" + v.Encode() + "&scope=" + url.QueryEscape(scope), nil
-}
-
-// ==========================
-// BROWSER OPEN
-// ==========================
-func openBrowser(u string) error {
-	var cmd *exec.Cmd
-
-	switch runtime.GOOS {
-	case "windows":
-		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", u)
-	case "darwin":
-		cmd = exec.Command("open", u)
-	default:
-		cmd = exec.Command("xdg-open", u)
-	}
-
-	return cmd.Start()
 }
