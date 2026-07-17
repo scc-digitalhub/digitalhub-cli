@@ -5,20 +5,20 @@
 class Dhcli < Formula
   desc "A command-line tool for DigitalHub platform."
   homepage "https://scc-digitalhub.github.io/"
-  version "0.14.4"
+  version "0.15.0"
 
   on_macos do
     if Hardware::CPU.intel?
-      url "https://github.com/scc-digitalhub/digitalhub-cli/releases/download/0.14.4/dhcli-darwin-amd64.tar.gz"
-      sha256 "1b7b7f6251549cd756144ab7416c319f02bc3274dd45a4b5ab72bc503699340c"
+      url "https://github.com/scc-digitalhub/digitalhub-cli/releases/download/0.15.0/dhcli-darwin-amd64.tar.gz"
+      sha256 "f58599a56b3747aa2118f6e3ad81311e658edb417b6c2d72c045aea044e5c7a8"
 
       define_method(:install) do
         bin.install "dhcli"
       end
     end
     if Hardware::CPU.arm?
-      url "https://github.com/scc-digitalhub/digitalhub-cli/releases/download/0.14.4/dhcli-darwin-arm64.tar.gz"
-      sha256 "945a4fd3eb992269c2ad679442af4f808b628136ac72f43f317228a7d5a1a7d5"
+      url "https://github.com/scc-digitalhub/digitalhub-cli/releases/download/0.15.0/dhcli-darwin-arm64.tar.gz"
+      sha256 "8cf19cb5f87d3903ac797313b87b1dc86bde1c5312ceb27dec5ff872806eac23"
 
       define_method(:install) do
         bin.install "dhcli"
@@ -28,15 +28,15 @@ class Dhcli < Formula
 
   on_linux do
     if Hardware::CPU.intel? && Hardware::CPU.is_64_bit?
-      url "https://github.com/scc-digitalhub/digitalhub-cli/releases/download/0.14.4/dhcli-linux-amd64.tar.gz"
-      sha256 "39a647337ea74ff397ba2ead5b16cde79e033485772d689ebf6aaf2d8030cf49"
+      url "https://github.com/scc-digitalhub/digitalhub-cli/releases/download/0.15.0/dhcli-linux-amd64.tar.gz"
+      sha256 "24c0556a6f7605a81d9e631fddcf4bdac0dcf7dbf8f0f7a121afe9f169c33b16"
       define_method(:install) do
         bin.install "dhcli"
       end
     end
     if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-      url "https://github.com/scc-digitalhub/digitalhub-cli/releases/download/0.14.4/dhcli-linux-arm64.tar.gz"
-      sha256 "ac5312315deb34fc0bf4293110a46c26275f54ad499a0338c3550f5cecbcfcb0"
+      url "https://github.com/scc-digitalhub/digitalhub-cli/releases/download/0.15.0/dhcli-linux-arm64.tar.gz"
+      sha256 "fd8174fa331cf3a0eaefed404a45a32ef2f78f347b04c4f0d89c27ff90eaa8d4"
       define_method(:install) do
         bin.install "dhcli"
       end
