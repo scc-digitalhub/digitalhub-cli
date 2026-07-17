@@ -21,15 +21,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var proxyCmd = func() *cobra.Command {
+var portForwardCmd = func() *cobra.Command {
 	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	projectFlag := flags.NewStringFlag("project", "p", "Mandatory", "")
 	localPortFlag := flags.NewStringFlag("local-port", "l", "Local port for listening (default: random)", "")
 
 	cmd := &cobra.Command{
-		Use:   "proxy <run-id>",
-		Short: "Start transparent HTTP proxy for a specific run",
-		Long:  "Starts a local HTTP proxy that forwards requests to the baseUrl resolved from the run resource, through the configured remote proxy with Authorization",
+		Use:   "port-forward <run-id>",
+		Short: "Start local port-forward for a specific run",
+		Long:  "Starts a local port-forward that tunnels requests to the service URL resolved from the run resource, through the configured remote proxy with Authorization",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			runID := args[0]
@@ -67,11 +67,11 @@ var proxyCmd = func() *cobra.Command {
 				cancel()
 			}()
 
-			// Start the proxy
-			if err := proxy.StartProxy(ctx, project, runID, localPort); err != nil {
+			// Start the port-forward
+			if err := proxy.StartPortForward(ctx, project, runID, localPort); err != nil {
 				// Graceful shutdown returns http.ErrServerClosed - this is expected
 				if !errors.Is(err, http.ErrServerClosed) {
-					log.Fatalf("Proxy error: %v", err)
+					log.Fatalf("Port-forward error: %v", err)
 				}
 			}
 		},
@@ -85,5 +85,5 @@ var proxyCmd = func() *cobra.Command {
 }()
 
 func init() {
-	pkg.RegisterCommand(proxyCmd)
+	pkg.RegisterCommand(portForwardCmd)
 }
