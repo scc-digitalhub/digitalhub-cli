@@ -107,6 +107,71 @@ func LoginHandler() error {
 }
 
 // ==========================
+// PAT (NON-INTERACTIVE) FLOW
+// ==========================
+
+// PatLoginHandler performs an OAuth2 token exchange (RFC 8693) using a Personal
+// Access Token as the subject token. This is suitable for non-interactive
+// environments such as CI jobs or containers.
+func PatLoginHandler(pat string) error {
+	utils.CheckUpdateEnvironment()
+	utils.CheckApiLevel(utils.ApiLevelKey, utils.LoginMin, utils.LoginMax)
+
+	tokenURL := viper.GetString(utils.Oauth2TokenEndpoint)
+	if tokenURL == "" {
+		return fmt.Errorf("oauth2_token_endpoint not configured")
+	}
+	clientID := viper.GetString(utils.DhCoreClientId)
+	if clientID == "" {
+		return fmt.Errorf("dhcore_client_id not configured")
+	}
+
+	v := url.Values{
+		"grant_type":           {"urn:ietf:params:oauth:grant-type:token-exchange"},
+		"client_id":            {clientID},
+		"subject_token":        {pat},
+		"subject_token_type":   {"urn:ietf:params:oauth:token-type:pat"},
+		"requested_token_type": {"urn:ietf:params:oauth:token-type:access_token"},
+	}
+
+	client := utils.GetDebugHTTPClient()
+	if client == nil {
+		client = &http.Client{Timeout: 15 * time.Second}
+	}
+
+	resp, err := client.PostForm(tokenURL, v)
+	if err != nil {
+		return fmt.Errorf("token exchange request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("token exchange error: %s - %s", resp.Status, string(body))
+	}
+
+	var m map[string]interface{}
+	if err := json.Unmarshal(body, &m); err != nil {
+		return fmt.Errorf("failed to parse token response: %w", err)
+	}
+
+	for k, val := range m {
+		key := k
+		if mapped, ok := utils.DhCoreMap[k]; ok {
+			key = mapped
+		}
+		viper.Set(key, fmt.Sprint(val))
+	}
+
+	if err := utils.UpdateIniSectionFromViper(viper.AllKeys()); err != nil {
+		logger.Error(fmt.Sprintf("persist error: %v", err))
+	}
+
+	logger.Success("Login successful (PAT token exchange)")
+	return nil
+}
+
+// ==========================
 // PKCE
 // ==========================
 func generatePKCE() (verifier, challenge string) {
