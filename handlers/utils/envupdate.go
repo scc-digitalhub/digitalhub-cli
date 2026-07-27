@@ -12,15 +12,28 @@ import (
 )
 
 // CheckUpdateEnvironment decides whether to refresh the environment:
-// - missing/empty timestamp -> update
-// - invalid timestamp       -> update
-// - older than TTL          -> update
+// - endpoint present but api_level absent -> bootstrap (well-known never fetched)
+// - api_level present                     -> fully bootstrapped, skip
+// - missing/empty timestamp               -> update
+// - invalid timestamp                     -> update
+// - older than TTL                        -> update
 func CheckUpdateEnvironment() {
 	const key = UpdatedEnvKey
 
-	if viper.IsSet(IniSource) && viper.GetString(IniSource) == "env" {
-		logger.Info("INI file has been created from enviromental variables...skip update")
+	endpoint := viper.GetString(DhCoreEndpoint)
+	apiLevel := viper.GetString(ApiLevelKey)
 
+	// Partial config: endpoint known but well-known endpoints never fetched.
+	if endpoint != "" && apiLevel == "" {
+		logger.Warn("Config has endpoint but no api_level — bootstrapping from well-known.")
+		updateEnvironment()
+		return
+	}
+
+	// api_level is the authoritative signal that the config is fully bootstrapped.
+	// This covers both env-provided configs and already-initialised file configs.
+	if apiLevel != "" {
+		logger.Step("Config already bootstrapped (api_level present) — skip update.")
 		return
 	}
 
@@ -90,10 +103,10 @@ func updateEnvironment() {
 		env = resolveEnvName()
 	}
 	if err := UpdateIniFromStruct(getIniPath(), env); err != nil {
-		logger.Error(fmt.Sprintf("Persist failed: %v", err))
-		return
+		logger.Warn(fmt.Sprintf("Persist skipped (read-only or missing ini): %v", err))
+	} else {
+		logger.Info(fmt.Sprintf("Persisted to [%s].", env))
 	}
-	logger.Info(fmt.Sprintf("Persisted to [%s].", env))
 }
 
 // Backward-compat wrapper.

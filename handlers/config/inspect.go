@@ -11,15 +11,18 @@ import (
 	"strings"
 
 	"dhcli/handlers/utils"
+
 	"sigs.k8s.io/yaml"
 )
 
 func ConfigHandler(output string) error {
+	utils.CheckUpdateEnvironment()
 	entries := utils.GetConfigEntries()
 	return printEntries(entries, utils.TranslateFormat(output))
 }
 
 func CredentialsHandler(output string) error {
+	utils.CheckUpdateEnvironment()
 	entries := utils.GetCredentialEntries()
 	return printEntries(entries, utils.TranslateFormat(output))
 }
