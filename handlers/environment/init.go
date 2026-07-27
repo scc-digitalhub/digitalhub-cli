@@ -6,11 +6,13 @@ package environment
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -35,7 +37,12 @@ func InitEnvironmentHandler(venvPath string, includePre bool) error {
 		return fmt.Errorf("python3 not found: %w", err)
 	}
 	if !supportedPythonVersion(string(out)) {
-		return fmt.Errorf("unsupported Python version (need 3.9–3.12): %s", strings.TrimSpace(string(out)))
+		return fmt.Errorf("unsupported Python version (need >= 3.9): %s", strings.TrimSpace(string(out)))
+	}
+
+	uvExe := findUV()
+	if uvExe != "" {
+		log.Printf("uv found at %s, using uv for venv and package management", uvExe)
 	}
 
 	// Check if venv already exists and is valid
@@ -46,8 +53,15 @@ func InitEnvironmentHandler(venvPath string, includePre bool) error {
 		log.Printf("Found existing venv at %s", absPath)
 	} else {
 		log.Printf("Creating new venv at %s", absPath)
-		if err := createVenv(absPath); err != nil {
+		if err := createVenv(absPath, uvExe); err != nil {
 			return fmt.Errorf("failed to create venv: %w", err)
+		}
+	}
+
+	// Ensure pip is available in the venv. Not needed when uv manages installation.
+	if uvExe == "" {
+		if err := ensurePip(pythonExe); err != nil {
+			return fmt.Errorf("pip not available in venv: %w", err)
 		}
 	}
 
@@ -75,14 +89,22 @@ func InitEnvironmentHandler(venvPath string, includePre bool) error {
 		pipSpec = ">=" + apiVer + ".0,<" + nextMinor
 	}
 
-	// Install packages using the venv's python/pip
+	// Install packages using uv (if available) or the venv's pip.
 	for _, pkg := range packageList() {
-		args := []string{"-m", "pip", "install", pkg + pipSpec}
-		if includePre {
-			args = append(args, "--pre")
+		var cmd *exec.Cmd
+		if uvExe != "" {
+			uvArgs := []string{"pip", "install", "--python", pythonExe, pkg + pipSpec}
+			if includePre {
+				uvArgs = append(uvArgs, "--pre")
+			}
+			cmd = exec.Command(uvExe, uvArgs...)
+		} else {
+			pipArgs := []string{"-m", "pip", "install", pkg + pipSpec}
+			if includePre {
+				pipArgs = append(pipArgs, "--pre")
+			}
+			cmd = exec.Command(pythonExe, pipArgs...)
 		}
-
-		cmd := exec.Command(pythonExe, args...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 
@@ -109,8 +131,9 @@ func isValidVenv(path string) bool {
 	return err1 == nil && err2 == nil
 }
 
-// createVenv creates a new Python virtual environment at the given path
-func createVenv(path string) error {
+// createVenv creates a new Python virtual environment at the given path.
+// If uvExe is non-empty, uv is used instead of python3 -m venv.
+func createVenv(path string, uvExe string) error {
 	// Check if path already exists
 	if info, err := os.Stat(path); err == nil {
 		// Path exists - check if it's a valid venv
@@ -130,14 +153,65 @@ func createVenv(path string) error {
 	}
 
 	// Path doesn't exist - create the venv
-	cmd := exec.Command("python3", "-m", "venv", path)
+	var stderr bytes.Buffer
+	var cmd *exec.Cmd
+	if uvExe != "" {
+		// uv venv respects the active python3 via --python
+		cmd = exec.Command(uvExe, "venv", "--python", "python3", path)
+	} else {
+		cmd = exec.Command("python3", "-m", "venv", path)
+	}
 	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
+		msg := stderr.String()
+		if strings.Contains(msg, "No module named venv") || strings.Contains(msg, "ensurepip") {
+			return fmt.Errorf("venv creation failed: the 'venv' module is not available.\n%s\nOriginal error: %s",
+				venvInstallHint(), strings.TrimSpace(msg))
+		}
+		if msg != "" {
+			return fmt.Errorf("venv creation failed: %s", strings.TrimSpace(msg))
+		}
 		return fmt.Errorf("venv creation failed: %w", err)
 	}
 
+	return nil
+}
+
+// findUV returns the path to the uv executable, or "" if uv is not on PATH.
+func findUV() string {
+	path, err := exec.LookPath("uv")
+	if err != nil {
+		return ""
+	}
+	return path
+}
+
+// ensurePip checks whether pip is available inside the venv and attempts to
+// bootstrap it via ensurepip when it is not. This handles venvs created with
+// --without-pip or environments where ensurepip was not bundled at venv
+// creation time.
+func ensurePip(pythonExe string) error {
+	cmd := exec.Command(pythonExe, "-m", "pip", "--version")
+	if err := cmd.Run(); err == nil {
+		return nil // pip already available
+	}
+
+	log.Println("pip not found in venv, bootstrapping via ensurepip...")
+	var stderr bytes.Buffer
+	cmd = exec.Command(pythonExe, "-m", "ensurepip", "--upgrade")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		msg := strings.TrimSpace(stderr.String())
+		if strings.Contains(msg, "No module named ensurepip") {
+			return fmt.Errorf("pip is missing and ensurepip is not available.\n%s\nOriginal error: %s",
+				pipInstallHint(), msg)
+		}
+		return fmt.Errorf("failed to bootstrap pip: %s", msg)
+	}
+	log.Println("pip bootstrapped successfully.")
 	return nil
 }
 
@@ -155,7 +229,7 @@ func supportedPythonVersion(ver string) bool {
 		return false
 	}
 	min, err := strconv.Atoi(parts[1])
-	if err != nil || min < 9 || min > 12 {
+	if err != nil || min < 9 {
 		return false
 	}
 	return true
@@ -179,6 +253,34 @@ func promptYesNo(prompt string) bool {
 
 func packageList() []string {
 	return []string{"digitalhub[full]", "digitalhub-runtime-python"}
+}
+
+// venvInstallHint returns an OS-appropriate install hint for the venv module.
+func venvInstallHint() string {
+	if runtime.GOOS != "linux" {
+		return "Install the 'venv' module for your Python distribution."
+	}
+	if isAlpine() {
+		return "On Alpine, install it with: apk add python3"
+	}
+	return "On Debian/Ubuntu, install it with: sudo apt install python3-venv"
+}
+
+// pipInstallHint returns an OS-appropriate install hint for pip.
+func pipInstallHint() string {
+	if runtime.GOOS != "linux" {
+		return "Install pip for your Python distribution."
+	}
+	if isAlpine() {
+		return "On Alpine, install it with: apk add py3-pip"
+	}
+	return "On Debian/Ubuntu, install it with: sudo apt install python3-pip python3-venv"
+}
+
+// isAlpine detects whether we are running on Alpine Linux.
+func isAlpine() bool {
+	_, err := os.Stat("/etc/alpine-release")
+	return err == nil
 }
 
 // incrementMinorVersion increments the minor version number
