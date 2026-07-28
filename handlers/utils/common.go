@@ -31,6 +31,14 @@ func getIniPath() string {
 		return configPath
 	}
 
+	// Check if ini file exists in current working directory
+	if cwd, err := os.Getwd(); err == nil {
+		cwdIniPath := cwd + string(os.PathSeparator) + IniName
+		if _, err := os.Stat(cwdIniPath); err == nil {
+			return cwdIniPath
+		}
+	}
+
 	// Fall back to default path in home directory
 	iniPath, err := os.UserHomeDir()
 	if err != nil {
