@@ -51,6 +51,8 @@ const (
 	LogMax     = 0
 	MetricsMin = 10
 	MetricsMax = 0
+	EventsMin  = 10
+	EventsMax  = 0
 )
 
 // Resources maps plural resource names to their accepted aliases.

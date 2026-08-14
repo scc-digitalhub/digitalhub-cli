@@ -113,7 +113,7 @@ func printShort(src []byte) error {
 	return nil
 }
 
-func printJson(id string, src []byte) error {
+func printJson(id string, src []byte, pretty ...bool) error {
 	var jsonData []byte = src
 	if id == "" {
 		var m map[string]interface{}
@@ -133,11 +133,16 @@ func printJson(id string, src []byte) error {
 		jsonData = out
 	}
 
-	var pretty bytes.Buffer
-	if err := json.Indent(&pretty, jsonData, "", "    "); err != nil {
-		return err
+	wantPretty := len(pretty) == 0 || pretty[0]
+	if wantPretty {
+		var buf bytes.Buffer
+		if err := json.Indent(&buf, jsonData, "", "    "); err != nil {
+			return err
+		}
+		fmt.Println(buf.String())
+	} else {
+		fmt.Println(string(jsonData))
 	}
-	fmt.Println(pretty.String())
 	return nil
 }
 
