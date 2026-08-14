@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"dhcli/keys"
+
 	"github.com/spf13/viper"
 )
 
@@ -27,10 +29,10 @@ const (
 // detectAuthMode returns the active authentication mode based on what is
 // currently stored in Viper.
 func detectAuthMode() authMode {
-	if viper.GetString(DhCoreAccessToken) != "" || viper.GetString(DhCoreRefreshToken) != "" {
+	if viper.GetString(keys.DhCoreAccessToken) != "" || viper.GetString(keys.DhCoreRefreshToken) != "" {
 		return authModeOAuth2
 	}
-	if viper.GetString(DhCoreUser) != "" && viper.GetString(DhCorePassword) != "" {
+	if viper.GetString(keys.DhCoreUser) != "" && viper.GetString(keys.DhCorePassword) != "" {
 		return authModeBasic
 	}
 	return authModePublic
@@ -51,7 +53,7 @@ func detectAuthMode() authMode {
 // Any non-401 response (including network errors) is treated as "proceed" so
 // that transient server issues do not block the caller.
 func CheckCredentials() error {
-	endpoint := viper.GetString(DhCoreEndpoint)
+	endpoint := viper.GetString(keys.DhCoreEndpoint)
 	if endpoint == "" {
 		return nil
 	}
@@ -72,11 +74,11 @@ func CheckCredentials() error {
 	mode := detectAuthMode()
 	switch mode {
 	case authModeOAuth2:
-		if tok := viper.GetString(DhCoreAccessToken); tok != "" {
+		if tok := viper.GetString(keys.DhCoreAccessToken); tok != "" {
 			req.Header.Set("Authorization", "Bearer "+tok)
 		}
 	case authModeBasic:
-		req.SetBasicAuth(viper.GetString(DhCoreUser), viper.GetString(DhCorePassword))
+		req.SetBasicAuth(viper.GetString(keys.DhCoreUser), viper.GetString(keys.DhCorePassword))
 	case authModePublic:
 		// no Authorization header
 	}
@@ -94,7 +96,7 @@ func CheckCredentials() error {
 
 	switch mode {
 	case authModeOAuth2:
-		return doRefresh()
+		return DoRefresh()
 	case authModeBasic:
 		return fmt.Errorf("authentication failed: invalid username or password")
 	default: // authModePublic
@@ -102,22 +104,22 @@ func CheckCredentials() error {
 	}
 }
 
-// doRefresh performs a refresh_token grant against the OAuth2 token endpoint
+// DoRefresh performs a refresh_token grant against the OAuth2 token endpoint
 // and persists the resulting tokens to viper and the ini file.
-func doRefresh() error {
-	logger.Info(fmt.Sprintf("Refreshing credentials for %v ...", viper.GetString(DhCoreEndpoint)))
+func DoRefresh() error {
+	logger.Info(fmt.Sprintf("Refreshing credentials for %v ...", viper.GetString(keys.DhCoreEndpoint)))
 
-	refreshToken := viper.GetString(DhCoreRefreshToken)
+	refreshToken := viper.GetString(keys.DhCoreRefreshToken)
 	if refreshToken == "" {
 		return fmt.Errorf("session expired and no refresh token available – please log in again")
 	}
 
-	tokenURL := viper.GetString(Oauth2TokenEndpoint)
+	tokenURL := viper.GetString(keys.Oauth2TokenEndpoint)
 	if tokenURL == "" {
 		return fmt.Errorf("oauth2_token_endpoint not configured – please log in again")
 	}
 
-	clientID := viper.GetString(DhCoreClientId)
+	clientID := viper.GetString(keys.DhCoreClientId)
 
 	raw := viper.GetString("scopes_supported")
 	var scopes []string
@@ -166,7 +168,7 @@ func doRefresh() error {
 
 	for k, v := range m {
 		key := k
-		if mapped, ok := DhCoreMap[k]; ok {
+		if mapped, ok := keys.DhCoreMap[k]; ok {
 			key = mapped
 		}
 		viper.Set(key, fmt.Sprint(v))

@@ -13,6 +13,7 @@ import (
 	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
 
 	"dhcli/handlers/utils"
+	"dhcli/keys"
 
 	crudsvc "github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/services/crud"
 
@@ -23,7 +24,7 @@ func DeleteHandler(env string, project string, name string, confirm bool, cascad
 	endpoint := utils.TranslateEndpoint(resource)
 
 	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(utils.ApiLevelKey, utils.DeleteMin, utils.DeleteMax)
+	utils.CheckApiLevel(keys.ApiLevelKey, keys.DeleteMin, keys.DeleteMax)
 	if err := utils.CheckCredentials(); err != nil {
 		return err
 	}
@@ -76,9 +77,9 @@ func DeleteHandler(env string, project string, name string, confirm bool, cascad
 	// Adapter: viper -> sdk.Config
 	cfg := config.Config{
 		Core: config.CoreConfig{
-			BaseURL:     viper.GetString(utils.DhCoreEndpoint),
-			APIVersion:  viper.GetString(utils.DhCoreApiVersion),
-			AccessToken: viper.GetString(utils.DhCoreAccessToken),
+			BaseURL:     viper.GetString(keys.DhCoreEndpoint),
+			APIVersion:  viper.GetString(keys.DhCoreApiVersion),
+			AccessToken: viper.GetString(keys.DhCoreAccessToken),
 		},
 		HTTPClient: utils.GetDebugHTTPClient(),
 	}

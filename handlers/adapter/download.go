@@ -16,6 +16,7 @@ import (
 	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
 
 	"dhcli/handlers/utils"
+	"dhcli/keys"
 
 	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/services/transfer"
 
@@ -26,7 +27,7 @@ import (
 func DownloadHandler(env string, destination string, output string, project string, name string, resource string, id string, verbose bool) error {
 
 	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(utils.ApiLevelKey, utils.LoginMin, utils.LoginMax)
+	utils.CheckApiLevel(keys.ApiLevelKey, keys.LoginMin, keys.LoginMax)
 	if err := utils.CheckCredentials(); err != nil {
 		return err
 	}
@@ -39,9 +40,9 @@ func DownloadHandler(env string, destination string, output string, project stri
 	// Traduce viper -> sdk.Config (INI/ENV/flags già caricati nel PersistentPreRunE)
 	cfg := config.Config{
 		Core: config.CoreConfig{
-			BaseURL:     viper.GetString(utils.DhCoreEndpoint),
-			APIVersion:  viper.GetString(utils.DhCoreApiVersion),
-			AccessToken: viper.GetString(utils.DhCoreAccessToken),
+			BaseURL:     viper.GetString(keys.DhCoreEndpoint),
+			APIVersion:  viper.GetString(keys.DhCoreApiVersion),
+			AccessToken: viper.GetString(keys.DhCoreAccessToken),
 		},
 		S3: config.S3Config{
 			AccessKey:   viper.GetString("aws_access_key_id"),

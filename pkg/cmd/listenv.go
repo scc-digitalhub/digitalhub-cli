@@ -5,8 +5,8 @@
 package cmd
 
 import (
-	"dhcli/pkg"
 	"dhcli/handlers/environment"
+	"dhcli/pkg"
 
 	"github.com/spf13/cobra"
 )

@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"dhcli/keys"
+
 	"github.com/spf13/viper"
 	"gopkg.in/ini.v1"
 )
@@ -203,7 +205,7 @@ func UpdateIniFromStruct(iniPath, envName string) error {
 	if !cfg.Section("DEFAULT").HasKey("current_environment") {
 		cfg.Section("DEFAULT").Key("current_environment").SetValue(envName)
 	}
-	sec.Key(UpdatedEnvKey).SetValue(time.Now().UTC().Format(time.RFC3339))
+	sec.Key(keys.UpdatedEnvKey).SetValue(time.Now().UTC().Format(time.RFC3339))
 	return cfg.SaveTo(iniPath)
 }
 
@@ -257,13 +259,13 @@ func RegisterIniCfgWithViper(optionalEnv ...string) error {
 			if envName == "" {
 				envName = resolveEnvName(optionalEnv...)
 			}
-			viper.Set(CurrentEnvironment, envName)
+			viper.Set(keys.CurrentEnvironment, envName)
 			return nil
 		}
 		cfg, err = ini.Load(iniPath)
 		if err != nil {
 			logger.Error(fmt.Sprintf("INI written but cannot reload: %v (ENV-only mode)", err))
-			viper.Set(CurrentEnvironment, viper.GetString(CurrentEnvironment))
+			viper.Set(keys.CurrentEnvironment, viper.GetString(keys.CurrentEnvironment))
 			return nil
 		}
 	}
@@ -279,7 +281,7 @@ func RegisterIniCfgWithViper(optionalEnv ...string) error {
 	if err := loadIniSectionIntoViper(cfg, env); err != nil {
 		return fmt.Errorf("failed to load INI into viper: %w", err)
 	}
-	viper.Set(CurrentEnvironment, env)
+	viper.Set(keys.CurrentEnvironment, env)
 	return nil
 }
 
@@ -320,22 +322,22 @@ func bootstrapFromEnv(iniPath string, optionalEnv ...string) (string, error) {
 		}
 	}
 
-	baseEndpoint := viper.GetString(DhCoreEndpoint)
+	baseEndpoint := viper.GetString(keys.DhCoreEndpoint)
 	if baseEndpoint == "" {
-		return "", fmt.Errorf("missing %s: set it in env or run 'dhcli register'", DhCoreEndpoint)
+		return "", fmt.Errorf("missing %s: set it in env or run 'dhcli register'", keys.DhCoreEndpoint)
 	}
 
 	envName := resolveEnvName(optionalEnv...)
 	if envName == "default" {
-		if nm := viper.GetString(DhCoreName); nm != "" {
+		if nm := viper.GetString(keys.DhCoreName); nm != "" {
 			envName = nm
 		}
 	}
-	viper.Set(CurrentEnvironment, envName)
+	viper.Set(keys.CurrentEnvironment, envName)
 
 	// Set source, this is needed to skip the CheckUpdateEnvironment from wellknown in case the ini file has been
 	// constructed from env
-	viper.Set(IniSource, "env")
+	viper.Set(keys.IniSource, "env")
 
 	if err := WriteIniFromStruct(iniPath, envName); err != nil {
 		return "", fmt.Errorf("write ini failed: %w", err)

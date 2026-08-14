@@ -5,11 +5,13 @@
 package cmd
 
 import (
+	"log"
+
 	"dhcli/handlers/environment"
 	"dhcli/handlers/utils"
+	"dhcli/keys"
 	"dhcli/pkg"
 	"dhcli/pkg/flags"
-	"log"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -36,7 +38,7 @@ var initCmd = func() *cobra.Command {
 				venvPath = args[0]
 			} else {
 				// If no path provided, use current environment name
-				venvPath = viper.GetString(utils.CurrentEnvironment)
+				venvPath = viper.GetString(keys.CurrentEnvironment)
 			}
 
 			// If still empty, default to current directory

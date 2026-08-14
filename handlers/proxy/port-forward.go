@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"dhcli/handlers/utils"
+	"dhcli/keys"
 
 	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
 	crudsvc "github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/services/crud"
@@ -95,7 +96,7 @@ func StartPortForward(ctx context.Context, project string, runID string, localPo
 	logger := utils.GetGlobalLogger()
 
 	// Get remote proxy URL from configuration
-	proxyURLStr := viper.GetString(utils.DhCoreProxy)
+	proxyURLStr := viper.GetString(keys.DhCoreProxy)
 	if proxyURLStr == "" {
 		return fmt.Errorf("proxy URL not configured")
 	}
@@ -108,7 +109,7 @@ func StartPortForward(ctx context.Context, project string, runID string, localPo
 	logger.Step(fmt.Sprintf("Using proxy %s", proxyURL.String()))
 
 	// Get authorization token
-	authToken := viper.GetString(utils.DhCoreAccessToken)
+	authToken := viper.GetString(keys.DhCoreAccessToken)
 	if authToken == "" {
 		return fmt.Errorf("authorization token not available")
 	}
@@ -248,9 +249,9 @@ func refreshServiceInfo(service *ServiceInfo, project string, runID string) erro
 	// Build SDK config from viper
 	cfg := config.Config{
 		Core: config.CoreConfig{
-			BaseURL:     viper.GetString(utils.DhCoreEndpoint),
-			APIVersion:  viper.GetString(utils.DhCoreApiVersion),
-			AccessToken: viper.GetString(utils.DhCoreAccessToken),
+			BaseURL:     viper.GetString(keys.DhCoreEndpoint),
+			APIVersion:  viper.GetString(keys.DhCoreApiVersion),
+			AccessToken: viper.GetString(keys.DhCoreAccessToken),
 		},
 		HTTPClient: utils.GetDebugHTTPClient(),
 	}

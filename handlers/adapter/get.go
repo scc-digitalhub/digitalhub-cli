@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"dhcli/handlers/utils"
+	"dhcli/keys"
 )
 
 func GetHandler(env string, output string, project string, name string, resource string, id string) error {
@@ -26,7 +27,7 @@ func GetHandler(env string, output string, project string, name string, resource
 
 	// Stessa logica esistente
 	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(utils.ApiLevelKey, utils.GetMin, utils.GetMax)
+	utils.CheckApiLevel(keys.ApiLevelKey, keys.GetMin, keys.GetMax)
 	if err := utils.CheckCredentials(); err != nil {
 		return err
 	}
@@ -40,9 +41,9 @@ func GetHandler(env string, output string, project string, name string, resource
 	// Adapter: viper/ini/env -> sdk.Config
 	cfg := config.Config{
 		Core: config.CoreConfig{
-			BaseURL:     viper.GetString(utils.DhCoreEndpoint),
-			APIVersion:  viper.GetString(utils.DhCoreApiVersion),
-			AccessToken: viper.GetString(utils.DhCoreAccessToken),
+			BaseURL:     viper.GetString(keys.DhCoreEndpoint),
+			APIVersion:  viper.GetString(keys.DhCoreApiVersion),
+			AccessToken: viper.GetString(keys.DhCoreAccessToken),
 		},
 		HTTPClient: utils.GetDebugHTTPClient(),
 	}

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"dhcli/handlers/utils"
+	"dhcli/keys"
 
 	"github.com/spf13/viper"
 	"sigs.k8s.io/yaml"
@@ -28,16 +29,16 @@ const metricsFollowInterval = 15 * time.Second
 // id is required for the "run" scope.
 func MetricsHandler(env string, output string, project string, scope string, id string, follow bool) error {
 	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(utils.ApiLevelKey, utils.MetricsMin, utils.MetricsMax)
+	utils.CheckApiLevel(keys.ApiLevelKey, keys.MetricsMin, keys.MetricsMax)
 	if err := utils.CheckCredentials(); err != nil {
 		return err
 	}
 
 	format := utils.TranslateFormat(output)
 
-	baseURL := strings.TrimRight(viper.GetString(utils.DhCoreEndpoint), "/")
-	apiVersion := viper.GetString(utils.DhCoreApiVersion)
-	accessToken := viper.GetString(utils.DhCoreAccessToken)
+	baseURL := strings.TrimRight(viper.GetString(keys.DhCoreEndpoint), "/")
+	apiVersion := viper.GetString(keys.DhCoreApiVersion)
+	accessToken := viper.GetString(keys.DhCoreAccessToken)
 
 	var metricsURL string
 	switch scope {
@@ -91,7 +92,7 @@ func MetricsHandler(env string, output string, project string, scope string, id 
 			// Print entity header
 			switch scope {
 			case "instance":
-				name := viper.GetString(utils.DhCoreName)
+				name := viper.GetString(keys.DhCoreName)
 				if name == "" {
 					name = baseURL
 				}

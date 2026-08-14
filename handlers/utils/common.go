@@ -19,6 +19,8 @@ import (
 	"strconv"
 	"strings"
 
+	"dhcli/keys"
+
 	"github.com/spf13/viper"
 	"gopkg.in/ini.v1"
 )
@@ -33,7 +35,7 @@ func getIniPath() string {
 
 	// Check if ini file exists in current working directory
 	if cwd, err := os.Getwd(); err == nil {
-		cwdIniPath := cwd + string(os.PathSeparator) + IniName
+		cwdIniPath := cwd + string(os.PathSeparator) + keys.IniName
 		if _, err := os.Stat(cwdIniPath); err == nil {
 			return cwdIniPath
 		}
@@ -44,7 +46,7 @@ func getIniPath() string {
 	if err != nil {
 		iniPath = "."
 	}
-	return iniPath + string(os.PathSeparator) + IniName
+	return iniPath + string(os.PathSeparator) + keys.IniName
 }
 
 func LoadIni(createOnMissing bool) *ini.File {
@@ -105,7 +107,7 @@ func TranslateFormat(format string) string {
 }
 
 func TranslateEndpoint(resource string) string {
-	for key, val := range Resources {
+	for key, val := range keys.Resources {
 		if key == resource || slices.Contains(val, resource) {
 			return key
 		}
@@ -150,8 +152,8 @@ func WaitForConfirmation(msg string) {
 
 func PrintCommentForYaml(args ...string) {
 	// fmt.Printf("# Generated on: %v\n", time.Now().Round(0))
-	// fmt.Printf("#   from environment: %v (core version %v)\n", viper.GetString(DhCoreName), viper.GetString("dhcore_version"))
-	// fmt.Printf("#   found at: %v\n", viper.GetString(DhCoreEndpoint))
+	// fmt.Printf("#   from environment: %v (core version %v)\n", viper.GetString(keys.DhCoreName), viper.GetString("dhcore_version"))
+	// fmt.Printf("#   found at: %v\n", viper.GetString(keys.DhCoreEndpoint))
 	var parts []string
 	for _, s := range args {
 		if s != "" {

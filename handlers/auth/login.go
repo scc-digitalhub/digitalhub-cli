@@ -27,6 +27,7 @@ import (
 	"github.com/spf13/viper"
 
 	"dhcli/handlers/utils"
+	"dhcli/keys"
 )
 
 //go:embed callback.html
@@ -45,7 +46,7 @@ var logger = utils.GetGlobalLogger()
 // ==========================
 func LoginHandler() error {
 	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(utils.ApiLevelKey, utils.LoginMin, utils.LoginMax)
+	utils.CheckApiLevel(keys.ApiLevelKey, keys.LoginMin, keys.LoginMax)
 
 	verifier, challenge := generatePKCE()
 	state := randomString(32)
@@ -90,7 +91,7 @@ func LoginHandler() error {
 	} else {
 		for k, v := range m {
 			key := k
-			if mapped, ok := utils.DhCoreMap[k]; ok {
+			if mapped, ok := keys.DhCoreMap[k]; ok {
 				key = mapped
 			}
 			viper.Set(key, fmt.Sprint(v))
@@ -115,13 +116,13 @@ func LoginHandler() error {
 // environments such as CI jobs or containers.
 func PatLoginHandler(pat string) error {
 	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(utils.ApiLevelKey, utils.LoginMin, utils.LoginMax)
+	utils.CheckApiLevel(keys.ApiLevelKey, keys.LoginMin, keys.LoginMax)
 
-	tokenURL := viper.GetString(utils.Oauth2TokenEndpoint)
+	tokenURL := viper.GetString(keys.Oauth2TokenEndpoint)
 	if tokenURL == "" {
 		return fmt.Errorf("oauth2_token_endpoint not configured")
 	}
-	clientID := viper.GetString(utils.DhCoreClientId)
+	clientID := viper.GetString(keys.DhCoreClientId)
 	if clientID == "" {
 		return fmt.Errorf("dhcore_client_id not configured")
 	}
@@ -157,7 +158,7 @@ func PatLoginHandler(pat string) error {
 
 	for k, val := range m {
 		key := k
-		if mapped, ok := utils.DhCoreMap[k]; ok {
+		if mapped, ok := keys.DhCoreMap[k]; ok {
 			key = mapped
 		}
 		viper.Set(key, fmt.Sprint(val))
@@ -290,8 +291,8 @@ func startAuthCodeServer(
 		}
 
 		token := exchangeAuthCode(
-			viper.GetString(utils.Oauth2TokenEndpoint),
-			viper.GetString(utils.DhCoreClientId),
+			viper.GetString(keys.Oauth2TokenEndpoint),
+			viper.GetString(keys.DhCoreClientId),
 			verifier,
 			redirectURI,
 			code,
@@ -417,7 +418,7 @@ func buildAuthURL(chal, state, redirectURI string) (string, error) {
 
 	v := url.Values{
 		"response_type":         {"code"},
-		"client_id":             {viper.GetString(utils.DhCoreClientId)},
+		"client_id":             {viper.GetString(keys.DhCoreClientId)},
 		"redirect_uri":          {redirectURI},
 		"code_challenge":        {chal},
 		"code_challenge_method": {"S256"},

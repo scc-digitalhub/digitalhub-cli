@@ -14,12 +14,13 @@ import (
 	"strings"
 
 	"dhcli/handlers/utils"
+	"dhcli/keys"
 
 	"github.com/spf13/viper"
 )
 
 func RefreshHandler() error {
-	if viper.GetString(utils.DhCoreRefreshToken) == "" {
+	if viper.GetString(keys.DhCoreRefreshToken) == "" {
 		return fmt.Errorf("no refresh token available – please log in first")
 	}
 
@@ -39,8 +40,8 @@ func RefreshHandler() error {
 
 	data := url.Values{}
 	data.Set("grant_type", "refresh_token")
-	data.Set("client_id", viper.GetString(utils.DhCoreClientId))
-	data.Set("refresh_token", viper.GetString(utils.DhCoreRefreshToken))
+	data.Set("client_id", viper.GetString(keys.DhCoreClientId))
+	data.Set("refresh_token", viper.GetString(keys.DhCoreRefreshToken))
 	if len(scopes) > 0 {
 		data.Set("scope", strings.Join(scopes, " "))
 	}
@@ -51,7 +52,7 @@ func RefreshHandler() error {
 		client = &http.Client{}
 	}
 
-	resp, err := client.Post(viper.GetString(utils.Oauth2TokenEndpoint), "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
+	resp, err := client.Post(viper.GetString(keys.Oauth2TokenEndpoint), "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
 	if err != nil {
 		return err
 	}
@@ -74,7 +75,7 @@ func RefreshHandler() error {
 	// Map all token response fields into Viper (not just access_token and refresh_token)
 	for k, v := range responseJson {
 		key := k
-		if mapped, ok := utils.DhCoreMap[k]; ok {
+		if mapped, ok := keys.DhCoreMap[k]; ok {
 			key = mapped
 		}
 		viper.Set(key, fmt.Sprint(v))

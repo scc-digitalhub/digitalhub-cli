@@ -16,6 +16,7 @@ import (
 	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
 
 	"dhcli/handlers/utils"
+	"dhcli/keys"
 
 	"github.com/spf13/viper"
 	"sigs.k8s.io/yaml"
@@ -25,7 +26,7 @@ func RunHandler(env string, project string, functionName string, functionId stri
 	endpoint := utils.TranslateEndpoint("run")
 
 	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(utils.ApiLevelKey, utils.CreateMin, utils.CreateMax)
+	utils.CheckApiLevel(keys.ApiLevelKey, keys.CreateMin, keys.CreateMax)
 	if err := utils.CheckCredentials(); err != nil {
 		return err
 	}
@@ -59,9 +60,9 @@ func RunHandler(env string, project string, functionName string, functionId stri
 
 	cfg := config.Config{
 		Core: config.CoreConfig{
-			BaseURL:     viper.GetString(utils.DhCoreEndpoint),
-			APIVersion:  viper.GetString(utils.DhCoreApiVersion),
-			AccessToken: viper.GetString(utils.DhCoreAccessToken),
+			BaseURL:     viper.GetString(keys.DhCoreEndpoint),
+			APIVersion:  viper.GetString(keys.DhCoreApiVersion),
+			AccessToken: viper.GetString(keys.DhCoreAccessToken),
 		},
 		HTTPClient: utils.GetDebugHTTPClient(),
 	}

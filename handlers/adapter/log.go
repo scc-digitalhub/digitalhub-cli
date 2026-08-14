@@ -18,6 +18,7 @@ import (
 	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
 
 	"dhcli/handlers/utils"
+	"dhcli/keys"
 
 	"github.com/spf13/viper"
 )
@@ -26,7 +27,7 @@ func LogHandler(env string, project string, container string, follow bool, id st
 	endpoint := utils.TranslateEndpoint("run")
 
 	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(utils.ApiLevelKey, utils.LogMin, utils.LogMax)
+	utils.CheckApiLevel(keys.ApiLevelKey, keys.LogMin, keys.LogMax)
 	if err := utils.CheckCredentials(); err != nil {
 		return err
 	}
@@ -38,9 +39,9 @@ func LogHandler(env string, project string, container string, follow bool, id st
 	// Bridge viper -> sdk config
 	cfg := config.Config{
 		Core: config.CoreConfig{
-			BaseURL:     viper.GetString(utils.DhCoreEndpoint),
-			APIVersion:  viper.GetString(utils.DhCoreApiVersion),
-			AccessToken: viper.GetString(utils.DhCoreAccessToken),
+			BaseURL:     viper.GetString(keys.DhCoreEndpoint),
+			APIVersion:  viper.GetString(keys.DhCoreApiVersion),
+			AccessToken: viper.GetString(keys.DhCoreAccessToken),
 		},
 		HTTPClient: utils.GetDebugHTTPClient(),
 	}

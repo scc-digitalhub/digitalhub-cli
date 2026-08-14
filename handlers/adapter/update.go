@@ -13,6 +13,7 @@ import (
 	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
 
 	"dhcli/handlers/utils"
+	"dhcli/keys"
 
 	crudsvc "github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/services/crud"
 
@@ -24,7 +25,7 @@ func UpdateHandler(env string, project string, filePath string, resource string,
 	endpoint := utils.TranslateEndpoint(resource)
 
 	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(utils.ApiLevelKey, utils.UpdateMin, utils.UpdateMax)
+	utils.CheckApiLevel(keys.ApiLevelKey, keys.UpdateMin, keys.UpdateMax)
 	if err := utils.CheckCredentials(); err != nil {
 		return err
 	}
@@ -78,9 +79,9 @@ func UpdateHandler(env string, project string, filePath string, resource string,
 	// Bridge Viper → sdk.Config (retrocomp.)
 	cfg := config.Config{
 		Core: config.CoreConfig{
-			BaseURL:     viper.GetString(utils.DhCoreEndpoint),
-			APIVersion:  viper.GetString(utils.DhCoreApiVersion),
-			AccessToken: viper.GetString(utils.DhCoreAccessToken),
+			BaseURL:     viper.GetString(keys.DhCoreEndpoint),
+			APIVersion:  viper.GetString(keys.DhCoreApiVersion),
+			AccessToken: viper.GetString(keys.DhCoreAccessToken),
 		},
 		HTTPClient: utils.GetDebugHTTPClient(),
 	}

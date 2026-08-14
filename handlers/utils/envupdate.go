@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"dhcli/keys"
+
 	"github.com/spf13/viper"
 )
 
@@ -18,10 +20,10 @@ import (
 // - invalid timestamp                     -> update
 // - older than TTL                        -> update
 func CheckUpdateEnvironment() {
-	const key = UpdatedEnvKey
+	const key = keys.UpdatedEnvKey
 
-	endpoint := viper.GetString(DhCoreEndpoint)
-	apiLevel := viper.GetString(ApiLevelKey)
+	endpoint := viper.GetString(keys.DhCoreEndpoint)
+	apiLevel := viper.GetString(keys.ApiLevelKey)
 
 	// Partial config: endpoint known but well-known endpoints never fetched.
 	if endpoint != "" && apiLevel == "" {
@@ -70,7 +72,7 @@ func CheckUpdateEnvironment() {
 // Fetch well-known, update Viper, bump timestamp, persist allowlisted keys.
 func updateEnvironment() {
 	logger.Info("Updating environment…")
-	baseEndpoint := viper.GetString(DhCoreEndpoint)
+	baseEndpoint := viper.GetString(keys.DhCoreEndpoint)
 	if baseEndpoint == "" {
 		logger.Warn("Skip: dhcore_endpoint is empty.")
 		return
@@ -95,10 +97,10 @@ func updateEnvironment() {
 	}
 
 	ts := time.Now().UTC().Format(time.RFC3339)
-	viper.Set(UpdatedEnvKey, ts)
-	logger.Info(fmt.Sprintf("Set %s=%s", UpdatedEnvKey, ts))
+	viper.Set(keys.UpdatedEnvKey, ts)
+	logger.Info(fmt.Sprintf("Set %s=%s", keys.UpdatedEnvKey, ts))
 
-	env := viper.GetString(CurrentEnvironment)
+	env := viper.GetString(keys.CurrentEnvironment)
 	if env == "" {
 		env = resolveEnvName()
 	}
@@ -111,7 +113,7 @@ func updateEnvironment() {
 
 // Backward-compat wrapper.
 func UpdateIniSectionFromViper(_ []string) error {
-	env := viper.GetString(CurrentEnvironment)
+	env := viper.GetString(keys.CurrentEnvironment)
 	if env == "" {
 		env = resolveEnvName()
 	}

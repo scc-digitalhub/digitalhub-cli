@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"dhcli/handlers/utils"
+	"dhcli/keys"
 
 	"github.com/spf13/viper"
 )
@@ -44,12 +45,12 @@ type proxyPageData struct {
 func StartBrowserProxy(ctx context.Context, project string, runID string) error {
 	logger := utils.GetGlobalLogger()
 
-	authToken := viper.GetString(utils.DhCoreAccessToken)
+	authToken := viper.GetString(keys.DhCoreAccessToken)
 	if authToken == "" {
 		return fmt.Errorf("authorization token not available")
 	}
 
-	proxyURLStr := viper.GetString(utils.DhCoreProxy)
+	proxyURLStr := viper.GetString(keys.DhCoreProxy)
 	if proxyURLStr == "" {
 		return fmt.Errorf("proxy URL not configured")
 	}

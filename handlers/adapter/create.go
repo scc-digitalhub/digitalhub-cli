@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"dhcli/handlers/utils"
+	"dhcli/keys"
 
 	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
 
@@ -22,7 +23,7 @@ func CreateHandler(env string, project string, name string, filePath string, res
 	endpoint := utils.TranslateEndpoint(resource)
 
 	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(utils.ApiLevelKey, utils.CreateMin, utils.CreateMax)
+	utils.CheckApiLevel(keys.ApiLevelKey, keys.CreateMin, keys.CreateMax)
 	if err := utils.CheckCredentials(); err != nil {
 		return err
 	}
@@ -44,9 +45,9 @@ func CreateHandler(env string, project string, name string, filePath string, res
 	// Adapter: viper -> sdk.Config
 	cfg := config.Config{
 		Core: config.CoreConfig{
-			BaseURL:     viper.GetString(utils.DhCoreEndpoint),
-			APIVersion:  viper.GetString(utils.DhCoreApiVersion),
-			AccessToken: viper.GetString(utils.DhCoreAccessToken),
+			BaseURL:     viper.GetString(keys.DhCoreEndpoint),
+			APIVersion:  viper.GetString(keys.DhCoreApiVersion),
+			AccessToken: viper.GetString(keys.DhCoreAccessToken),
 		},
 		HTTPClient: utils.GetDebugHTTPClient(),
 	}

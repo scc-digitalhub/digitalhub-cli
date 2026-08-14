@@ -5,10 +5,11 @@
 package cmd
 
 import (
+	"log"
+
+	"dhcli/handlers/auth"
 	"dhcli/pkg"
 	"dhcli/pkg/flags"
-	"dhcli/handlers/auth"
-	"log"
 
 	"github.com/spf13/cobra"
 )

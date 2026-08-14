@@ -14,6 +14,7 @@ import (
 	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
 
 	"dhcli/handlers/utils"
+	"dhcli/keys"
 
 	"github.com/spf13/viper"
 )
@@ -21,7 +22,7 @@ import (
 func UploadHandler(env string, input string, project string, resource string, id string, name string, verbose bool) error {
 
 	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(utils.ApiLevelKey, utils.LoginMin, utils.LoginMax)
+	utils.CheckApiLevel(keys.ApiLevelKey, keys.LoginMin, keys.LoginMax)
 	if err := utils.CheckCredentials(); err != nil {
 		return err
 	}
@@ -38,9 +39,9 @@ func UploadHandler(env string, input string, project string, resource string, id
 	// Traduzione viper -> sdk.Config (retro-compat)
 	cfg := config.Config{
 		Core: config.CoreConfig{
-			BaseURL:     viper.GetString(utils.DhCoreEndpoint),
-			APIVersion:  viper.GetString(utils.DhCoreApiVersion),
-			AccessToken: viper.GetString(utils.DhCoreAccessToken),
+			BaseURL:     viper.GetString(keys.DhCoreEndpoint),
+			APIVersion:  viper.GetString(keys.DhCoreApiVersion),
+			AccessToken: viper.GetString(keys.DhCoreAccessToken),
 		},
 		S3: config.S3Config{
 			AccessKey:   viper.GetString("aws_access_key_id"),

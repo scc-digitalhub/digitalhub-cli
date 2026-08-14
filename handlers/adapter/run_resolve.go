@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/viper"
 
 	"dhcli/handlers/utils"
+	"dhcli/keys"
 )
 
 // ResolveRunIDByFunctionName finds the ID of the most recent run matching the
@@ -23,9 +24,9 @@ import (
 func ResolveRunIDByFunctionName(project, functionName, state, action string) (string, error) {
 	cfg := config.Config{
 		Core: config.CoreConfig{
-			BaseURL:     viper.GetString(utils.DhCoreEndpoint),
-			APIVersion:  viper.GetString(utils.DhCoreApiVersion),
-			AccessToken: viper.GetString(utils.DhCoreAccessToken),
+			BaseURL:     viper.GetString(keys.DhCoreEndpoint),
+			APIVersion:  viper.GetString(keys.DhCoreApiVersion),
+			AccessToken: viper.GetString(keys.DhCoreAccessToken),
 		},
 		HTTPClient: utils.GetDebugHTTPClient(),
 	}
@@ -115,9 +116,9 @@ func ResolveRunIDByFunctionName(project, functionName, state, action string) (st
 func ResolveRunIDByName(project, name, state, action string) (string, error) {
 	cfg := config.Config{
 		Core: config.CoreConfig{
-			BaseURL:     viper.GetString(utils.DhCoreEndpoint),
-			APIVersion:  viper.GetString(utils.DhCoreApiVersion),
-			AccessToken: viper.GetString(utils.DhCoreAccessToken),
+			BaseURL:     viper.GetString(keys.DhCoreEndpoint),
+			APIVersion:  viper.GetString(keys.DhCoreApiVersion),
+			AccessToken: viper.GetString(keys.DhCoreAccessToken),
 		},
 		HTTPClient: utils.GetDebugHTTPClient(),
 	}

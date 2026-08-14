@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"dhcli/handlers/utils"
+	"dhcli/keys"
 )
 
 func RegisterHandler(env string, endpoint string, force bool) error {
@@ -32,7 +33,7 @@ func RegisterHandler(env string, endpoint string, force bool) error {
 	}
 
 	if env == "" || env == "null" {
-		env = utils.GetStringValue(config, utils.DhCoreName)
+		env = utils.GetStringValue(config, keys.DhCoreName)
 		if env == "" {
 			return fmt.Errorf("environment not specified and not defined in core configuration")
 		}
@@ -41,8 +42,8 @@ func RegisterHandler(env string, endpoint string, force bool) error {
 	// 2. Check for endpoint conflict before clearing section
 	if cfg.HasSection(env) {
 		existingSection := cfg.Section(env)
-		if existingSection.HasKey(utils.DhCoreEndpoint) {
-			existingEndpoint := existingSection.Key(utils.DhCoreEndpoint).String()
+		if existingSection.HasKey(keys.DhCoreEndpoint) {
+			existingEndpoint := existingSection.Key(keys.DhCoreEndpoint).String()
 			// Normalize both endpoints by removing trailing slashes for comparison
 			normalizedExisting := strings.TrimSuffix(existingEndpoint, "/")
 			normalizedNew := strings.TrimSuffix(endpoint, "/")
@@ -69,12 +70,12 @@ func RegisterHandler(env string, endpoint string, force bool) error {
 	}
 
 	// 5. Check API level
-	apiLevel := utils.GetStringValue(config, utils.ApiLevelKey)
+	apiLevel := utils.GetStringValue(config, keys.ApiLevelKey)
 	apiLevelInt, err := strconv.Atoi(apiLevel)
 	if err != nil {
 		log.Println("WARNING: API level not valid or missing.")
-	} else if apiLevelInt < utils.MinApiLevel {
-		log.Printf("WARNING: API level %v < minimum required %v\n", apiLevelInt, utils.MinApiLevel)
+	} else if apiLevelInt < keys.MinApiLevel {
+		log.Printf("WARNING: API level %v < minimum required %v\n", apiLevelInt, keys.MinApiLevel)
 	}
 
 	// 6. Fetch and reflect OpenID config
@@ -83,18 +84,18 @@ func RegisterHandler(env string, endpoint string, force bool) error {
 		return fmt.Errorf("fetching OpenID configuration failed: %w", err)
 	}
 
-	keys := make([]string, 0, len(openIdConfig))
+	sortedKeys := make([]string, 0, len(openIdConfig))
 	for k := range openIdConfig {
-		keys = append(keys, k)
+		sortedKeys = append(sortedKeys, k)
 	}
-	sort.Strings(keys)
+	sort.Strings(sortedKeys)
 
-	for _, k := range keys {
+	for _, k := range sortedKeys {
 		v := openIdConfig[k]
 
 		// remap only if there is a DHCORE correspondence
 		targetKey := k
-		if dhKey, has := utils.DhCoreMap[k]; has {
+		if dhKey, has := keys.DhCoreMap[k]; has {
 			targetKey = dhKey
 		}
 
@@ -106,15 +107,15 @@ func RegisterHandler(env string, endpoint string, force bool) error {
 	}
 
 	// 7. Add timestamp
-	section.NewKey(utils.UpdatedEnvKey, time.Now().UTC().Format(time.RFC3339))
+	section.NewKey(keys.UpdatedEnvKey, time.Now().UTC().Format(time.RFC3339))
 
 	// 8. Add ini_source
-	section.NewKey(utils.IniSource, "well-known")
+	section.NewKey(keys.IniSource, "well-known")
 
 	// 9. Set default env if missing
 	defaultSection := cfg.Section("DEFAULT")
-	if !defaultSection.HasKey(utils.CurrentEnvironment) {
-		defaultSection.NewKey(utils.CurrentEnvironment, env)
+	if !defaultSection.HasKey(keys.CurrentEnvironment) {
+		defaultSection.NewKey(keys.CurrentEnvironment, env)
 	}
 
 	utils.SaveIni(cfg)

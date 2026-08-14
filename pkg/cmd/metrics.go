@@ -5,10 +5,11 @@
 package cmd
 
 import (
+	"log"
+
 	"dhcli/handlers/adapter"
 	"dhcli/pkg"
 	"dhcli/pkg/flags"
-	"log"
 
 	"dhcli/handlers/utils"
 

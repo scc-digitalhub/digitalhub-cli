@@ -6,11 +6,6 @@ package cmd
 
 import (
 	"context"
-	"dhcli/handlers/adapter"
-	"dhcli/handlers/proxy"
-	"dhcli/handlers/utils"
-	"dhcli/pkg"
-	"dhcli/pkg/flags"
 	"errors"
 	"log"
 	"net/http"
@@ -18,6 +13,12 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+
+	"dhcli/handlers/adapter"
+	"dhcli/handlers/proxy"
+	"dhcli/handlers/utils"
+	"dhcli/pkg"
+	"dhcli/pkg/flags"
 
 	"github.com/spf13/cobra"
 )
