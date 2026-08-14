@@ -5,9 +5,10 @@
 package main
 
 import (
+	"log"
+
 	"dhcli/pkg"
 	_ "dhcli/pkg/cmd"
-	"log"
 
 	"gopkg.in/ini.v1"
 )

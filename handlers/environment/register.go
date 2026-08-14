@@ -112,11 +112,12 @@ func RegisterHandler(env string, endpoint string, force bool) error {
 	// 8. Add ini_source
 	section.NewKey(keys.IniSource, "well-known")
 
-	// 9. Set default env if missing
+	// 9. Set default as default environment if not already set
 	defaultSection := cfg.Section("DEFAULT")
-	if !defaultSection.HasKey(keys.CurrentEnvironment) {
-		defaultSection.NewKey(keys.CurrentEnvironment, env)
+	if defaultSection.HasKey(keys.CurrentEnvironment) {
+		defaultSection.DeleteKey(keys.CurrentEnvironment)
 	}
+	defaultSection.NewKey(keys.CurrentEnvironment, env)
 
 	utils.SaveIni(cfg)
 
