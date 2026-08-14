@@ -5,7 +5,6 @@
 package environment
 
 import (
-	"fmt"
 	"log"
 
 	"dhcli/handlers/utils"
@@ -13,6 +12,12 @@ import (
 
 func ListEnvHandler() {
 	cfg := utils.LoadIni(true)
+
+	currentEnv := cfg.Section("DEFAULT").Key("current_environment").String()
+	if currentEnv != "" {
+		log.Printf("Current environment: %s\n", currentEnv)
+	}
+
 	sections := cfg.SectionStrings()
 	sectionsString := ""
 
@@ -28,6 +33,5 @@ func ListEnvHandler() {
 	}
 	sectionsString = sectionsString[:len(sectionsString)-2]
 
-	log.Println("Available environments:")
-	fmt.Printf("%v\n", sectionsString)
+	log.Printf("Available environments: %s\n", sectionsString)
 }
