@@ -15,15 +15,15 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func ConfigHandler(output string) error {
+func ConfigHandler(output string, provider string) error {
 	utils.CheckUpdateEnvironment()
-	entries := utils.GetConfigEntries()
+	entries := utils.GetConfigEntriesByProvider(provider, output)
 	return printEntries(entries, utils.TranslateFormat(output))
 }
 
-func CredentialsHandler(output string) error {
+func CredentialsHandler(output string, provider string) error {
 	utils.CheckUpdateEnvironment()
-	entries := utils.GetCredentialEntries()
+	entries := utils.GetCredentialEntriesByProvider(provider, output)
 	return printEntries(entries, utils.TranslateFormat(output))
 }
 
