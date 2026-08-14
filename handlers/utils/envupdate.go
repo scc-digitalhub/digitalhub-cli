@@ -15,10 +15,10 @@ import (
 
 // CheckUpdateEnvironment decides whether to refresh the environment:
 // - endpoint present but api_level absent -> bootstrap (well-known never fetched)
-// - api_level present                     -> fully bootstrapped, skip
 // - missing/empty timestamp               -> update
 // - invalid timestamp                     -> update
 // - older than TTL                        -> update
+// - otherwise                             -> skip (fresh)
 func CheckUpdateEnvironment() {
 	const key = keys.UpdatedEnvKey
 
@@ -29,13 +29,6 @@ func CheckUpdateEnvironment() {
 	if endpoint != "" && apiLevel == "" {
 		logger.Warn("Config has endpoint but no api_level — bootstrapping from well-known.")
 		updateEnvironment()
-		return
-	}
-
-	// api_level is the authoritative signal that the config is fully bootstrapped.
-	// This covers both env-provided configs and already-initialised file configs.
-	if apiLevel != "" {
-		logger.Step("Config already bootstrapped (api_level present) — skip update.")
 		return
 	}
 

@@ -178,12 +178,18 @@ func WriteIniFromStruct(iniPath, envName string) error {
 }
 
 // Update or create INI section from current Viper values (persist:"true" only).
+// Existing keys in the section are cleared before repopulating so that key order
+// is always deterministic (struct-field order) without moving the section in the file.
 func UpdateIniFromStruct(iniPath, envName string) error {
 	cfg, err := ini.Load(iniPath)
 	if err != nil {
 		return WriteIniFromStruct(iniPath, envName)
 	}
 	sec := cfg.Section(envName)
+	// Clear existing keys so they are rewritten in struct-field order.
+	for _, k := range sec.Keys() {
+		sec.DeleteKey(k.Name())
+	}
 
 	rt := reflect.TypeOf(Config{})
 	for i := 0; i < rt.NumField(); i++ {
