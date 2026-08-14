@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -142,62 +143,46 @@ func getContainerLogAdapter(
 		return nil, fmt.Errorf("json parsing failed: %w", err)
 	}
 
-	// 2) Determine container name
-	containerName := container
-	if containerName == "" {
-		// se container non specificato, calcola il "main" container come nel vecchio codice
-
-		resBody, _, err := svc.GetResource(ctx, runsvc.LogRequest{
-			RunResourceRequest: runsvc.RunResourceRequest{
-				Project:  project,
-				Resource: endpoint,
-				ID:       id,
-			},
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		var m map[string]interface{}
-		if err := json.Unmarshal(resBody, &m); err != nil {
-			return nil, err
-		}
-
-		spec, ok := m["spec"].(map[string]interface{})
-		if !ok {
-			return nil, errors.New("invalid resource: missing spec")
-		}
-
-		task, ok := spec["task"].(string)
-		if !ok {
-			return nil, errors.New("invalid resource: missing task in spec")
-		}
-
-		idx := strings.Index(task, ":")
-		if idx == -1 {
-			return nil, errors.New("invalid task format in spec")
-		}
-
-		taskFormatted := strings.ReplaceAll(task[:idx], "+", "")
-		containerName = fmt.Sprintf("c-%v-%v", taskFormatted, id)
+	// 2) Collect all log entries — the top-level "id" field is the container name
+	type entryWithContainer struct {
+		name  string
+		entry map[string]interface{}
 	}
-
-	// 3) Loop over logs to find the correct one
-	for _, entry := range logs {
-		entryMap, ok := entry.(map[string]interface{})
+	var entries []entryWithContainer
+	for _, raw := range logs {
+		entryMap, ok := raw.(map[string]interface{})
 		if !ok {
 			continue
 		}
-		statusVal, ok := entryMap["status"].(map[string]interface{})
-		if !ok {
+		name, _ := entryMap["id"].(string)
+		if name == "" {
 			continue
 		}
-		entryContainer, _ := statusVal["container"].(string)
+		entries = append(entries, entryWithContainer{name: name, entry: entryMap})
+	}
 
-		if containerName == entryContainer {
-			return entryMap, nil
+	if len(entries) == 0 {
+		return nil, fmt.Errorf("no log entries with a container found")
+	}
+
+	// 3) Pick container
+	if container == "" {
+		if len(entries) > 1 {
+			names := make([]string, len(entries))
+			for i, e := range entries {
+				names[i] = e.name
+			}
+			fmt.Fprintf(os.Stderr, "More than one container found: %s, picking %s...\n",
+				strings.Join(names, ", "), entries[0].name)
+		}
+		return entries[0].entry, nil
+	}
+
+	for _, e := range entries {
+		if e.name == container {
+			return e.entry, nil
 		}
 	}
 
-	return nil, fmt.Errorf("container not found")
+	return nil, fmt.Errorf("container %q not found", container)
 }
