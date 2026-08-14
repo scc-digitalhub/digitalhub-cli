@@ -71,6 +71,8 @@ func updateEnvironment() {
 		return
 	}
 
+	var additionalKeys []string
+
 	cfg, err := FetchConfig(baseEndpoint + "/.well-known/configuration")
 	if err != nil {
 		logger.Error(fmt.Sprintf("Config fetch failed: %v", err))
@@ -78,6 +80,7 @@ func updateEnvironment() {
 	}
 	for k, v := range cfg {
 		viper.Set(k, ReflectValue(v))
+		additionalKeys = append(additionalKeys, k)
 	}
 
 	oidc, err := FetchConfig(baseEndpoint + "/.well-known/openid-configuration")
@@ -86,33 +89,29 @@ func updateEnvironment() {
 		return
 	}
 	for k, v := range oidc {
-		viper.Set(k, ReflectValue(v))
+		pk := "oauth2_" + k
+		viper.Set(pk, ReflectValue(v))
+		additionalKeys = append(additionalKeys, pk)
 	}
 
 	ts := time.Now().UTC().Format(time.RFC3339)
 	viper.Set(keys.UpdatedEnvKey, ts)
+	additionalKeys = append(additionalKeys, keys.UpdatedEnvKey)
 	logger.Info(fmt.Sprintf("Set %s=%s", keys.UpdatedEnvKey, ts))
 
 	env := viper.GetString(keys.CurrentEnvironment)
 	if env == "" {
 		env = resolveEnvName()
 	}
-	if err := UpdateIniFromStruct(getIniPath(), env); err != nil {
+	if err := PersistToIni(getIniPath(), env, additionalKeys); err != nil {
 		logger.Warn(fmt.Sprintf("Persist skipped (read-only or missing ini): %v", err))
 	} else {
 		logger.Info(fmt.Sprintf("Persisted to [%s].", env))
 	}
 }
 
-// Backward-compat wrapper.
+// UpdateIniSectionFromViper persists the current environment section to the INI.
+// The additionalKeys argument is accepted for backward-compatibility but ignored.
 func UpdateIniSectionFromViper(_ []string) error {
-	env := viper.GetString(keys.CurrentEnvironment)
-	if env == "" {
-		env = resolveEnvName()
-	}
-	if err := UpdateIniFromStruct(getIniPath(), env); err != nil {
-		return fmt.Errorf("failed to save ini: %w", err)
-	}
-	logger.Info(fmt.Sprintf("Updated section [%s] in %s", env, getIniPath()))
-	return nil
+	return PersistCurrentEnv(nil)
 }

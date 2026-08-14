@@ -4,7 +4,6 @@
 package utils
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -114,14 +113,14 @@ func DoRefresh() error {
 		return fmt.Errorf("session expired and no refresh token available – please log in again")
 	}
 
-	tokenURL := viper.GetString(keys.Oauth2TokenEndpoint)
+	tokenURL := viper.GetString(keys.OAuth2TokenEndpoint)
 	if tokenURL == "" {
 		return fmt.Errorf("oauth2_token_endpoint not configured – please log in again")
 	}
 
 	clientID := viper.GetString(keys.DhCoreClientId)
 
-	raw := viper.GetString("scopes_supported")
+	raw := viper.GetString(keys.OAuth2ScopesSupported)
 	var scopes []string
 	if raw != "" {
 		for _, s := range strings.FieldsFunc(raw, func(r rune) bool {
@@ -161,20 +160,12 @@ func DoRefresh() error {
 		return fmt.Errorf("token refresh failed (%s) – please log in again", resp.Status)
 	}
 
-	var m map[string]interface{}
-	if err := json.Unmarshal(body, &m); err != nil {
-		return fmt.Errorf("failed to parse refresh token response: %w", err)
+	credKeys, err := ApplyTokenResponse(body)
+	if err != nil {
+		return fmt.Errorf("failed to apply token response: %w", err)
 	}
-
-	for k, v := range m {
-		key := k
-		if mapped, ok := keys.DhCoreMap[k]; ok {
-			key = mapped
-		}
-		viper.Set(key, fmt.Sprint(v))
-	}
-
-	if err := UpdateIniSectionFromViper(viper.AllKeys()); err != nil {
+	credKeys = append(credKeys, keys.CredentialsList)
+	if err := PersistCurrentEnv(credKeys); err != nil {
 		return fmt.Errorf("failed to persist refreshed tokens: %w", err)
 	}
 

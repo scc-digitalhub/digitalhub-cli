@@ -7,8 +7,7 @@ package utils
 import (
 	"bytes"
 	"fmt"
-	"os"
-	"reflect"
+	"sort"
 	"strings"
 	"time"
 
@@ -18,73 +17,65 @@ import (
 	"gopkg.in/ini.v1"
 )
 
-// EnvDumpPrefix: optional prefix for env lookup (e.g., "DHCORE")
-const EnvDumpPrefix = ""
+// internalKeys are CLI-only keys that must never be added as new INI entries.
+var internalKeys = map[string]bool{}
 
-// Config holds all logical keys. Tags:
-// - vkey: Viper key
-// - env: canonical env name (UPPER_SNAKE). If empty, derived from vkey
-// - persist: "true" to write the key into the INI
-// - default: optional default to set if key is unset
-// - secret: "true" if sensitive (not used here, but handy for logging)
-// - bind: "false" to NOT bind from env (we still can set defaults)
-type Config struct {
-	AuthorizationEndpoint             string `vkey:"authorization_endpoint"               env:"AUTHORIZATION_ENDPOINT"               persist:"true"`
-	AwsAccessKeyID                    string `vkey:"aws_access_key_id"                    env:"AWS_ACCESS_KEY_ID"                    persist:"true"  secret:"true"`
-	AwsCredentialsExpiration          string `vkey:"aws_credentials_expiration"           env:"AWS_CREDENTIALS_EXPIRATION"           persist:"true"  secret:"true"`
-	AwsEndpointURL                    string `vkey:"aws_endpoint_url"                     env:"AWS_ENDPOINT_URL"                     persist:"true"`
-	AwsRegion                         string `vkey:"aws_region"                           env:"AWS_REGION"                           persist:"true"`
-	AwsSecretAccessKey                string `vkey:"aws_secret_access_key"                env:"AWS_SECRET_ACCESS_KEY"                persist:"true"  secret:"true"`
-	AwsSessionToken                   string `vkey:"aws_session_token"                    env:"AWS_SESSION_TOKEN"                    persist:"true"  secret:"true"`
-	DbDatabase                        string `vkey:"db_database"                          env:"DB_DATABASE"                          persist:"true"`
-	DbHost                            string `vkey:"db_host"                              env:"DB_HOST"                              persist:"true"`
-	DbPassword                        string `vkey:"db_password"                          env:"DB_PASSWORD"                          persist:"true"  secret:"true"`
-	DbPlatform                        string `vkey:"db_platform"                          env:"DB_PLATFORM"                          persist:"true"`
-	DbPort                            string `vkey:"db_port"                              env:"DB_PORT"                              persist:"true"`
-	DbUsername                        string `vkey:"db_username"                          env:"DB_USERNAME"                          persist:"true"`
-	DhProjects                        string `vkey:"dh_projects"                          env:"DH_PROJECTS"                          persist:"true"`
-	DhcoreAccessToken                 string `vkey:"dhcore_access_token"                  env:"DHCORE_ACCESS_TOKEN"                  persist:"true"  secret:"true"`
-	DhcoreApiLevel                    string `vkey:"dhcore_api_level"                     env:"DHCORE_API_LEVEL"                     persist:"true"`
-	DhcoreApiVersion                  string `vkey:"dhcore_api_version"                   env:"DHCORE_API_VERSION"                   persist:"true"  default:"v1"`
-	DhcoreAuthenticationMethods       string `vkey:"dhcore_authentication_methods"        env:"DHCORE_AUTHENTICATION_METHODS"        persist:"true"`
-	DhcoreClientId                    string `vkey:"dhcore_client_id"                     env:"DHCORE_CLIENT_ID"                     persist:"true"`
-	DhcoreDefaultFilesStore           string `vkey:"dhcore_default_files_store"           env:"DHCORE_DEFAULT_FILES_STORE"           persist:"true"`
-	DhcoreEndpoint                    string `vkey:"dhcore_endpoint"                      env:"DHCORE_ENDPOINT"                      persist:"true"`
-	DhcoreExpiresIn                   string `vkey:"dhcore_expires_in"                    env:"DHCORE_EXPIRES_IN"                    persist:"true"`
-	DhcoreIdToken                     string `vkey:"dhcore_id_token"                      env:"DHCORE_ID_TOKEN"                      persist:"true"  secret:"true"`
-	DhcoreUser                        string `vkey:"dhcore_user"                          env:"DHCORE_USER"                          persist:"true"`
-	DhcorePassword                    string `vkey:"dhcore_password"                      env:"DHCORE_PASSWORD"                      persist:"true"  secret:"true"`
-	DhcoreIssuer                      string `vkey:"dhcore_issuer"                        env:"DHCORE_ISSUER"                        persist:"true"`
-	DhcoreName                        string `vkey:"dhcore_name"                          env:"DHCORE_NAME"                          persist:"true"`
-	DhcoreRealm                       string `vkey:"dhcore_realm"                         env:"DHCORE_REALM"                         persist:"true"`
-	DhcoreRefreshToken                string `vkey:"dhcore_refresh_token"                 env:"DHCORE_REFRESH_TOKEN"                 persist:"true"  secret:"true"`
-	DhcoreVersion                     string `vkey:"dhcore_version"                       env:"DHCORE_VERSION"                       persist:"true"`
-	GrantTypesSupported               string `vkey:"grant_types_supported"                env:"GRANT_TYPES_SUPPORTED"                persist:"true"`
-	Issuer                            string `vkey:"issuer"                               env:"ISSUER"                               persist:"true"`
-	JwksUri                           string `vkey:"jwks_uri"                             env:"JWKS_URI"                             persist:"true"`
-	ResponseTypesSupported            string `vkey:"response_types_supported"             env:"RESPONSE_TYPES_SUPPORTED"             persist:"true"`
-	S3Bucket                          string `vkey:"s3_bucket"                            env:"S3_BUCKET"                            persist:"true"`
-	S3PathStyle                       string `vkey:"s3_path_style"                        env:"S3_PATH_STYLE"                        persist:"true"`
-	S3SignatureVersion                string `vkey:"s3_signature_version"                 env:"S3_SIGNATURE_VERSION"                 persist:"true"`
-	ScopesSupported                   string `vkey:"scopes_supported"                     env:"SCOPES_SUPPORTED"                     persist:"true"`
-	TokenEndpoint                     string `vkey:"token_endpoint"                       env:"TOKEN_ENDPOINT"                       persist:"true"`
-	TokenEndpointAuthMethodsSupported string `vkey:"token_endpoint_auth_methods_supported" env:"TOKEN_ENDPOINT_AUTH_METHODS_SUPPORTED" persist:"true"`
-	UserinfoEndpoint                  string `vkey:"userinfo_endpoint"                    env:"USERINFO_ENDPOINT"                    persist:"true"`
-	IniSource                         string `vkey:"ini_source"               env:"INI_SOURCE"               persist:"true"`
-	UpdatedEnvironment                string `vkey:"updated_environment" env:"UPDATED_ENVIRONMENT" persist:"true" bind:"false"`
-	CurrentEnvironment                string `vkey:"current_environment" env:"CURRENT_ENVIRONMENT" persist:"false"`
+// SetupViperEnv configures Viper to automatically bind environment variables.
+// Key foo_bar maps to env var FOO_BAR.
+func SetupViperEnv() {
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	viper.AutomaticEnv()
+}
 
-	// Oauth2
-	Oauth2TokenEndpoint                     string `vkey:"oauth2_token_endpoint"                 env:"OAUTH2_TOKEN_ENDPOINT"                 persist:"true"`
-	Oauth2UserinfoEndpoint                  string `vkey:"oauth2_userinfo_endpoint"              env:"OAUTH2_USERINFO_ENDPOINT"              persist:"true"`
-	Oauth2AuthorizationEndpoint             string `vkey:"oauth2_authorization_endpoint"         env:"OAUTH2_AUTHORIZATION_ENDPOINT"         persist:"true"`
-	Oauth2ScopesSupported                   string `vkey:"oauth2_scopes_supported"               env:"OAUTH2_SCOPES_SUPPORTED"               persist:"true"`
-	Oauth2Issuer                            string `vkey:"oauth2_issuer"                        env:"OAUTH2_ISSUER"                        persist:"true"`
-	Oauth2ResponseTypesSupported            string `vkey:"oauth2_response_types_supported"        env:"OAUTH2_RESPONSE_TYPES_SUPPORTED"        persist:"true"`
-	Oauth2JwksUri                           string `vkey:"oauth2_jwks_uri"                       env:"OAUTH2_JWKS_URI"                       persist:"true"`
-	Oauth2GrantTypesSupported               string `vkey:"oauth2_grant_types_supported"           env:"OAUTH2_GRANT_TYPES_SUPPORTED"           persist:"true"`
-	Oauth2TokenEndpointAuthMethodsSupported string `vkey:"oauth2_token_endpoint_auth_methods_supported" env:"OAUTH2_TOKEN_ENDPOINT_AUTH_METHODS_SUPPORTED" persist:"true"`
-	RunId                                   string `vkey:"run_id" env:"RUN_ID" persist:"false"`
+// PersistToIni updates every existing key in the named INI section from the
+// current Viper value, then upserts any explicitly-provided additional keys.
+// All values are written as-is, including empty strings.
+// If the INI file does not yet exist a new one is created.
+func PersistToIni(iniPath, envName string, additionalKeys []string) error {
+	cfg, err := ini.Load(iniPath)
+	if err != nil {
+		cfg = ini.Empty()
+		cfg.Section("DEFAULT").Key(keys.CurrentEnvironment).SetValue(envName)
+	}
+
+	sec := cfg.Section(envName)
+
+	// Update all existing section keys from Viper.
+	for _, k := range sec.Keys() {
+		name := k.Name()
+		if internalKeys[name] {
+			continue
+		}
+		k.SetValue(viper.GetString(name))
+	}
+
+	// Upsert explicitly-provided additional keys in sorted order.
+	sort.Strings(additionalKeys)
+	for _, name := range additionalKeys {
+		if internalKeys[name] {
+			continue
+		}
+		if sec.HasKey(name) {
+			sec.Key(name).SetValue(viper.GetString(name))
+		} else {
+			sec.NewKey(name, viper.GetString(name))
+		}
+	}
+
+	if !cfg.Section("DEFAULT").HasKey(keys.CurrentEnvironment) {
+		cfg.Section("DEFAULT").Key(keys.CurrentEnvironment).SetValue(envName)
+	}
+	return cfg.SaveTo(iniPath)
+}
+
+// PersistCurrentEnv is a convenience wrapper around PersistToIni that resolves
+// the INI path and current environment name from Viper.
+func PersistCurrentEnv(additionalKeys []string) error {
+	env := viper.GetString(keys.CurrentEnvironment)
+	if env == "" {
+		env = resolveEnvName()
+	}
+	return PersistToIni(getIniPath(), env, additionalKeys)
 }
 
 // resolveEnvName: --env > "default"
@@ -93,126 +84,6 @@ func resolveEnvName(optionalEnv ...string) string {
 		return optionalEnv[0]
 	}
 	return "default"
-}
-
-// mirror PREFIX_FOO -> FOO (optional)
-func mirrorPrefix(prefix string) {
-	if prefix == "" {
-		return
-	}
-	upPrefix := strings.ToUpper(prefix) + "_"
-	for _, e := range os.Environ() {
-		kv := strings.SplitN(e, "=", 2)
-		if len(kv) != 2 {
-			continue
-		}
-		name, val := kv[0], kv[1]
-		if strings.HasPrefix(name, upPrefix) {
-			unpref := strings.TrimPrefix(name, upPrefix)
-			if os.Getenv(unpref) == "" {
-				_ = os.Setenv(unpref, val)
-			}
-		}
-	}
-}
-
-// Bind env for all fields of Config using struct tags.
-func BindEnvFromStruct(prefix string) {
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	viper.AutomaticEnv()
-	mirrorPrefix(prefix)
-
-	rt := reflect.TypeOf(Config{})
-	for i := 0; i < rt.NumField(); i++ {
-		f := rt.Field(i)
-
-		key := f.Tag.Get("vkey")
-		if key == "" {
-			continue
-		}
-
-		// if false not to bind
-		if f.Tag.Get("bind") == "false" {
-			if def := f.Tag.Get("default"); def != "" && !viper.IsSet(key) {
-				viper.SetDefault(key, def)
-			}
-			continue
-		}
-
-		env := f.Tag.Get("env")
-		if env == "" {
-			env = strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
-		}
-		_ = viper.BindEnv(key, env)
-
-		if def := f.Tag.Get("default"); def != "" && !viper.IsSet(key) {
-			viper.SetDefault(key, def)
-		}
-	}
-}
-
-// Write a new INI with only fields marked persist:"true".
-func WriteIniFromStruct(iniPath, envName string) error {
-	cfg := ini.Empty()
-	cfg.Section("DEFAULT").Key("current_environment").SetValue(envName)
-	sec := cfg.Section(envName)
-
-	rt := reflect.TypeOf(Config{})
-	for i := 0; i < rt.NumField(); i++ {
-		f := rt.Field(i)
-		if f.Tag.Get("persist") != "true" {
-			continue
-		}
-		key := f.Tag.Get("vkey")
-		if key == "" {
-			continue
-		}
-		val := viper.GetString(key)
-		if val == "" {
-			continue
-		}
-		sec.Key(key).SetValue(val)
-	}
-
-	return cfg.SaveTo(iniPath)
-}
-
-// Update or create INI section from current Viper values (persist:"true" only).
-// Existing keys in the section are cleared before repopulating so that key order
-// is always deterministic (struct-field order) without moving the section in the file.
-func UpdateIniFromStruct(iniPath, envName string) error {
-	cfg, err := ini.Load(iniPath)
-	if err != nil {
-		return WriteIniFromStruct(iniPath, envName)
-	}
-	sec := cfg.Section(envName)
-	// Clear existing keys so they are rewritten in struct-field order.
-	for _, k := range sec.Keys() {
-		sec.DeleteKey(k.Name())
-	}
-
-	rt := reflect.TypeOf(Config{})
-	for i := 0; i < rt.NumField(); i++ {
-		f := rt.Field(i)
-		if f.Tag.Get("persist") != "true" {
-			continue
-		}
-		key := f.Tag.Get("vkey")
-		if key == "" {
-			continue
-		}
-		val := viper.GetString(key)
-		if val == "" {
-			continue
-		}
-		sec.Key(key).SetValue(val)
-	}
-
-	if !cfg.Section("DEFAULT").HasKey("current_environment") {
-		cfg.Section("DEFAULT").Key("current_environment").SetValue(envName)
-	}
-	sec.Key(keys.UpdatedEnvKey).SetValue(time.Now().UTC().Format(time.RFC3339))
-	return cfg.SaveTo(iniPath)
 }
 
 // Load [DEFAULT] + [env] into Viper (TOML in-memory). ENV can still override on Get().
@@ -254,7 +125,7 @@ func loadIniSectionIntoViper(cfg *ini.File, env string) error {
 func RegisterIniCfgWithViper(optionalEnv ...string) error {
 	iniPath := getIniPath()
 
-	BindEnvFromStruct(EnvDumpPrefix)
+	SetupViperEnv()
 
 	cfg, err := ini.Load(iniPath)
 	if err != nil {
@@ -291,46 +162,35 @@ func RegisterIniCfgWithViper(optionalEnv ...string) error {
 	return nil
 }
 
-// Bootstrap (when INI is missing): read all variables from OS envs using Config struct.
-// - NO well-known fetch
-// - honors `bind:"false"` (skip ENV read for that key)
-// - applies `default:"..."` only if key is unset
+// bootstrapFromEnv creates a new INI by fetching .well-known endpoints when no
+// INI file exists yet but DHCORE_ENDPOINT is available in the environment.
+// AutomaticEnv (set by SetupViperEnv) makes DHCORE_ENDPOINT available to Viper.
 func bootstrapFromEnv(iniPath string, optionalEnv ...string) (string, error) {
-
-	rt := reflect.TypeOf(Config{})
-	for i := 0; i < rt.NumField(); i++ {
-		f := rt.Field(i)
-
-		vkey := f.Tag.Get("vkey")
-		if vkey == "" {
-			continue
-		}
-
-		if strings.EqualFold(f.Tag.Get("bind"), "false") {
-			if def := f.Tag.Get("default"); def != "" && !viper.IsSet(vkey) {
-				viper.SetDefault(vkey, def)
-			}
-			continue
-		}
-
-		envName := f.Tag.Get("env")
-		if envName == "" {
-			envName = strings.ToUpper(strings.ReplaceAll(vkey, ".", "_"))
-		}
-
-		if val, ok := os.LookupEnv(envName); ok {
-			viper.Set(vkey, val)
-			continue
-		}
-
-		if def := f.Tag.Get("default"); def != "" && !viper.IsSet(vkey) {
-			viper.SetDefault(vkey, def)
-		}
-	}
-
 	baseEndpoint := viper.GetString(keys.DhCoreEndpoint)
 	if baseEndpoint == "" {
 		return "", fmt.Errorf("missing %s: set it in env or run 'dhcli register'", keys.DhCoreEndpoint)
+	}
+
+	var additionalKeys []string
+
+	cfg, err := FetchConfig(baseEndpoint + "/.well-known/configuration")
+	if err != nil {
+		return "", fmt.Errorf("fetching configuration failed: %w", err)
+	}
+	for k, v := range cfg {
+		viper.Set(k, ReflectValue(v))
+		additionalKeys = append(additionalKeys, k)
+	}
+
+	oidc, err := FetchConfig(baseEndpoint + "/.well-known/openid-configuration")
+	if err != nil {
+		logger.Warn(fmt.Sprintf("OpenID config fetch failed (non-fatal): %v", err))
+	} else {
+		for k, v := range oidc {
+			pk := "oauth2_" + k
+			viper.Set(pk, ReflectValue(v))
+			additionalKeys = append(additionalKeys, pk)
+		}
 	}
 
 	envName := resolveEnvName(optionalEnv...)
@@ -341,11 +201,14 @@ func bootstrapFromEnv(iniPath string, optionalEnv ...string) (string, error) {
 	}
 	viper.Set(keys.CurrentEnvironment, envName)
 
-	// Set source, this is needed to skip the CheckUpdateEnvironment from wellknown in case the ini file has been
-	// constructed from env
-	viper.Set(keys.IniSource, "env")
+	ts := time.Now().UTC().Format(time.RFC3339)
+	viper.Set(keys.UpdatedEnvKey, ts)
+	additionalKeys = append(additionalKeys, keys.UpdatedEnvKey)
 
-	if err := WriteIniFromStruct(iniPath, envName); err != nil {
+	viper.Set(keys.IniSource, "well-known")
+	additionalKeys = append(additionalKeys, keys.IniSource)
+
+	if err := PersistToIni(iniPath, envName, additionalKeys); err != nil {
 		return "", fmt.Errorf("write ini failed: %w", err)
 	}
 

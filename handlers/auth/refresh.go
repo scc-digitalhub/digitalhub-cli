@@ -5,7 +5,6 @@
 package auth
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -25,7 +24,7 @@ func RefreshHandler() error {
 	}
 
 	// Read and normalize scopes from config
-	raw := viper.GetString("scopes_supported")
+	raw := viper.GetString(keys.OAuth2ScopesSupported)
 	var scopes []string
 	if raw != "" {
 		split := strings.FieldsFunc(raw, func(r rune) bool {
@@ -52,7 +51,7 @@ func RefreshHandler() error {
 		client = &http.Client{}
 	}
 
-	resp, err := client.Post(viper.GetString(keys.Oauth2TokenEndpoint), "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
+	resp, err := client.Post(viper.GetString(keys.OAuth2TokenEndpoint), "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
 	if err != nil {
 		return err
 	}
@@ -67,22 +66,12 @@ func RefreshHandler() error {
 		return fmt.Errorf("token server error: %s %s", resp.Status, string(body))
 	}
 
-	var responseJson map[string]interface{}
-	if err := json.Unmarshal(body, &responseJson); err != nil {
-		return fmt.Errorf("json parse error: %w", err)
+	credKeys, err := utils.ApplyTokenResponse(body)
+	if err != nil {
+		return fmt.Errorf("failed to apply token response: %w", err)
 	}
-
-	// Map all token response fields into Viper (not just access_token and refresh_token)
-	for k, v := range responseJson {
-		key := k
-		if mapped, ok := keys.DhCoreMap[k]; ok {
-			key = mapped
-		}
-		viper.Set(key, fmt.Sprint(v))
-	}
-
-	// Persist all config keys to ini file
-	if err := utils.UpdateIniSectionFromViper(viper.AllKeys()); err != nil {
+	credKeys = append(credKeys, keys.CredentialsList)
+	if err := utils.PersistCurrentEnv(credKeys); err != nil {
 		return err
 	}
 

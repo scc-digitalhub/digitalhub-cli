@@ -84,21 +84,13 @@ func LoginHandler() error {
 		return res.Err
 	}
 
-	// Map token response into Viper and persist to config file
-	var m map[string]interface{}
-	if err := json.Unmarshal(res.TokenJSON, &m); err != nil {
-		logger.Error(fmt.Sprintf("json parse error: %v", err))
+	// Process token response: prefix standard tokens, pass through dynamic credentials.
+	credKeys, err := utils.ApplyTokenResponse(res.TokenJSON)
+	if err != nil {
+		logger.Error(fmt.Sprintf("token parse error: %v", err))
 	} else {
-		for k, v := range m {
-			key := k
-			if mapped, ok := keys.DhCoreMap[k]; ok {
-				key = mapped
-			}
-			viper.Set(key, fmt.Sprint(v))
-		}
-
-		// Persist config keys to ini file
-		if err := utils.UpdateIniSectionFromViper(viper.AllKeys()); err != nil {
+		credKeys = append(credKeys, keys.CredentialsList)
+		if err := utils.PersistCurrentEnv(credKeys); err != nil {
 			logger.Error(fmt.Sprintf("persist error: %v", err))
 		}
 	}
@@ -118,7 +110,7 @@ func PatLoginHandler(pat string) error {
 	utils.CheckUpdateEnvironment()
 	utils.CheckApiLevel(keys.ApiLevelKey, keys.LoginMin, keys.LoginMax)
 
-	tokenURL := viper.GetString(keys.Oauth2TokenEndpoint)
+	tokenURL := viper.GetString(keys.OAuth2TokenEndpoint)
 	if tokenURL == "" {
 		return fmt.Errorf("oauth2_token_endpoint not configured")
 	}
@@ -151,20 +143,12 @@ func PatLoginHandler(pat string) error {
 		return fmt.Errorf("token exchange error: %s - %s", resp.Status, string(body))
 	}
 
-	var m map[string]interface{}
-	if err := json.Unmarshal(body, &m); err != nil {
-		return fmt.Errorf("failed to parse token response: %w", err)
+	credKeys, err := utils.ApplyTokenResponse(body)
+	if err != nil {
+		return fmt.Errorf("failed to apply token response: %w", err)
 	}
-
-	for k, val := range m {
-		key := k
-		if mapped, ok := keys.DhCoreMap[k]; ok {
-			key = mapped
-		}
-		viper.Set(key, fmt.Sprint(val))
-	}
-
-	if err := utils.UpdateIniSectionFromViper(viper.AllKeys()); err != nil {
+	credKeys = append(credKeys, keys.CredentialsList)
+	if err := utils.PersistCurrentEnv(credKeys); err != nil {
 		logger.Error(fmt.Sprintf("persist error: %v", err))
 	}
 
@@ -291,7 +275,7 @@ func startAuthCodeServer(
 		}
 
 		token := exchangeAuthCode(
-			viper.GetString(keys.Oauth2TokenEndpoint),
+			viper.GetString(keys.OAuth2TokenEndpoint),
 			viper.GetString(keys.DhCoreClientId),
 			verifier,
 			redirectURI,
@@ -399,7 +383,7 @@ func exchangeAuthCode(tokenURL, clientID, verifier, redirectURI, code string) []
 // AUTH URL BUILDER
 // ==========================
 func buildAuthURL(chal, state, redirectURI string) (string, error) {
-	raw := viper.GetString("scopes_supported")
+	raw := viper.GetString(keys.OAuth2ScopesSupported)
 
 	var scopes []string
 	if raw != "" {
@@ -425,7 +409,7 @@ func buildAuthURL(chal, state, redirectURI string) (string, error) {
 		"state":                 {state},
 	}
 
-	base := viper.GetString("authorization_endpoint")
+	base := viper.GetString(keys.OAuth2AuthorizationEndpoint)
 	if base == "" {
 		return "", fmt.Errorf("authorization_endpoint missing")
 	}

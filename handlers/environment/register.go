@@ -93,16 +93,9 @@ func RegisterHandler(env string, endpoint string, force bool) error {
 	for _, k := range sortedKeys {
 		v := openIdConfig[k]
 
-		// remap only if there is a DHCORE correspondence
-		targetKey := k
-		if dhKey, has := keys.DhCoreMap[k]; has {
-			targetKey = dhKey
-		}
-
-		// ReflectValue deve gestire slice/array (es. scopes_supported)
+		// All OIDC keys are prefixed with oauth2_ to namespace them.
+		targetKey := "oauth2_" + k
 		valStr := utils.ReflectValue(v)
-
-		// section.Key crea se non esiste; SetValue sovrascrive/assegna
 		section.Key(targetKey).SetValue(valStr)
 	}
 
