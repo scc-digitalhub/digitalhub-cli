@@ -29,6 +29,9 @@ func ListResourcesHandler(env string, output string, project string, name string
 
 	utils.CheckUpdateEnvironment()
 	utils.CheckApiLevel(utils.ApiLevelKey, utils.ListMin, utils.ListMax)
+	if err := utils.CheckCredentials(); err != nil {
+		return err
+	}
 
 	format := utils.TranslateFormat(output)
 

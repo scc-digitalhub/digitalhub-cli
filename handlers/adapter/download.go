@@ -27,6 +27,9 @@ func DownloadHandler(env string, destination string, output string, project stri
 
 	utils.CheckUpdateEnvironment()
 	utils.CheckApiLevel(utils.ApiLevelKey, utils.LoginMin, utils.LoginMax)
+	if err := utils.CheckCredentials(); err != nil {
+		return err
+	}
 
 	endpoint := utils.TranslateEndpoint(resource)
 	if endpoint != "projects" && project == "" {

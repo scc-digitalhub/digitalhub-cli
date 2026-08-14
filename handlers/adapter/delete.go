@@ -24,6 +24,9 @@ func DeleteHandler(env string, project string, name string, confirm bool, cascad
 
 	utils.CheckUpdateEnvironment()
 	utils.CheckApiLevel(utils.ApiLevelKey, utils.DeleteMin, utils.DeleteMax)
+	if err := utils.CheckCredentials(); err != nil {
+		return err
+	}
 
 	// Warning per i project senza cascade (comportamento originale)
 	if endpoint == "projects" && !cascade {

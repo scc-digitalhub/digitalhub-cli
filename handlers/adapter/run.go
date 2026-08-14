@@ -26,6 +26,9 @@ func RunHandler(env string, project string, functionName string, functionId stri
 
 	utils.CheckUpdateEnvironment()
 	utils.CheckApiLevel(utils.ApiLevelKey, utils.CreateMin, utils.CreateMax)
+	if err := utils.CheckCredentials(); err != nil {
+		return err
+	}
 
 	if project == "" {
 		return errors.New("project not specified")

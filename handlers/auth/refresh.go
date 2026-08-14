@@ -19,6 +19,10 @@ import (
 )
 
 func RefreshHandler() error {
+	if viper.GetString(utils.DhCoreRefreshToken) == "" {
+		return fmt.Errorf("no refresh token available – please log in first")
+	}
+
 	// Read and normalize scopes from config
 	raw := viper.GetString("scopes_supported")
 	var scopes []string

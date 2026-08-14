@@ -25,6 +25,9 @@ func UpdateHandler(env string, project string, filePath string, resource string,
 
 	utils.CheckUpdateEnvironment()
 	utils.CheckApiLevel(utils.ApiLevelKey, utils.UpdateMin, utils.UpdateMax)
+	if err := utils.CheckCredentials(); err != nil {
+		return err
+	}
 
 	if filePath == "" {
 		log.Println("Input file not specified.")

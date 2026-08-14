@@ -22,6 +22,9 @@ func UploadHandler(env string, input string, project string, resource string, id
 
 	utils.CheckUpdateEnvironment()
 	utils.CheckApiLevel(utils.ApiLevelKey, utils.LoginMin, utils.LoginMax)
+	if err := utils.CheckCredentials(); err != nil {
+		return err
+	}
 
 	if input == "" {
 		return errors.New("missing required input file or directory")

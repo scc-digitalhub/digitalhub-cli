@@ -23,6 +23,9 @@ func CreateHandler(env string, project string, name string, filePath string, res
 
 	utils.CheckUpdateEnvironment()
 	utils.CheckApiLevel(utils.ApiLevelKey, utils.CreateMin, utils.CreateMax)
+	if err := utils.CheckCredentials(); err != nil {
+		return err
+	}
 
 	if endpoint != "projects" {
 		if project == "" {

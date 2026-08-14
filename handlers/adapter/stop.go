@@ -23,6 +23,9 @@ func StopHandler(env string, project string, id string) error {
 	// Preserve original guards/compat behavior
 	utils.CheckUpdateEnvironment()
 	utils.CheckApiLevel(utils.ApiLevelKey, utils.StopMin, utils.StopMax)
+	if err := utils.CheckCredentials(); err != nil {
+		return err
+	}
 
 	if project == "" {
 		return errors.New("project not specified")

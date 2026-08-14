@@ -27,6 +27,9 @@ func GetHandler(env string, output string, project string, name string, resource
 	// Stessa logica esistente
 	utils.CheckUpdateEnvironment()
 	utils.CheckApiLevel(utils.ApiLevelKey, utils.GetMin, utils.GetMax)
+	if err := utils.CheckCredentials(); err != nil {
+		return err
+	}
 
 	format := utils.TranslateFormat(output)
 

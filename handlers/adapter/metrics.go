@@ -29,6 +29,9 @@ const metricsFollowInterval = 15 * time.Second
 func MetricsHandler(env string, output string, project string, scope string, id string, follow bool) error {
 	utils.CheckUpdateEnvironment()
 	utils.CheckApiLevel(utils.ApiLevelKey, utils.MetricsMin, utils.MetricsMax)
+	if err := utils.CheckCredentials(); err != nil {
+		return err
+	}
 
 	format := utils.TranslateFormat(output)
 

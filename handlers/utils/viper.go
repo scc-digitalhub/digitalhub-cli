@@ -29,7 +29,7 @@ const EnvDumpPrefix = ""
 type Config struct {
 	AuthorizationEndpoint             string `vkey:"authorization_endpoint"               env:"AUTHORIZATION_ENDPOINT"               persist:"true"`
 	AwsAccessKeyID                    string `vkey:"aws_access_key_id"                    env:"AWS_ACCESS_KEY_ID"                    persist:"true"  secret:"true"`
-	AwsCredentialsExpiration          string `vkey:"aws_credentials_expiration"           env:"AWS_CREDENTIALS_EXPIRATION"           persist:"true"`
+	AwsCredentialsExpiration          string `vkey:"aws_credentials_expiration"           env:"AWS_CREDENTIALS_EXPIRATION"           persist:"true"  secret:"true"`
 	AwsEndpointURL                    string `vkey:"aws_endpoint_url"                     env:"AWS_ENDPOINT_URL"                     persist:"true"`
 	AwsRegion                         string `vkey:"aws_region"                           env:"AWS_REGION"                           persist:"true"`
 	AwsSecretAccessKey                string `vkey:"aws_secret_access_key"                env:"AWS_SECRET_ACCESS_KEY"                persist:"true"  secret:"true"`
