@@ -23,6 +23,9 @@ func ConfigHandler(output string, provider string) error {
 
 func CredentialsHandler(output string, provider string) error {
 	utils.CheckUpdateEnvironment()
+	if err := utils.CheckCredentials(); err != nil {
+		return err
+	}
 	entries := utils.GetCredentialEntriesByProvider(provider, output)
 	return printEntries(entries, utils.TranslateFormat(output))
 }

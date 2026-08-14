@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"dhcli/keys"
 
@@ -69,6 +70,13 @@ func ApplyTokenResponse(body []byte) ([]string, error) {
 	}
 
 	var credKeys []string
+
+	// Compute expires_at from expires_in if present.
+	if oauth.ExpiresIn > 0 {
+		expiresAt := time.Now().Add(time.Duration(oauth.ExpiresIn) * time.Second).UTC().Format(time.RFC3339)
+		viper.Set(keys.DhCoreExpiresAt, expiresAt)
+		credKeys = append(credKeys, keys.DhCoreExpiresAt)
+	}
 
 	// Standard tokens: stored with dhcore_ prefix.
 	if oauth.AccessToken != "" {

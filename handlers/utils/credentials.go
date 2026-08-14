@@ -56,6 +56,7 @@ func CheckCredentials() error {
 	if endpoint == "" {
 		return nil
 	}
+
 	logger.Info(fmt.Sprintf("Checking credentials for %v ...", endpoint))
 
 	authURL := strings.TrimRight(endpoint, "/") + "/api/auth"
@@ -73,6 +74,16 @@ func CheckCredentials() error {
 	mode := detectAuthMode()
 	switch mode {
 	case authModeOAuth2:
+		// If expires_at is set and the token expires within 5 minutes, refresh
+		// proactively without hitting the remote endpoint.
+		if expiresAtStr := viper.GetString(keys.DhCoreExpiresAt); expiresAtStr != "" {
+			if expiresAt, err := time.Parse(time.RFC3339, expiresAtStr); err == nil {
+				if time.Until(expiresAt) < 5*time.Minute {
+					logger.Info("Token already expired or expires soon, refresh ...")
+					return DoRefresh()
+				}
+			}
+		}
 		if tok := viper.GetString(keys.DhCoreAccessToken); tok != "" {
 			req.Header.Set("Authorization", "Bearer "+tok)
 		}

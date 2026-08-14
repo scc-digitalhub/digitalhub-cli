@@ -19,6 +19,7 @@ const (
 	DhCoreApiVersion            = "dhcore_api_version"
 	DhCoreAccessToken           = "dhcore_access_token"
 	DhCoreIdToken               = "dhcore_id_token"
+	DhCoreExpiresAt             = "dhcore_expires_at"
 	CredentialsList             = "credentials_list"
 	DhCoreUser                  = "dhcore_user"
 	DhCorePassword              = "dhcore_password"
