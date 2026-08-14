@@ -17,7 +17,7 @@ import (
 
 func ConfigHandler(output string, provider string) error {
 	utils.CheckUpdateEnvironment()
-	entries := utils.GetConfigEntriesByProvider(provider, output)
+	entries := getConfigEntriesByProvider(provider, output)
 	return printEntries(entries, utils.TranslateFormat(output))
 }
 
@@ -26,7 +26,7 @@ func CredentialsHandler(output string, provider string) error {
 	if err := utils.CheckCredentials(); err != nil {
 		return err
 	}
-	entries := utils.GetCredentialEntriesByProvider(provider, output)
+	entries := getCredentialEntriesByProvider(provider, output)
 	return printEntries(entries, utils.TranslateFormat(output))
 }
 

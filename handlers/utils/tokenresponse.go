@@ -99,15 +99,15 @@ func ApplyTokenResponse(body []byte) ([]string, error) {
 	}
 
 	// Update credentials_list: union with existing so re-login never shrinks it.
-	existing := splitCSV(viper.GetString(keys.CredentialsList))
+	existing := SplitCSV(viper.GetString(keys.CredentialsList))
 	merged := unionStringSlice(existing, credKeys)
 	viper.Set(keys.CredentialsList, strings.Join(merged, ","))
 
 	return merged, nil
 }
 
-// splitCSV splits a comma-separated string into a trimmed, non-empty slice.
-func splitCSV(s string) []string {
+// SplitCSV splits a comma-separated string into a trimmed, non-empty slice.
+func SplitCSV(s string) []string {
 	if s == "" {
 		return nil
 	}

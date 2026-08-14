@@ -2,11 +2,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package utils
+package config
 
 import (
 	"strings"
 
+	"dhcli/handlers/utils"
 	"dhcli/keys"
 
 	"github.com/spf13/viper"
@@ -47,6 +48,9 @@ func filterS3(entries map[string]string, format string) map[string]string {
 			if format == "json" {
 				// remove the prefix and convert to CamelCase (e.g. "aws_access_key" → "AccessKey")
 				lower = strings.TrimPrefix(lower, "aws_")
+				if lower == "credentials_expiration" {
+					lower = "expiration"
+				}
 				outKey = snakeToCamel(lower)
 			}
 			result[outKey] = v
@@ -61,22 +65,19 @@ func filterS3(entries map[string]string, format string) map[string]string {
 	return result
 }
 
-// filter oauth2/oidc configuration
+// filterOAuth2 filters oauth2/oidc configuration entries.
 func filterOAuth2(entries map[string]string, format string) map[string]string {
 	result := make(map[string]string)
 	for k, v := range entries {
 		lower := strings.ToLower(k)
 		if strings.HasPrefix(lower, "oauth2_") || strings.HasPrefix(lower, "oidc_") {
-			outKey := k
 			//remove the prefix
 			if strings.HasPrefix(lower, "oauth2_") {
 				lower = strings.TrimPrefix(lower, "oauth2_")
 			} else if strings.HasPrefix(lower, "oidc_") {
 				lower = strings.TrimPrefix(lower, "oidc_")
 			}
-			outKey = lower
-
-			result[outKey] = v
+			result[lower] = v
 		}
 	}
 
@@ -128,24 +129,17 @@ func applyProviderFilter(entries map[string]string, provider, format string) map
 	return result
 }
 
-// ── Public getters ────────────────────────────────────────────────────────────
+// ── Getters ───────────────────────────────────────────────────────────────────
 
-// GetConfigEntries returns key-value pairs for all configuration fields:
-// keys present in the current INI section that are not credentials and
-// not internal CLI keys. Values are read from Viper (env may override).
-func GetConfigEntries() map[string]string {
-	return GetConfigEntriesByProvider("", "")
-}
-
-// GetConfigEntriesByProvider returns configuration entries filtered (and
+// getConfigEntriesByProvider returns configuration entries filtered (and
 // optionally transformed) by provider and output format. If provider is empty
 // all entries are returned unchanged.
-func GetConfigEntriesByProvider(provider, format string) map[string]string {
+func getConfigEntriesByProvider(provider, format string) map[string]string {
 	all := make(map[string]string)
 
 	credSet := credentialKeySet()
 
-	cfg, err := ini.Load(getIniPath())
+	cfg, err := ini.Load(utils.GetIniPath())
 	if err != nil {
 		return all
 	}
@@ -157,7 +151,7 @@ func GetConfigEntriesByProvider(provider, format string) map[string]string {
 
 	for _, k := range cfg.Section(env).Keys() {
 		name := k.Name()
-		if credSet[name] || internalKeys[name] || name == keys.CredentialsList {
+		if credSet[name] || utils.InternalKeys[name] || name == keys.CredentialsList {
 			continue
 		}
 		all[name] = viper.GetString(name)
@@ -167,19 +161,12 @@ func GetConfigEntriesByProvider(provider, format string) map[string]string {
 	return applyProviderFilter(all, norm, format)
 }
 
-// GetCredentialEntries returns key-value pairs for all credential fields,
-// as recorded in credentials_list by the most recent login or refresh.
-// Returns an empty map if credentials_list is absent (e.g. old INI).
-func GetCredentialEntries() map[string]string {
-	return GetCredentialEntriesByProvider("", "")
-}
-
-// GetCredentialEntriesByProvider returns credential entries filtered (and
+// getCredentialEntriesByProvider returns credential entries filtered (and
 // optionally transformed) by provider and output format. If provider is empty
 // all entries are returned unchanged.
-func GetCredentialEntriesByProvider(provider, format string) map[string]string {
+func getCredentialEntriesByProvider(provider, format string) map[string]string {
 	all := make(map[string]string)
-	for _, k := range splitCSV(viper.GetString(keys.CredentialsList)) {
+	for _, k := range utils.SplitCSV(viper.GetString(keys.CredentialsList)) {
 		all[k] = viper.GetString(k)
 	}
 	norm := strings.ToLower(strings.TrimSpace(provider))
@@ -189,7 +176,7 @@ func GetCredentialEntriesByProvider(provider, format string) map[string]string {
 // credentialKeySet returns the set of keys listed in credentials_list.
 func credentialKeySet() map[string]bool {
 	set := make(map[string]bool)
-	for _, k := range splitCSV(viper.GetString(keys.CredentialsList)) {
+	for _, k := range utils.SplitCSV(viper.GetString(keys.CredentialsList)) {
 		set[k] = true
 	}
 	return set

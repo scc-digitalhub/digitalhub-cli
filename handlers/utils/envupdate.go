@@ -103,7 +103,7 @@ func updateEnvironment() {
 	if env == "" {
 		env = resolveEnvName()
 	}
-	if err := PersistToIni(getIniPath(), env, additionalKeys); err != nil {
+	if err := PersistToIni(GetIniPath(), env, additionalKeys); err != nil {
 		logger.Warn(fmt.Sprintf("Persist skipped (read-only or missing ini): %v", err))
 	} else {
 		logger.Info(fmt.Sprintf("Persisted to [%s].", env))

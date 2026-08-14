@@ -17,8 +17,8 @@ import (
 	"gopkg.in/ini.v1"
 )
 
-// internalKeys are CLI-only keys that must never be added as new INI entries.
-var internalKeys = map[string]bool{}
+// InternalKeys are CLI-only keys that must never be added as new INI entries.
+var InternalKeys = map[string]bool{}
 
 // SetupViperEnv configures Viper to automatically bind environment variables.
 // Key foo_bar maps to env var FOO_BAR.
@@ -43,7 +43,7 @@ func PersistToIni(iniPath, envName string, additionalKeys []string) error {
 	// Update all existing section keys from Viper.
 	for _, k := range sec.Keys() {
 		name := k.Name()
-		if internalKeys[name] {
+		if InternalKeys[name] {
 			continue
 		}
 		k.SetValue(viper.GetString(name))
@@ -52,7 +52,7 @@ func PersistToIni(iniPath, envName string, additionalKeys []string) error {
 	// Upsert explicitly-provided additional keys in sorted order.
 	sort.Strings(additionalKeys)
 	for _, name := range additionalKeys {
-		if internalKeys[name] {
+		if InternalKeys[name] {
 			continue
 		}
 		if sec.HasKey(name) {
@@ -75,7 +75,7 @@ func PersistCurrentEnv(additionalKeys []string) error {
 	if env == "" {
 		env = resolveEnvName()
 	}
-	return PersistToIni(getIniPath(), env, additionalKeys)
+	return PersistToIni(GetIniPath(), env, additionalKeys)
 }
 
 // resolveEnvName: --env > "default"
@@ -123,7 +123,7 @@ func loadIniSectionIntoViper(cfg *ini.File, env string) error {
 // 2) load INI or lazy-bootstraps it from well-known (writes only target env)
 // 3) load active section into Viper and set current_environment
 func RegisterIniCfgWithViper(optionalEnv ...string) error {
-	iniPath := getIniPath()
+	iniPath := GetIniPath()
 
 	SetupViperEnv()
 

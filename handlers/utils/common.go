@@ -27,7 +27,7 @@ import (
 
 var logger = GetGlobalLogger()
 
-func getIniPath() string {
+func GetIniPath() string {
 	// Check if DH_CONFIG environment variable is set
 	if configPath := os.Getenv("DH_CONFIG"); configPath != "" {
 		return configPath
@@ -50,7 +50,7 @@ func getIniPath() string {
 }
 
 func LoadIni(createOnMissing bool) *ini.File {
-	cfg, err := ini.Load(getIniPath())
+	cfg, err := ini.Load(GetIniPath())
 	if err != nil {
 		if !createOnMissing {
 			logger.Error(fmt.Sprintf("Failed to read ini file: %v", err))
@@ -62,7 +62,7 @@ func LoadIni(createOnMissing bool) *ini.File {
 }
 
 func SaveIni(cfg *ini.File) {
-	if err := cfg.SaveTo(getIniPath()); err != nil {
+	if err := cfg.SaveTo(GetIniPath()); err != nil {
 		logger.Error(fmt.Sprintf("Failed to update ini file: %v", err))
 		os.Exit(1)
 	}
