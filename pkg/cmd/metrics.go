@@ -51,17 +51,23 @@ var metricsCmd = func() *cobra.Command {
 var metricsProjectCmd = func() *cobra.Command {
 	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	outFlag := flags.NewStringFlag("out", "o", "output format (short, json, yaml)", "")
+	projectFlag := flags.NewStringFlag("project", "p", "Project name", "")
 	followFlag := flags.NewBoolFlag("follow", "f", "Continuously refresh metrics every 15 seconds", false)
 
 	cmd := &cobra.Command{
-		Use:   "project <name>",
+		Use:   "project [name]",
 		Short: "Read project resource metrics",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.RangeArgs(0, 1),
 		Run: func(cmd *cobra.Command, args []string) {
+			project := *projectFlag.Value
+			if len(args) > 0 {
+				project = args[0]
+			}
+			project = utils.ResolveProject(project)
 			err := adapter.MetricsHandler(
 				*envFlag.Value,
 				*outFlag.Value,
-				args[0],
+				project,
 				"project",
 				"",
 				*followFlag.Value,
@@ -74,6 +80,7 @@ var metricsProjectCmd = func() *cobra.Command {
 
 	flags.AddFlag(cmd, &envFlag)
 	flags.AddFlag(cmd, &outFlag)
+	flags.AddFlag(cmd, &projectFlag)
 	flags.AddFlag(cmd, &followFlag)
 
 	return cmd
