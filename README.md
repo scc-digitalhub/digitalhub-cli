@@ -21,6 +21,50 @@ brew tap scc-digitalhub/digitalhub-cli https://github.com/scc-digitalhub/digital
 brew install dhcli
 ```
 
+## Version-pinned agent workspace
+
+After registering and selecting a Core environment, run from your project directory:
+
+```sh
+dhcli init --agent ./.venv
+```
+
+In addition to creating/updating the Python environment, `--agent` fetches the active Core's
+`dhcore_version` from `/.well-known/configuration`. It uses that release for SDK packages
+and renders the agent templates **embedded in the CLI binary**, not downloaded from GitHub.
+Core `0.16.2` selects the `0.16` knowledge branch.
+
+```text
+digitalhub-cli/templates/           User's working repository/
+  AGENTS.md                          AGENTS.md
+  CLAUDE.md                          CLAUDE.md
+  skills/dh-*/SKILL.md                .agents/skills/dh-*/SKILL.md
+```
+
+The destination is the current working directory, not the venv directory. `CLAUDE.md`
+directs Claude to `AGENTS.md`, which links to the local, agent-neutral skills.
+Every `{{DOCS}}` placeholder becomes `https://raw.githubusercontent.com/scc-digitalhub/docs/0.16`
+in this example. Knowledge stays remote under that branch's `knowledge/` folder and is
+fetched by the agent when needed. Relative knowledge links resolve against the fetched
+page URL, keeping the same release. Initialization contacts Core only for version discovery;
+it does not fetch templates or knowledge from GitHub and does not use a cached/default
+version if Core is unavailable. Agents must report unavailable knowledge rather than
+fall back to `main`, `latest`, or a different release.
+
+Identical files are left untouched on repeated initialization. Conflicting files (including
+custom instructions or files pinned to another version) are never overwritten: move them
+aside and reconcile your customizations before reinitializing. Symlink destinations are
+rejected. Failed writes roll back files and directories created by that installation,
+preserving pre-existing files. The usual package-installation confirmation still applies;
+cancelling or a failed package installation installs no agent files.
+Without `--agent`, `init` retains its existing Python-environment-only behavior.
+
+Maintain the router and skills in [`templates/`](templates/); `go:embed` includes them in every
+CLI build and release without external asset files. Publish release-specific knowledge under
+`knowledge/` on the corresponding [`scc-digitalhub/docs`](https://github.com/scc-digitalhub/docs)
+branch. Do not copy templates back into the docs repository. Run `go vet ./...` and
+`go build ./...` before release.
+
 ## Development
 
 - `core/commands` contains the definition of available commands and what flags they accept

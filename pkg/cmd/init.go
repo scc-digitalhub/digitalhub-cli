@@ -21,11 +21,12 @@ var initCmd = func() *cobra.Command {
 	// Local flag declarations
 	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	preFlag := flags.NewBoolFlag("pre", "", "Include pre-release versions when installing", false)
+	agentFlag := flags.NewBoolFlag("agent", "", "Install embedded agent templates with knowledge links matching the connected Core version", false)
 
 	cmd := &cobra.Command{
 		Use:   "init [path]",
 		Short: "Initialize a Python virtual environment and install packages",
-		Long:  "Creates or activates a Python virtual environment at the specified path (or current environment name) and installs dependencies. If no path is provided, uses the current environment name. If the path already contains a valid venv, dependencies are installed without recreating it.",
+		Long:  "Creates or activates a Python virtual environment at the specified path (or current environment name) and installs dependencies. If no path is provided, uses the current environment name. If the path already contains a valid venv, dependencies are installed without recreating it. With --agent, fetches the current Core version and installs embedded AGENTS.md, CLAUDE.md and .agents/skills templates in the current working directory, with remote knowledge links pinned to the matching major.minor docs branch. Identical agent files are left unchanged; conflicting files are never overwritten.",
 		Args:  cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			// Load configuration to access current environment
@@ -46,7 +47,7 @@ var initCmd = func() *cobra.Command {
 				venvPath = "."
 			}
 
-			if err := environment.InitEnvironmentHandler(venvPath, *preFlag.Value); err != nil {
+			if err := environment.InitEnvironmentHandler(venvPath, *preFlag.Value, *agentFlag.Value); err != nil {
 				log.Fatalf("Init failed: %v", err)
 			}
 		},
@@ -54,6 +55,7 @@ var initCmd = func() *cobra.Command {
 
 	flags.AddFlag(cmd, &envFlag)
 	flags.AddFlag(cmd, &preFlag)
+	flags.AddFlag(cmd, &agentFlag)
 
 	return cmd
 }()
