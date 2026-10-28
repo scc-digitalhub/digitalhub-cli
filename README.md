@@ -26,12 +26,12 @@ brew install dhcli
 After registering and selecting a Core environment, run from your project directory:
 
 ```sh
-dhcli init --agent ./.venv
+dhcli init --agent
 ```
 
-In addition to creating/updating the Python environment, `--agent` fetches the active Core's
-`dhcore_version` from `/.well-known/configuration`. It uses that release for SDK packages
-and renders the agent templates **embedded in the CLI binary**, not downloaded from GitHub.
+`--agent` fetches the active Core's `dhcore_version` from `/.well-known/configuration`
+and renders the agent templates **embedded in the CLI binary** into the current working
+directory (without creating a Python virtual environment or installing Python SDK packages).
 Core `0.16.2` selects the `0.16` knowledge branch.
 
 ```text
@@ -41,7 +41,7 @@ digitalhub-cli/templates/           User's working repository/
   skills/dh-*/SKILL.md                .agents/skills/dh-*/SKILL.md
 ```
 
-The destination is the current working directory, not the venv directory. `CLAUDE.md`
+The destination is the current working directory. `CLAUDE.md`
 directs Claude to `AGENTS.md`, which links to the local, agent-neutral skills.
 Every `{{DOCS}}` placeholder becomes `https://raw.githubusercontent.com/scc-digitalhub/docs/0.16`
 in this example. Knowledge stays remote under that branch's `knowledge/` folder and is
@@ -55,9 +55,8 @@ Identical files are left untouched on repeated initialization. Conflicting files
 custom instructions or files pinned to another version) are never overwritten: move them
 aside and reconcile your customizations before reinitializing. Symlink destinations are
 rejected. Failed writes roll back files and directories created by that installation,
-preserving pre-existing files. The usual package-installation confirmation still applies;
-cancelling or a failed package installation installs no agent files.
-Without `--agent`, `init` retains its existing Python-environment-only behavior.
+preserving pre-existing files.
+Without `--agent`, `dhcli init [path]` retains its existing Python-environment initialization behavior.
 
 Maintain the router and skills in [`templates/`](templates/); `go:embed` includes them in every
 CLI build and release without external asset files. Publish release-specific knowledge under

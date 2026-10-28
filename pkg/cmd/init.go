@@ -25,13 +25,26 @@ var initCmd = func() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "init [path]",
-		Short: "Initialize a Python virtual environment and install packages",
-		Long:  "Creates or activates a Python virtual environment at the specified path (or current environment name) and installs dependencies. If no path is provided, uses the current environment name. If the path already contains a valid venv, dependencies are installed without recreating it. With --agent, fetches the current Core version and installs embedded AGENTS.md, CLAUDE.md and .agents/skills templates in the current working directory, with remote knowledge links pinned to the matching major.minor docs branch. Identical agent files are left unchanged; conflicting files are never overwritten.",
+		Short: "Initialize a Python virtual environment or install agent templates",
+		Long:  "Creates or activates a Python virtual environment at the specified path (or current environment name) and installs dependencies. If no path is provided, uses the current environment name. If the path already contains a valid venv, dependencies are installed without recreating it. With --agent, fetches the current Core version and installs embedded AGENTS.md, CLAUDE.md and .agents/skills templates in the current working directory (without creating a Python venv or installing SDK packages), with remote knowledge links pinned to the matching major.minor docs branch. Identical agent files are left unchanged; conflicting files are never overwritten.",
 		Args:  cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			// Load configuration to access current environment
 			if err := utils.RegisterIniCfgWithViper(*envFlag.Value); err != nil {
 				log.Fatalf("Failed to load configuration: %v", err)
+			}
+
+			if *agentFlag.Value {
+				if len(args) > 0 {
+					log.Fatalf("Init failed: --agent does not accept a [path] argument (agent templates are installed in the current working directory)")
+				}
+				if *preFlag.Value {
+					log.Fatalf("Init failed: --pre cannot be combined with --agent")
+				}
+				if err := environment.InitAgentWorkspaceHandler(); err != nil {
+					log.Fatalf("Init failed: %v", err)
+				}
+				return
 			}
 
 			venvPath := ""
@@ -47,7 +60,7 @@ var initCmd = func() *cobra.Command {
 				venvPath = "."
 			}
 
-			if err := environment.InitEnvironmentHandler(venvPath, *preFlag.Value, *agentFlag.Value); err != nil {
+			if err := environment.InitEnvironmentHandler(venvPath, *preFlag.Value); err != nil {
 				log.Fatalf("Init failed: %v", err)
 			}
 		},

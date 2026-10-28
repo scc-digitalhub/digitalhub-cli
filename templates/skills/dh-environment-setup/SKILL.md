@@ -87,12 +87,12 @@ dhcli list projects
    dhcli list models -p <project>
    dhcli list workflows -p <project>
    ```
-2. *(Optional)* If you need a local Python virtual environment with `digitalhub[full]` matching the connected Core server's minor version:
+2. *(Optional)* To install version-pinned agent instructions and skills (`AGENTS.md`, `CLAUDE.md`, and `.agents/skills/`) in the current working directory:
+   ```bash
+   dhcli init --agent
+   ```
+   This fetches the active Core's version and renders the CLI's embedded templates with knowledge references to the matching `major.minor` docs branch (without creating a Python virtual environment). Identical agent files are left unchanged; conflicting files are reported as errors rather than overwritten.
+3. *(Optional)* If you need a local Python virtual environment with `digitalhub[full]` matching the connected Core server's minor version (for example, to run SDK gap fallbacks or author interactive notebooks):
    ```bash
    echo y | dhcli init ./.venv
    ```
-   To also install version-pinned agent instructions and skills in the current workspace,
-   use `echo y | dhcli init --agent ./.venv`. This fetches the active Core's version and
-   renders the CLI's embedded templates with knowledge references to the matching
-   `major.minor` docs branch. Identical agent files are left unchanged; conflicting
-   files are reported as errors rather than overwritten.

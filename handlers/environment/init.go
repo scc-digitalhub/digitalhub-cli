@@ -23,27 +23,31 @@ import (
 	"github.com/spf13/viper"
 )
 
+// InitAgentWorkspaceHandler fetches the connected Core version and installs
+// the embedded agent templates in the current working directory.
+func InitAgentWorkspaceHandler() error {
+	root, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("resolve agent workspace: %w", err)
+	}
+	agent, err := prepareAgentWorkspace(
+		&http.Client{Timeout: 30 * time.Second},
+		viper.GetString(keys.DhCoreEndpoint), root,
+	)
+	if err != nil {
+		return fmt.Errorf("prepare agent workspace: %w", err)
+	}
+	if err := agent.install(); err != nil {
+		return fmt.Errorf("install agent workspace: %w", err)
+	}
+	log.Printf("Agent workspace installed in %s (Core %s), knowledge pinned to %s/knowledge", agent.root, agent.version, agent.docsURL)
+	return nil
+}
+
 // InitEnvironmentHandler initializes a Python virtual environment at the given path
 // and installs dependencies. If the path already contains a valid venv, it just installs
 // dependencies. If not, it creates a new venv first.
-func InitEnvironmentHandler(venvPath string, includePre bool, withAgent bool) error {
-	var agent *agentWorkspace
-	if withAgent {
-		root, err := os.Getwd()
-		if err != nil {
-			return fmt.Errorf("resolve agent workspace: %w", err)
-		}
-		agent, err = prepareAgentWorkspace(
-			&http.Client{Timeout: 30 * time.Second},
-			viper.GetString(keys.DhCoreEndpoint), root,
-		)
-		if err != nil {
-			return fmt.Errorf("prepare agent workspace: %w", err)
-		}
-		// Use the freshly fetched Core version for both SDK packages and documentation.
-		viper.Set("dhcore_version", agent.branch)
-	}
-
+func InitEnvironmentHandler(venvPath string, includePre bool) error {
 	// Normalize path
 	absPath, err := filepath.Abs(venvPath)
 	if err != nil {
@@ -135,12 +139,6 @@ func InitEnvironmentHandler(venvPath string, includePre bool, withAgent bool) er
 		}
 	}
 
-	if agent != nil {
-		if err := agent.install(); err != nil {
-			return fmt.Errorf("install agent workspace (SDK installation completed): %w", err)
-		}
-		log.Printf("Agent workspace installed in %s (Core %s), knowledge pinned to %s/knowledge", agent.root, agent.version, agent.docsURL)
-	}
 	log.Println("Installation complete.")
 	log.Printf("To activate the venv, run: source %s/bin/activate", absPath)
 	return nil
