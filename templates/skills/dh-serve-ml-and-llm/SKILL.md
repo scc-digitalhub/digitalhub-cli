@@ -8,11 +8,11 @@ description: Deploy machine learning models (sklearnserve, mlflowserve, huggingf
 Use this procedural workflow whenever deploying trained Classical ML models (`sklearn`, `mlflow`, `huggingface`) as KServe OpenInference v2 services or deploying Generative AI models (LLMs, Whisper speech-to-text, embedding models) via vLLM or KubeAI.
 
 ## Reference Knowledge (Pinned to Platform Version)
-- **Serving Runtimes Overview**: [runtimes/index.md]({{DOCS}}/knowledge/runtimes/index.md)
-- **KubeAI Runtime (`kubeai-text`, `kubeai-speech`)**: [kubeai.md]({{DOCS}}/knowledge/runtimes/kubeai.md)
-- **vLLM Serving Runtime (`vllmserve-*`)**: [vllmserve.md]({{DOCS}}/knowledge/runtimes/vllmserve.md)
-- **Classical Model Serving**: [sklearnserve.md]({{DOCS}}/knowledge/runtimes/sklearnserve.md), [mlflowserve.md]({{DOCS}}/knowledge/runtimes/mlflowserve.md), [huggingfaceserve.md]({{DOCS}}/knowledge/runtimes/huggingfaceserve.md)
-- **Model Entity Specification**: [model.md]({{DOCS}}/knowledge/entities/model.md)
+- **Serving Runtimes Overview**: [runtimes/index.md](<%DOCS%>/knowledge/runtimes/index.md)
+- **KubeAI Runtime (`kubeai-text`, `kubeai-speech`)**: [kubeai.md](<%DOCS%>/knowledge/runtimes/kubeai.md)
+- **vLLM Serving Runtime (`vllmserve-*`)**: [vllmserve.md](<%DOCS%>/knowledge/runtimes/vllmserve.md)
+- **Classical Model Serving**: [sklearnserve.md](<%DOCS%>/knowledge/runtimes/sklearnserve.md), [mlflowserve.md](<%DOCS%>/knowledge/runtimes/mlflowserve.md), [huggingfaceserve.md](<%DOCS%>/knowledge/runtimes/huggingfaceserve.md)
+- **Model Entity Specification**: [model.md](<%DOCS%>/knowledge/entities/model.md)
 
 ---
 

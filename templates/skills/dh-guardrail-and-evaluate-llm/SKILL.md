@@ -8,10 +8,10 @@ description: Deploy real-time LLM input/output safety guardrail microservices (g
 Use this procedural workflow whenever deploying input/output content safety filters (PII redaction, toxic language detection, prompt injection defense) or standardized KServe OpenInference v2 Python inference handlers.
 
 ## Reference Knowledge (Pinned to Platform Version)
-- **Guardrail Runtime Specification**: [guardrail.md]({{DOCS}}/knowledge/runtimes/guardrail.md)
-- **OpenInference Runtime Specification**: [openinference.md]({{DOCS}}/knowledge/runtimes/openinference.md)
-- **Service Networking & Port-Forwarding**: [storage-and-services.md]({{DOCS}}/knowledge/cli/storage-and-services.md)
-- **Kubernetes Compute Resources**: [kubernetes-resources.md]({{DOCS}}/knowledge/management/kubernetes-resources.md)
+- **Guardrail Runtime Specification**: [guardrail.md](<%DOCS%>/knowledge/runtimes/guardrail.md)
+- **OpenInference Runtime Specification**: [openinference.md](<%DOCS%>/knowledge/runtimes/openinference.md)
+- **Service Networking & Port-Forwarding**: [storage-and-services.md](<%DOCS%>/knowledge/cli/storage-and-services.md)
+- **Kubernetes Compute Resources**: [kubernetes-resources.md](<%DOCS%>/knowledge/management/kubernetes-resources.md)
 
 ---
 

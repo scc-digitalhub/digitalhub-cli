@@ -8,9 +8,9 @@ description: Diagnose and fix failed DigitalHub Runs (ERROR state), YAML schema 
 Use this procedural workflow whenever a `dhcli` command returns an error or a DigitalHub Run (`python+job:run`, `python+build:run`, `hera+pipeline:run`, `*+serve:run`) enters `status.state: ERROR` or gets stuck in `READY`/`RUNNING`.
 
 ## Reference Knowledge (Pinned to Platform Version)
-- **Diagnostic & Troubleshooting Runbook**: [troubleshooting.md]({{DOCS}}/knowledge/management/troubleshooting.md)
-- **Run Entity & State Machine**: [run.md]({{DOCS}}/knowledge/entities/run.md)
-- **Kubernetes Compute, Memory & Volumes**: [kubernetes-resources.md]({{DOCS}}/knowledge/management/kubernetes-resources.md)
+- **Diagnostic & Troubleshooting Runbook**: [troubleshooting.md](<%DOCS%>/knowledge/management/troubleshooting.md)
+- **Run Entity & State Machine**: [run.md](<%DOCS%>/knowledge/entities/run.md)
+- **Kubernetes Compute, Memory & Volumes**: [kubernetes-resources.md](<%DOCS%>/knowledge/management/kubernetes-resources.md)
 
 ---
 

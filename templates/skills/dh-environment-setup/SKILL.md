@@ -8,10 +8,10 @@ description: Configure and verify the DigitalHub CLI (dhcli) environment in ~/.d
 Use this procedural workflow whenever starting work in a workspace, registering or switching DigitalHub environments, refreshing expired OAuth2 tokens, bootstrapping a local Python SDK virtual environment, or creating a DigitalHub project.
 
 ## Reference Knowledge (Pinned to Platform Version)
-- **CLI Auth & Environments**: [auth-and-env.md]({{DOCS}}/knowledge/cli/auth-and-env.md)
-- **Project Entity Specification**: [project.md]({{DOCS}}/knowledge/entities/project.md)
-- **CLI CRUD & YAML Anatomy**: [crud-and-yaml-anatomy.md]({{DOCS}}/knowledge/cli/crud-and-yaml-anatomy.md)
-- **Governance & Naming Rules**: [governance-and-security.md]({{DOCS}}/knowledge/management/governance-and-security.md)
+- **CLI Auth & Environments**: [auth-and-env.md](<%DOCS%>/knowledge/cli/auth-and-env.md)
+- **Project Entity Specification**: [project.md](<%DOCS%>/knowledge/entities/project.md)
+- **CLI CRUD & YAML Anatomy**: [crud-and-yaml-anatomy.md](<%DOCS%>/knowledge/cli/crud-and-yaml-anatomy.md)
+- **Governance & Naming Rules**: [governance-and-security.md](<%DOCS%>/knowledge/management/governance-and-security.md)
 
 ---
 
