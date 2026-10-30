@@ -43,7 +43,7 @@ digitalhub-cli/templates/           User's working repository/
 
 The destination is the current working directory. `CLAUDE.md`
 directs Claude to `AGENTS.md`, which links to the local, agent-neutral skills.
-Every `{{DOCS}}` placeholder becomes `https://raw.githubusercontent.com/scc-digitalhub/docs/0.16`
+Every `<%DOCS%>` placeholder becomes `https://raw.githubusercontent.com/scc-digitalhub/docs/0.16`
 in this example. Knowledge stays remote under that branch's `knowledge/` folder and is
 fetched by the agent when needed. Relative knowledge links resolve against the fetched
 page URL, keeping the same release. Initialization contacts Core only for version discovery;

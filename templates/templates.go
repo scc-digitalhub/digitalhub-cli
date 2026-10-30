@@ -7,6 +7,7 @@ package templates
 import (
 	"embed"
 	"fmt"
+	"github.com/cbroglie/mustache"
 	"io/fs"
 	"strings"
 )
@@ -32,7 +33,11 @@ func Render(docsURL string) (map[string]string, error) {
 		if strings.HasPrefix(path, "skills/") {
 			target = ".agents/" + path
 		}
-		rendered[target] = strings.ReplaceAll(string(content), "{{DOCS}}", docsURL)
+		result, err := mustache.RenderRaw("{{=<% %>=}}\n"+string(content), true, map[string]string{"DOCS": docsURL})
+		if err != nil {
+			return fmt.Errorf("render embedded template %s: %w", path, err)
+		}
+		rendered[target] = result
 		return nil
 	})
 	return rendered, err
