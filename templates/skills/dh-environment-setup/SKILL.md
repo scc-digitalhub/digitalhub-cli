@@ -8,6 +8,7 @@ description: Configure and verify the DigitalHub CLI (dhcli) environment in ~/.d
 Use this procedural workflow whenever starting work in a workspace, registering or switching DigitalHub environments, refreshing expired OAuth2 tokens, bootstrapping a local Python SDK virtual environment, or creating a DigitalHub project.
 
 ## Reference Knowledge (Pinned to Platform Version)
+
 - **CLI Auth & Environments**: [auth-and-env.md](<%DOCS%>/knowledge/cli/auth-and-env.md)
 - **Project Entity Specification**: [project.md](<%DOCS%>/knowledge/entities/project.md)
 - **CLI CRUD & YAML Anatomy**: [crud-and-yaml-anatomy.md](<%DOCS%>/knowledge/cli/crud-and-yaml-anatomy.md)
@@ -16,6 +17,7 @@ Use this procedural workflow whenever starting work in a workspace, registering 
 ---
 
 ## 1. Pre-Flight Checklist
+
 - [ ] Project names **must** obey RFC-1123 (`^[a-z0-9-]+$`, lowercase alphanumeric and hyphens, max 63 chars, e.g., `fraud-detection`).
 - [ ] `dhcli` is installed and on `PATH` (`dhcli --version`).
 
@@ -24,12 +26,15 @@ Use this procedural workflow whenever starting work in a workspace, registering 
 ## 2. Step-by-Step Procedure
 
 ### Step 1: Verify `dhcli` Installation
+
 Check that the `dhcli` binary is installed:
+
 ```bash
 dhcli --version
 ```
 
 ### Step 2: Inspect & Select the Active Environment (`~/.dhcore.ini`)
+
 1. List all registered environments in `~/.dhcore.ini`:
    ```bash
    dhcli list-env
@@ -49,10 +54,13 @@ dhcli --version
    ```
 
 ### Step 3: Verify Authentication & Refresh Tokens
+
 Test connectivity and authentication (use compact table output to avoid large JSON dumps):
+
 ```bash
 dhcli list projects
 ```
+
 - If the access token is expired (`401 Unauthorized`), try refreshing it first:
   ```bash
   dhcli refresh
@@ -68,7 +76,22 @@ dhcli list projects
     dhcli login
     ```
 
-### Step 4: Create or Verify the Target Project
+### Step 4: Export Local Tool Configuration (Optional)
+
+If local tools need platform configuration and credentials, generate a private `.env`:
+
+```bash
+dhcli init --env
+set -a && source .env && set +a
+```
+
+Use `dhcli init --env --environment <env-name>` (or `-e <env-name>`) to export a specific
+registered environment. Keep `.env` out of version
+control and do not display its contents, since it includes credentials. Regenerate it
+when credentials expire. Existing variables are merged; comments and formatting are normalized.
+
+### Step 5: Create or Verify the Target Project
+
 1. Check if the target project already exists:
    ```bash
    dhcli get projects <project> -o json
@@ -77,9 +100,10 @@ dhcli list projects
    ```bash
    dhcli create projects -n <project>
    ```
-   *(Or from a manifest via `dhcli create projects -f project.yaml`.)*
+   _(Or from a manifest via `dhcli create projects -f project.yaml`.)_
 
-### Step 5: Inspect Project Contents & Optional Python Venv Bootstrap
+### Step 6: Inspect Project Contents & Optional Python Venv Bootstrap
+
 1. List existing entities in the project:
    ```bash
    dhcli list functions -p <project>
@@ -87,12 +111,12 @@ dhcli list projects
    dhcli list models -p <project>
    dhcli list workflows -p <project>
    ```
-2. *(Optional)* To install version-pinned agent instructions and skills (`AGENTS.md`, `CLAUDE.md`, and `.agents/skills/`) in the current working directory:
+2. _(Optional)_ To install version-pinned agent instructions and skills (`AGENTS.md`, `CLAUDE.md`, and `.agents/skills/`) in the current working directory:
    ```bash
    dhcli init --agent
    ```
    This fetches the active Core's version and renders the CLI's embedded templates with knowledge references to the matching `major.minor` docs branch (without creating a Python virtual environment). Identical agent files are left unchanged; conflicting files are reported as errors rather than overwritten.
-3. *(Optional)* If you need a local Python virtual environment with `digitalhub[full]` matching the connected Core server's minor version (for example, to run SDK gap fallbacks or author interactive notebooks):
+3. _(Optional)_ If you need a local Python virtual environment with `digitalhub[full]` matching the connected Core server's minor version (for example, to run SDK gap fallbacks or author interactive notebooks):
    ```bash
    echo y | dhcli init ./.venv
    ```
