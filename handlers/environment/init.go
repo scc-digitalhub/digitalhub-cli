@@ -24,7 +24,8 @@ import (
 )
 
 // InitAgentWorkspaceHandler fetches the connected Core version and installs
-// the embedded agent templates in the current working directory.
+// the latest agent templates (falling back to embedded templates if offline)
+// in the current working directory.
 func InitAgentWorkspaceHandler() error {
 	root, err := os.Getwd()
 	if err != nil {
@@ -40,6 +41,7 @@ func InitAgentWorkspaceHandler() error {
 	if err := agent.install(); err != nil {
 		return fmt.Errorf("install agent workspace: %w", err)
 	}
+	fmt.Printf("Agent templates source: %s\n", agent.templateSource)
 	log.Printf("Agent workspace installed in %s (Core %s), knowledge pinned to %s/knowledge", agent.root, agent.version, agent.docsURL)
 	return nil
 }
