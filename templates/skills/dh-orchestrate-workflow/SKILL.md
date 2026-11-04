@@ -8,11 +8,11 @@ description: Author multi-step DAG pipelines in Python using Hera (Argo) or KFP 
 Use this procedural workflow whenever chaining multiple DigitalHub Functions into automated pipelines using Hera (Argo Workflows) or Kubeflow Pipelines (KFP), and scheduling runs with cron (`scheduler`) or event-driven (`lifecycle`) Triggers.
 
 ## Reference Knowledge (Pinned to Platform Version)
-- **Hera Workflow Runtime**: [hera.md]({{DOCS}}/knowledge/runtimes/hera.md)
-- **KFP Workflow Runtime**: [kfp.md]({{DOCS}}/knowledge/runtimes/kfp.md)
-- **Workflow Entity Specification**: [workflow.md]({{DOCS}}/knowledge/entities/workflow.md)
-- **Trigger Entity Specification**: [trigger.md]({{DOCS}}/knowledge/entities/trigger.md)
-- **Python SDK Fallback Guide**: [sdk-fallback.md]({{DOCS}}/knowledge/sdk/sdk-fallback.md)
+- **Hera Workflow Runtime**: [hera.md](<%DOCS%>/knowledge/runtimes/hera.md)
+- **KFP Workflow Runtime**: [kfp.md](<%DOCS%>/knowledge/runtimes/kfp.md)
+- **Workflow Entity Specification**: [workflow.md](<%DOCS%>/knowledge/entities/workflow.md)
+- **Trigger Entity Specification**: [trigger.md](<%DOCS%>/knowledge/entities/trigger.md)
+- **Python SDK Fallback Guide**: [sdk-fallback.md](<%DOCS%>/knowledge/sdk/sdk-fallback.md)
 
 ---
 

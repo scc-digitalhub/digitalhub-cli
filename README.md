@@ -3,20 +3,19 @@
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/scc-digitalhub/digitalhub-cli/release.yaml?event=release) [![license](https://img.shields.io/badge/license-Apache%202.0-blue)](https://github.com/scc-digitalhub/digitalhub-cli/LICENSE) ![GitHub Release](https://img.shields.io/github/v/release/scc-digitalhub/digitalhub-cli)
 ![Status](https://img.shields.io/badge/status-stable-gold)
 
-
 The Command-Line Interface (CLI) is a simple tool that offers a number of functionalities to set the platform up.
 
-The executable can be downloaded in the *Releases* page.
+The executable can be downloaded in the _Releases_ page.
 
 For a full overview of available commands, please check [the documentation](https://scc-digitalhub.github.io/docs/0.11/cli/commands/).
 
 ## Quick start
 
-Download and unpack the corresponding archive from the [GitHub release page](https://github.com/scc-digitalhub/digitalhub-cli/releases). Run the ``dhcli`` executable. 
+Download and unpack the corresponding archive from the [GitHub release page](https://github.com/scc-digitalhub/digitalhub-cli/releases). Run the `dhcli` executable.
 
-On Mac, you can use the *Homebrew Tap* distribution:
+On Mac, you can use the _Homebrew Tap_ distribution:
 
-``` sh
+```sh
 brew tap scc-digitalhub/digitalhub-cli https://github.com/scc-digitalhub/digitalhub-cli
 brew install dhcli
 ```
@@ -29,9 +28,12 @@ After registering and selecting a Core environment, run from your project direct
 dhcli init --agent
 ```
 
-`--agent` fetches the active Core's `dhcore_version` from `/.well-known/configuration`
-and renders the agent templates **embedded in the CLI binary** into the current working
-directory (without creating a Python virtual environment or installing Python SDK packages).
+`--agent` fetches the active Core's `dhcore_version` from `/.well-known/configuration`,
+downloads the latest agent templates from `scc-digitalhub/digitalhub-cli` (`main` branch),
+and renders them into the current working directory (without creating a Python virtual
+environment or installing Python SDK packages). If the remote archive is unavailable,
+incomplete, or invalid, it falls back to the templates embedded in the CLI binary.
+It also prints the template source and, when available, revision to stdout.
 Core `0.16.2` selects the `0.16` knowledge branch.
 
 ```text
@@ -43,19 +45,20 @@ digitalhub-cli/templates/           User's working repository/
 
 The destination is the current working directory. `CLAUDE.md`
 directs Claude to `AGENTS.md`, which links to the local, agent-neutral skills.
-Every `{{DOCS}}` placeholder becomes `https://raw.githubusercontent.com/scc-digitalhub/docs/0.16`
+Every `<%DOCS%>` placeholder becomes `https://raw.githubusercontent.com/scc-digitalhub/docs/0.16`
 in this example. Knowledge stays remote under that branch's `knowledge/` folder and is
 fetched by the agent when needed. Relative knowledge links resolve against the fetched
-page URL, keeping the same release. Initialization contacts Core only for version discovery;
-it does not fetch templates or knowledge from GitHub and does not use a cached/default
-version if Core is unavailable. Agents must report unavailable knowledge rather than
+page URL, keeping the same release. Agents must report unavailable knowledge rather than
 fall back to `main`, `latest`, or a different release.
 
-Identical files are left untouched on repeated initialization. Conflicting files (including
-custom instructions or files pinned to another version) are never overwritten: move them
-aside and reconcile your customizations before reinitializing. Symlink destinations are
-rejected. Failed writes roll back files and directories created by that installation,
-preserving pre-existing files.
+Identical files are left untouched on repeated initialization. By default, differing existing
+files are never overwritten; pass `dhcli init --agent --overwrite` to update existing `AGENTS.md`,
+`CLAUDE.md`, and skill files in place when remote templates are fetched (back up customizations
+before running with `--overwrite`). When falling back to embedded templates (for example, when
+GitHub is unreachable), only missing template files are created and existing files are preserved
+even with `--overwrite` so an offline run never downgrades newer remote templates to older
+embedded versions. Symlink destinations are rejected. Failed writes attempt to roll back files
+and directories created or modified by that installation; any rollback errors are reported.
 Without `--agent`, `dhcli init [path]` retains its existing Python-environment initialization behavior.
 
 Maintain the router and skills in [`templates/`](templates/); `go:embed` includes them in every
@@ -75,24 +78,27 @@ branch. Do not copy templates back into the docs repository. Run `go vet ./...` 
 
 If you wish to build the executable from source, run the following:
 
-``` sh
+```sh
 go build
 ```
 
 To build with a specific version:
 
-``` sh
+```sh
 go build -ldflags "-X dhcli/core.version=0.15.0"
 ```
 
 It will generate an executable named `dhcli` for your operating system and architecture. To change the target OS or architecture, you need to set the `GOOS` and `GOARCH` variables and build it. Some examples:
-``` sh
+
+```sh
 GOOS=linux GOARCH=amd64 go build -o dhcli-linux-amd64
 ```
-``` sh
+
+```sh
 GOOS=darwin GOARCH=arm64 go build -o dhcli-darwin-arm64
 ```
-``` sh
+
+```sh
 GOOS=windows GOARCH=amd64 go build -o dhcli-win-amd64.exe
 ```
 
@@ -104,7 +110,7 @@ A GitHub Actions workflow is set to be triggered upon pushing a new tag and will
 
 Tags must use the `v` prefix (required by Go modules):
 
-``` sh
+```sh
 git tag -a vX.Y.Z -m "Some release" && git push origin vX.Y.Z
 ```
 

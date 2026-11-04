@@ -8,10 +8,10 @@ description: Upload local files, datasets, and model weights to S3 via dhcli upl
 Use this procedural workflow whenever uploading local files/directories to the project's S3 datalake, registering structured `table` Dataitems (`s3://`, `https://`, or `sql://`), registering public artifacts, or downloading entities to local disk.
 
 ## Reference Knowledge (Pinned to Platform Version)
-- **Dataitem Entity (`dataitem`, `table`, `croissant`)**: [dataitem.md]({{DOCS}}/knowledge/entities/dataitem.md)
-- **Artifact Entity (`artifact`)**: [artifact.md]({{DOCS}}/knowledge/entities/artifact.md)
-- **Model Entity (`model`, `sklearn`, `mlflow`, `huggingface`)**: [model.md]({{DOCS}}/knowledge/entities/model.md)
-- **CLI Storage & Services Reference**: [storage-and-services.md]({{DOCS}}/knowledge/cli/storage-and-services.md)
+- **Dataitem Entity (`dataitem`, `table`, `croissant`)**: [dataitem.md](<%DOCS%>/knowledge/entities/dataitem.md)
+- **Artifact Entity (`artifact`)**: [artifact.md](<%DOCS%>/knowledge/entities/artifact.md)
+- **Model Entity (`model`, `sklearn`, `mlflow`, `huggingface`)**: [model.md](<%DOCS%>/knowledge/entities/model.md)
+- **CLI Storage & Services Reference**: [storage-and-services.md](<%DOCS%>/knowledge/cli/storage-and-services.md)
 
 ---
 

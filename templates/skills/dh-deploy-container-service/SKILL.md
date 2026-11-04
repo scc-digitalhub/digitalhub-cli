@@ -8,9 +8,9 @@ description: Register custom Docker/OCI container Functions and run them as Kube
 Use this procedural workflow whenever running a pre-built Docker/OCI image as a batch job (`container+job`), deploying a web UI or REST API (`container+serve`, such as Streamlit, Gradio, FastAPI), running a background worker (`container+deploy`), or building a container image in-cluster (`container+build`).
 
 ## Reference Knowledge (Pinned to Platform Version)
-- **Container Runtime Specification**: [container.md]({{DOCS}}/knowledge/runtimes/container.md)
-- **Kubernetes Resources, Volumes, Secrets & Ports**: [kubernetes-resources.md]({{DOCS}}/knowledge/management/kubernetes-resources.md)
-- **Service Discovery & Port-Forwarding**: [storage-and-services.md]({{DOCS}}/knowledge/cli/storage-and-services.md)
+- **Container Runtime Specification**: [container.md](<%DOCS%>/knowledge/runtimes/container.md)
+- **Kubernetes Resources, Volumes, Secrets & Ports**: [kubernetes-resources.md](<%DOCS%>/knowledge/management/kubernetes-resources.md)
+- **Service Discovery & Port-Forwarding**: [storage-and-services.md](<%DOCS%>/knowledge/cli/storage-and-services.md)
 
 ---
 
