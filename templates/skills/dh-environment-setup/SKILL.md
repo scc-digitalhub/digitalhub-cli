@@ -87,8 +87,9 @@ set -a && source .env && set +a
 
 Use `dhcli init --env --environment <env-name>` (or `-e <env-name>`) to export a specific
 registered environment. Keep `.env` out of version
-control and do not display its contents, since it includes credentials. Regenerate it
-when credentials expire. Existing variables are merged; comments and formatting are normalized.
+control and do not display its contents, since it includes credentials. When credentials expire
+or `.env` already exists, pass `dhcli init --env --overwrite` to merge and update it in place
+(existing custom variables are preserved; comments and formatting are normalized).
 
 ### Step 5: Create or Verify the Target Project
 
@@ -115,7 +116,7 @@ when credentials expire. Existing variables are merged; comments and formatting 
    ```bash
    dhcli init --agent
    ```
-   This fetches the active Core's version and renders the CLI's embedded templates with knowledge references to the matching `major.minor` docs branch (without creating a Python virtual environment). Identical agent files are left unchanged; conflicting files are reported as errors rather than overwritten.
+   This fetches the active Core's version and installs the latest templates from the CLI repository (falling back to embedded templates if offline) with knowledge references pinned to the matching `major.minor` docs branch (without creating a Python virtual environment). Identical agent files are left unchanged; differing files are reported as errors unless `--overwrite` is passed.
 3. _(Optional)_ If you need a local Python virtual environment with `digitalhub[full]` matching the connected Core server's minor version (for example, to run SDK gap fallbacks or author interactive notebooks):
    ```bash
    echo y | dhcli init ./.venv

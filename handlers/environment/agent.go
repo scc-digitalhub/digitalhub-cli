@@ -29,6 +29,7 @@ type agentWorkspace struct {
 	branch         string
 	docsURL        string
 	templateSource templates.SourceInfo
+	overwrite      bool
 	files          map[string]string
 }
 
@@ -60,7 +61,7 @@ func fetchCoreConfiguration(client *http.Client, url string) ([]byte, error) {
 	return body, nil
 }
 
-func prepareAgentWorkspace(client *http.Client, endpoint, root string) (*agentWorkspace, error) {
+func prepareAgentWorkspace(client *http.Client, endpoint, root string, overwrite bool) (*agentWorkspace, error) {
 	if endpoint == "" {
 		return nil, fmt.Errorf("Core endpoint is missing; register and select an environment first")
 	}
@@ -93,6 +94,7 @@ func prepareAgentWorkspace(client *http.Client, endpoint, root string) (*agentWo
 		branch:         branch,
 		docsURL:        docsURL,
 		templateSource: sourceInfo,
+		overwrite:      overwrite,
 		files:          files,
 	}
 	if _, err := workspace.pendingFiles(); err != nil {
@@ -150,6 +152,9 @@ func (w *agentWorkspace) pendingFiles() ([]string, error) {
 		}
 		if string(content) == w.files[path] {
 			continue
+		}
+		if !w.overwrite {
+			return nil, fmt.Errorf("refusing to overwrite existing agent file %s; pass --overwrite to update it", target)
 		}
 		pending = append(pending, path)
 	}
@@ -211,9 +216,17 @@ func (w *agentWorkspace) install() (err error) {
 			createdDirs = append(createdDirs, missing[i])
 		}
 
-		info, statErr := root.Lstat(target)
 		var file *os.File
-		if os.IsNotExist(statErr) {
+		if !w.overwrite || w.templateSource.Kind != "remote" {
+			file, err = root.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+			if err != nil {
+				if os.IsExist(err) {
+					return fmt.Errorf("refusing to overwrite existing agent file %s; pass --overwrite to update it", filepath.Join(w.root, target))
+				}
+				return fmt.Errorf("create agent file %s: %w", target, err)
+			}
+			createdFiles = append(createdFiles, target)
+		} else if info, statErr := root.Lstat(target); os.IsNotExist(statErr) {
 			file, err = root.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
 			if err != nil {
 				return fmt.Errorf("create agent file %s: %w", target, err)

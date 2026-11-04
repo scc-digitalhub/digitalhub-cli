@@ -19,7 +19,7 @@ import (
 
 var envNamePattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
-func EnvFileHandler(path string) error {
+func EnvFileHandler(path string, overwrite bool) error {
 	utils.CheckUpdateEnvironment()
 	if err := utils.CheckCredentials(); err != nil {
 		return err
@@ -31,15 +31,18 @@ func EnvFileHandler(path string) error {
 	if len(entries) == 0 {
 		return fmt.Errorf("no configuration or credentials found; register and select an environment first")
 	}
-	return writeEnvFile(path, entries)
+	return writeEnvFile(path, entries, overwrite)
 }
 
-func writeEnvFile(path string, entries map[string]string) error {
+func writeEnvFile(path string, entries map[string]string, overwrite bool) error {
 	merged := gotenv.Env{}
 	info, err := os.Lstat(path)
 	if err == nil {
 		if !info.Mode().IsRegular() {
 			return fmt.Errorf("refusing to replace non-regular env file %s", path)
+		}
+		if !overwrite {
+			return fmt.Errorf("refusing to overwrite existing env file %s; pass --overwrite to update it", path)
 		}
 		content, err := os.ReadFile(path)
 		if err != nil {
@@ -86,6 +89,15 @@ func writeEnvFile(path string, entries map[string]string) error {
 	}
 	if err := file.Close(); err != nil {
 		return fmt.Errorf("close env file: %w", err)
+	}
+	if !overwrite {
+		if err := os.Link(file.Name(), path); err != nil {
+			if os.IsExist(err) {
+				return fmt.Errorf("refusing to overwrite existing env file %s; pass --overwrite to update it", path)
+			}
+			return fmt.Errorf("publish env file: %w", err)
+		}
+		return nil
 	}
 	if err := os.Rename(file.Name(), path); err != nil {
 		return fmt.Errorf("replace env file: %w", err)

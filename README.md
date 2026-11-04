@@ -3,20 +3,19 @@
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/scc-digitalhub/digitalhub-cli/release.yaml?event=release) [![license](https://img.shields.io/badge/license-Apache%202.0-blue)](https://github.com/scc-digitalhub/digitalhub-cli/LICENSE) ![GitHub Release](https://img.shields.io/github/v/release/scc-digitalhub/digitalhub-cli)
 ![Status](https://img.shields.io/badge/status-stable-gold)
 
-
 The Command-Line Interface (CLI) is a simple tool that offers a number of functionalities to set the platform up.
 
-The executable can be downloaded in the *Releases* page.
+The executable can be downloaded in the _Releases_ page.
 
 For a full overview of available commands, please check [the documentation](https://scc-digitalhub.github.io/docs/0.11/cli/commands/).
 
 ## Quick start
 
-Download and unpack the corresponding archive from the [GitHub release page](https://github.com/scc-digitalhub/digitalhub-cli/releases). Run the ``dhcli`` executable. 
+Download and unpack the corresponding archive from the [GitHub release page](https://github.com/scc-digitalhub/digitalhub-cli/releases). Run the `dhcli` executable.
 
-On Mac, you can use the *Homebrew Tap* distribution:
+On Mac, you can use the _Homebrew Tap_ distribution:
 
-``` sh
+```sh
 brew tap scc-digitalhub/digitalhub-cli https://github.com/scc-digitalhub/digitalhub-cli
 brew install dhcli
 ```
@@ -52,14 +51,14 @@ fetched by the agent when needed. Relative knowledge links resolve against the f
 page URL, keeping the same release. Agents must report unavailable knowledge rather than
 fall back to `main`, `latest`, or a different release.
 
-Identical files are left untouched on repeated initialization. When remote templates are fetched,
-**any differing destination file is overwritten without confirmation or backup**, including custom
-`AGENTS.md`, `CLAUDE.md`, and skill files (back up customizations before running the command).
-When falling back to embedded templates (for example, when GitHub is unreachable), only missing
-template files are created and existing files are preserved so an offline run never downgrades
-newer remote templates to older embedded versions. Symlink destinations are rejected.
-Failed writes attempt to roll back files and directories created or modified by that installation;
-any rollback errors are reported.
+Identical files are left untouched on repeated initialization. By default, differing existing
+files are never overwritten; pass `dhcli init --agent --overwrite` to update existing `AGENTS.md`,
+`CLAUDE.md`, and skill files in place when remote templates are fetched (back up customizations
+before running with `--overwrite`). When falling back to embedded templates (for example, when
+GitHub is unreachable), only missing template files are created and existing files are preserved
+even with `--overwrite` so an offline run never downgrades newer remote templates to older
+embedded versions. Symlink destinations are rejected. Failed writes attempt to roll back files
+and directories created or modified by that installation; any rollback errors are reported.
 Without `--agent`, `dhcli init [path]` retains its existing Python-environment initialization behavior.
 
 Maintain the router and skills in [`templates/`](templates/); `go:embed` includes them in every
@@ -79,24 +78,27 @@ branch. Do not copy templates back into the docs repository. Run `go vet ./...` 
 
 If you wish to build the executable from source, run the following:
 
-``` sh
+```sh
 go build
 ```
 
 To build with a specific version:
 
-``` sh
+```sh
 go build -ldflags "-X dhcli/core.version=0.15.0"
 ```
 
 It will generate an executable named `dhcli` for your operating system and architecture. To change the target OS or architecture, you need to set the `GOOS` and `GOARCH` variables and build it. Some examples:
-``` sh
+
+```sh
 GOOS=linux GOARCH=amd64 go build -o dhcli-linux-amd64
 ```
-``` sh
+
+```sh
 GOOS=darwin GOARCH=arm64 go build -o dhcli-darwin-arm64
 ```
-``` sh
+
+```sh
 GOOS=windows GOARCH=amd64 go build -o dhcli-win-amd64.exe
 ```
 
@@ -108,7 +110,7 @@ A GitHub Actions workflow is set to be triggered upon pushing a new tag and will
 
 Tags must use the `v` prefix (required by Go modules):
 
-``` sh
+```sh
 git tag -a vX.Y.Z -m "Some release" && git push origin vX.Y.Z
 ```
 

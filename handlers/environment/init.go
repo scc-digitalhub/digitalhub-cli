@@ -26,14 +26,14 @@ import (
 // InitAgentWorkspaceHandler fetches the connected Core version and installs
 // the latest agent templates (falling back to embedded templates if offline)
 // in the current working directory.
-func InitAgentWorkspaceHandler() error {
+func InitAgentWorkspaceHandler(overwrite bool) error {
 	root, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("resolve agent workspace: %w", err)
 	}
 	agent, err := prepareAgentWorkspace(
 		&http.Client{Timeout: 30 * time.Second},
-		viper.GetString(keys.DhCoreEndpoint), root,
+		viper.GetString(keys.DhCoreEndpoint), root, overwrite,
 	)
 	if err != nil {
 		return fmt.Errorf("prepare agent workspace: %w", err)
