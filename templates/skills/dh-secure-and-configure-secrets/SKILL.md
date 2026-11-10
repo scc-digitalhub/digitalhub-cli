@@ -8,10 +8,10 @@ description: Manage Kubernetes-backed project secrets in DigitalHub, create secr
 Use this procedural workflow whenever workloads require sensitive credentials (HuggingFace API tokens for gated models like Llama-3, database passwords, object storage keys, or external API secrets).
 
 ## Reference Knowledge (Pinned to Platform Version)
-- **Secret Entity Specification**: [secret.md]({{DOCS}}/knowledge/entities/secret.md)
-- **Kubernetes Resources & Secrets**: [kubernetes-resources.md]({{DOCS}}/knowledge/management/kubernetes-resources.md)
-- **Platform Governance & Secret Rules**: [governance-and-security.md]({{DOCS}}/knowledge/management/governance-and-security.md)
-- **Python SDK Fallback Guide**: [sdk-fallback.md]({{DOCS}}/knowledge/sdk/sdk-fallback.md)
+- **Secret Entity Specification**: [secret.md](<%DOCS%>/knowledge/entities/secret.md)
+- **Kubernetes Resources & Secrets**: [kubernetes-resources.md](<%DOCS%>/knowledge/management/kubernetes-resources.md)
+- **Platform Governance & Secret Rules**: [governance-and-security.md](<%DOCS%>/knowledge/management/governance-and-security.md)
+- **Python SDK Fallback Guide**: [sdk-fallback.md](<%DOCS%>/knowledge/sdk/sdk-fallback.md)
 
 ---
 

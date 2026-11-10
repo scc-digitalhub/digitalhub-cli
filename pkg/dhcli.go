@@ -44,8 +44,11 @@ var dhcli = &cobra.Command{
 
 		envFlag := cmd.Flags().Lookup("env")
 		var env string
-		if envFlag != nil && envFlag.Value.String() != "" {
+		if envFlag != nil && envFlag.Value.Type() == "string" && envFlag.Value.String() != "" {
 			env = envFlag.Value.String()
+		}
+		if environmentFlag := cmd.Flags().Lookup("environment"); environmentFlag != nil {
+			env = environmentFlag.Value.String()
 		}
 
 		// Only skip config for explicit maintenance cmds

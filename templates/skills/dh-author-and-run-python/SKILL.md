@@ -8,10 +8,10 @@ description: Author a DigitalHub Python function (batch job or Nuclio HTTP serve
 Use this procedural workflow whenever creating or updating a Python Function (`kind: python`), building custom `requirements` with `python+build`, running batch jobs (`python+job`) or Nuclio HTTP endpoints (`python+serve`), and verifying execution logs.
 
 ## Reference Knowledge (Pinned to Platform Version)
-- **Python Runtime Specification**: [python.md]({{DOCS}}/knowledge/runtimes/python.md)
-- **Function & Run Entities**: [function.md]({{DOCS}}/knowledge/entities/function.md), [run.md]({{DOCS}}/knowledge/entities/run.md)
-- **Writing Python Handler Code**: [handler-authoring.md]({{DOCS}}/knowledge/sdk/handler-authoring.md)
-- **Reading & Logging Data/Models/Metrics**: [data-models-and-metrics.md]({{DOCS}}/knowledge/sdk/data-models-and-metrics.md)
+- **Python Runtime Specification**: [python.md](<%DOCS%>/knowledge/runtimes/python.md)
+- **Function & Run Entities**: [function.md](<%DOCS%>/knowledge/entities/function.md), [run.md](<%DOCS%>/knowledge/entities/run.md)
+- **Writing Python Handler Code**: [handler-authoring.md](<%DOCS%>/knowledge/sdk/handler-authoring.md)
+- **Reading & Logging Data/Models/Metrics**: [data-models-and-metrics.md](<%DOCS%>/knowledge/sdk/data-models-and-metrics.md)
 
 ---
 

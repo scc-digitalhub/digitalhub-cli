@@ -24,11 +24,13 @@ const agentDocsBase = "https://raw.githubusercontent.com/scc-digitalhub/docs"
 var coreVersionPattern = regexp.MustCompile(`^v?([0-9]+)\.([0-9]+)(\.[0-9]+([A-Za-z0-9.+-]*))?$`)
 
 type agentWorkspace struct {
-	root    string
-	version string
-	branch  string
-	docsURL string
-	files   map[string]string
+	root           string
+	version        string
+	branch         string
+	docsURL        string
+	templateSource templates.SourceInfo
+	overwrite      bool
+	files          map[string]string
 }
 
 func docsBranch(version string) (string, error) {
@@ -59,7 +61,7 @@ func fetchCoreConfiguration(client *http.Client, url string) ([]byte, error) {
 	return body, nil
 }
 
-func prepareAgentWorkspace(client *http.Client, endpoint, root string) (*agentWorkspace, error) {
+func prepareAgentWorkspace(client *http.Client, endpoint, root string, overwrite bool) (*agentWorkspace, error) {
 	if endpoint == "" {
 		return nil, fmt.Errorf("Core endpoint is missing; register and select an environment first")
 	}
@@ -78,20 +80,22 @@ func prepareAgentWorkspace(client *http.Client, endpoint, root string) (*agentWo
 		return nil, err
 	}
 	docsURL := agentDocsBase + "/" + branch
-	files, err := templates.Render(docsURL)
+	files, sourceInfo, err := templates.RenderLatest(client, docsURL)
 	if err != nil {
-		return nil, fmt.Errorf("render embedded agent templates: %w", err)
+		return nil, fmt.Errorf("render agent templates: %w", err)
 	}
 	root, err = filepath.Abs(root)
 	if err != nil {
 		return nil, fmt.Errorf("resolve agent workspace: %w", err)
 	}
 	workspace := &agentWorkspace{
-		root:    root,
-		version: config.Version,
-		branch:  branch,
-		docsURL: docsURL,
-		files:   files,
+		root:           root,
+		version:        config.Version,
+		branch:         branch,
+		docsURL:        docsURL,
+		templateSource: sourceInfo,
+		overwrite:      overwrite,
+		files:          files,
 	}
 	if _, err := workspace.pendingFiles(); err != nil {
 		return nil, err
@@ -111,7 +115,11 @@ func (w *agentWorkspace) paths() []string {
 func (w *agentWorkspace) pendingFiles() ([]string, error) {
 	var pending []string
 	for _, path := range w.paths() {
-		target := filepath.Join(w.root, filepath.FromSlash(path))
+		relative := filepath.FromSlash(path)
+		if !filepath.IsLocal(relative) || filepath.Clean(relative) == "." {
+			return nil, fmt.Errorf("agent destination is not a local file path: %s", path)
+		}
+		target := filepath.Join(w.root, relative)
 		for parent := filepath.Dir(target); parent != w.root; parent = filepath.Dir(parent) {
 			info, err := os.Lstat(parent)
 			if os.IsNotExist(err) {
@@ -132,16 +140,23 @@ func (w *agentWorkspace) pendingFiles() ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		if info.Mode().IsRegular() {
-			content, err := os.ReadFile(target)
-			if err != nil {
-				return nil, err
-			}
-			if string(content) == w.files[path] {
-				continue
-			}
+		if !info.Mode().IsRegular() {
+			return nil, fmt.Errorf("agent destination is not a regular file: %s", target)
 		}
-		return nil, fmt.Errorf("refusing to overwrite existing agent file %s; move it aside before initializing", target)
+		if w.templateSource.Kind != "remote" {
+			continue
+		}
+		content, err := os.ReadFile(target)
+		if err != nil {
+			return nil, err
+		}
+		if string(content) == w.files[path] {
+			continue
+		}
+		if !w.overwrite {
+			return nil, fmt.Errorf("refusing to overwrite existing agent file %s; pass --overwrite to update it", target)
+		}
+		pending = append(pending, path)
 	}
 	return pending, nil
 }
@@ -161,9 +176,15 @@ func (w *agentWorkspace) install() (err error) {
 		return err
 	}
 	var createdFiles, createdDirs []string
+	updatedFiles := make(map[string][]byte)
 	defer func() {
 		if err == nil {
 			return
+		}
+		for target, prev := range updatedFiles {
+			if restoreErr := writeRootFile(root, target, prev); restoreErr != nil {
+				err = errors.Join(err, fmt.Errorf("rollback updated agent file: %w", restoreErr))
+			}
 		}
 		for i := len(createdFiles) - 1; i >= 0; i-- {
 			if removeErr := root.Remove(createdFiles[i]); removeErr != nil {
@@ -194,11 +215,38 @@ func (w *agentWorkspace) install() (err error) {
 			}
 			createdDirs = append(createdDirs, missing[i])
 		}
-		file, err := root.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
-		if err != nil {
-			return fmt.Errorf("create agent file %s: %w", target, err)
+
+		var file *os.File
+		if !w.overwrite || w.templateSource.Kind != "remote" {
+			file, err = root.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+			if err != nil {
+				if os.IsExist(err) {
+					return fmt.Errorf("refusing to overwrite existing agent file %s; pass --overwrite to update it", filepath.Join(w.root, target))
+				}
+				return fmt.Errorf("create agent file %s: %w", target, err)
+			}
+			createdFiles = append(createdFiles, target)
+		} else if info, statErr := root.Lstat(target); os.IsNotExist(statErr) {
+			file, err = root.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+			if err != nil {
+				return fmt.Errorf("create agent file %s: %w", target, err)
+			}
+			createdFiles = append(createdFiles, target)
+		} else if statErr != nil {
+			return fmt.Errorf("inspect agent file %s: %w", target, statErr)
+		} else if !info.Mode().IsRegular() {
+			return fmt.Errorf("agent destination is not a regular file: %s", target)
+		} else {
+			prev, readErr := readRootFile(root, target)
+			if readErr != nil {
+				return fmt.Errorf("read existing agent file %s: %w", target, readErr)
+			}
+			updatedFiles[target] = prev
+			file, err = root.OpenFile(target, os.O_WRONLY|os.O_TRUNC, 0644)
+			if err != nil {
+				return fmt.Errorf("update agent file %s: %w", target, err)
+			}
 		}
-		createdFiles = append(createdFiles, target)
 		_, writeErr := file.WriteString(w.files[path])
 		closeErr := file.Close()
 		if writeErr != nil {
@@ -209,4 +257,23 @@ func (w *agentWorkspace) install() (err error) {
 		}
 	}
 	return nil
+}
+
+func readRootFile(root *os.Root, target string) ([]byte, error) {
+	f, err := root.Open(target)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return io.ReadAll(f)
+}
+
+func writeRootFile(root *os.Root, target string, data []byte) error {
+	f, err := root.OpenFile(target, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+	_, writeErr := f.Write(data)
+	closeErr := f.Close()
+	return errors.Join(writeErr, closeErr)
 }

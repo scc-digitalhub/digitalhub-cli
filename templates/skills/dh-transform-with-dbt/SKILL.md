@@ -8,9 +8,9 @@ description: Author SQL data transformations using dbt, package them into kind d
 Use this procedural workflow whenever running SQL data engineering transformations, aggregations, and cleaning pipelines over tabular Dataitems stored in PostgreSQL or Dremio using dbt.
 
 ## Reference Knowledge (Pinned to Platform Version)
-- **DBT Runtime Specification**: [dbt.md]({{DOCS}}/knowledge/runtimes/dbt.md)
-- **Dataitem Entity (`kind: table`)**: [dataitem.md]({{DOCS}}/knowledge/entities/dataitem.md)
-- **CLI Execution & Runs**: [execution-and-runs.md]({{DOCS}}/knowledge/cli/execution-and-runs.md)
+- **DBT Runtime Specification**: [dbt.md](<%DOCS%>/knowledge/runtimes/dbt.md)
+- **Dataitem Entity (`kind: table`)**: [dataitem.md](<%DOCS%>/knowledge/entities/dataitem.md)
+- **CLI Execution & Runs**: [execution-and-runs.md](<%DOCS%>/knowledge/cli/execution-and-runs.md)
 
 ---
 
