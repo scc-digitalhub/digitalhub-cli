@@ -13,7 +13,31 @@ For a full overview of available commands, please check [the documentation](http
 
 Download and unpack the corresponding archive from the [GitHub release page](https://github.com/scc-digitalhub/digitalhub-cli/releases). Run the `dhcli` executable.
 
-On Mac, you can use the _Homebrew Tap_ distribution:
+To install the latest release directly, use the installer for your platform. The installers verify the downloaded archive against the SHA-256 checksum published with the release and install it in your user directory without administrator privileges.
+
+Linux and macOS (requires `curl` or `wget`, `tar`, and `sha256sum` or `shasum`):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/scc-digitalhub/digitalhub-cli/main/install.sh | sh
+```
+
+To install a specific version, pass its version without the `v` prefix:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/scc-digitalhub/digitalhub-cli/main/install.sh | sh -s -- 0.15.2
+```
+
+The binary is installed to `~/.local/bin`. If that directory is not already on your `PATH`, add it to your shell configuration.
+
+Windows PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/scc-digitalhub/digitalhub-cli/main/install.ps1 | iex
+```
+
+PowerShell installs to `$HOME\.local\bin` and adds that directory to your user `PATH`. To install a specific version or choose another directory, download `install.ps1` and run it with `-Version 0.15.2` and/or `-InstallDir <directory>`.
+
+On Mac, you can also use the _Homebrew Tap_ distribution:
 
 ```sh
 brew tap scc-digitalhub/digitalhub-cli https://github.com/scc-digitalhub/digitalhub-cli
