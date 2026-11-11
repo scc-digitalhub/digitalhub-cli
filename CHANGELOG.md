@@ -1,3 +1,15 @@
+# [0.16.0](https://github.com/scc-digitalhub/digitalhub-cli/compare/0.15.2...0.16.0) (2026-11-11)
+
+New major relase for the cli, adding support for agents and environment initialization. 
+
+### Features
+
+* **agent:** fetch latest agent templates from GitHub with embedded fallback ([0cde145](https://github.com/scc-digitalhub/digitalhub-cli/commit/0cde1457f7877ca0ebcde0c4b6da96f4b78edd6d))
+* **init:** add --env flag to export config and credentials to .env ([b79b347](https://github.com/scc-digitalhub/digitalhub-cli/commit/b79b34709ecb7999b0d505e5ed3e3f30330d85d4))
+* **init:** decouple --agent template installation from Python venv setup ([fee2d79](https://github.com/scc-digitalhub/digitalhub-cli/commit/fee2d79c3b5c8740e0dddedb4d0ee505089b3ba6))
+* **init:** install embedded agent templates with version-pinned knowledge ([a28353e](https://github.com/scc-digitalhub/digitalhub-cli/commit/a28353ed32fedf750546e6a08c366e44ef367c55))
+* **init:** require --overwrite to update existing .env and agent template files ([3b04880](https://github.com/scc-digitalhub/digitalhub-cli/commit/3b048809d47dc2fef08635dae2c9adb5fb5c3ace))
+
 ## [0.15.2](https://github.com/scc-digitalhub/digitalhub-cli/compare/0.15.1...0.15.2) (2026-08-14)
 
 ### Bug Fixes
