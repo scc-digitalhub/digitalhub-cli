@@ -14,9 +14,15 @@ switch ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture) {
 
 if ($Version -eq "latest") {
     $releaseUrl = "https://github.com/$repository/releases/latest/download"
+    $releaseTag = (Invoke-RestMethod -Uri "https://api.github.com/repos/$repository/releases/latest").tag_name
+    if (-not $releaseTag) {
+        throw "Could not determine the latest dhcli release version"
+    }
+    $checksumVersion = $releaseTag
 } else {
-    $tag = if ($Version.StartsWith("v")) { $Version } else { "v$Version" }
+    $tag = $Version
     $releaseUrl = "https://github.com/$repository/releases/download/$tag"
+    $checksumVersion = $tag
 }
 
 $archive = "dhcli-windows-$architecture.zip"
@@ -27,7 +33,7 @@ try {
     $archivePath = Join-Path $temporaryDirectory $archive
     $checksumsPath = Join-Path $temporaryDirectory "checksums.txt"
     Invoke-WebRequest -Uri "$releaseUrl/$archive" -OutFile $archivePath
-    Invoke-WebRequest -Uri "$releaseUrl/checksums.txt" -OutFile $checksumsPath
+    Invoke-WebRequest -Uri "$releaseUrl/dhcli_${checksumVersion}_checksums.txt" -OutFile $checksumsPath
 
     $checksumLine = Get-Content $checksumsPath | Where-Object { $_ -match "\s+$([regex]::Escape($archive))$" } | Select-Object -First 1
     if (-not $checksumLine -or $checksumLine -notmatch "^([a-fA-F0-9]{64})\s+") {
