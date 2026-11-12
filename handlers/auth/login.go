@@ -119,12 +119,32 @@ func PatLoginHandler(pat string) error {
 		return fmt.Errorf("dhcore_client_id not configured")
 	}
 
+	scopesSupported := viper.GetString(keys.OAuth2ScopesSupported)
+
+	var scopes []string
+	if scopesSupported != "" {
+		split := strings.FieldsFunc(scopesSupported, func(r rune) bool {
+			return r == ',' || r == ' ' || r == '\n' || r == '\t'
+		})
+
+		for _, s := range split {
+			if s != "" {
+				scopes = append(scopes, s)
+			}
+		}
+	} else {
+		scopes = append(scopes, "openid", "profile")
+	}
+
+	scope := strings.Join(scopes, " ")
+
 	v := url.Values{
 		"grant_type":           {"urn:ietf:params:oauth:grant-type:token-exchange"},
 		"client_id":            {clientID},
 		"subject_token":        {pat},
 		"subject_token_type":   {"urn:ietf:params:oauth:token-type:pat"},
 		"requested_token_type": {"urn:ietf:params:oauth:token-type:access_token"},
+		"scope":                {scope},
 	}
 
 	client := utils.GetDebugHTTPClient()
