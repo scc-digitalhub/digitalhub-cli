@@ -5,11 +5,10 @@
 package utils
 
 import (
-	"bytes"
+	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"net/http/httputil"
+	"net/url"
 )
 
 // DebugTransport wraps http.RoundTripper to log requests and responses
@@ -21,34 +20,21 @@ type DebugTransport struct {
 func (t *DebugTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	logger := GetGlobalLogger()
 
-	// Log request
-	reqDump, err := httputil.DumpRequest(req, true)
-	if err != nil {
-		logger.Debug(fmt.Sprintf("Error dumping request: %v", err))
-	} else {
-		logger.Debug(fmt.Sprintf("===== REQUEST =====\n%s", string(reqDump)))
-	}
+	// Headers, query strings and bodies can all contain credentials.
+	logger.Debug(fmt.Sprintf("===== REQUEST =====\n%s %s://%s%s", req.Method, req.URL.Scheme, req.URL.Host, req.URL.EscapedPath()))
 
-	// Execute request
 	resp, err := t.underlying.RoundTrip(req)
 	if err != nil {
-		logger.Debug(fmt.Sprintf("Request error: %v", err))
+		// url.Error embeds the full URL (incl. query), so only log the underlying cause.
+		cause := err
+		var urlErr *url.Error
+		if errors.As(err, &urlErr) {
+			cause = urlErr.Err
+		}
+		logger.Debug(fmt.Sprintf("HTTP request failed: %v", cause))
 		return resp, err
 	}
-
-	// Read response body
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		logger.Debug(fmt.Sprintf("Error reading response body: %v", err))
-		return resp, err
-	}
-
-	// Log response
-	logger.Debug(fmt.Sprintf("===== RESPONSE (Status %d) =====\n%s\n%s", resp.StatusCode, resp.Proto, string(respBody)))
-
-	// Restore response body so SDK can read it
-	resp.Body = io.NopCloser(bytes.NewReader(respBody))
-
+	logger.Debug(fmt.Sprintf("===== RESPONSE =====\n%s %d", resp.Proto, resp.StatusCode))
 	return resp, nil
 }
 
@@ -75,4 +61,9 @@ func EnableDebugMode() *http.Client {
 // GetDebugHTTPClient returns the global debug HTTP client if debug mode is enabled
 func GetDebugHTTPClient() *http.Client {
 	return debugHTTPClient
+}
+
+// SetHTTPClient sets the global HTTP client used by the CLI and SDK (useful for testing or custom transports).
+func SetHTTPClient(client *http.Client) {
+	debugHTTPClient = client
 }

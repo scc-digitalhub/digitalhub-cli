@@ -5,23 +5,38 @@
 package environment
 
 import (
+	"fmt"
 	"log"
 	"os"
 
 	"dhcli/handlers/utils"
 )
 
-func UseHandler(env string) {
-	environmentName := env
-	cfg := utils.LoadIni(false)
-	if !cfg.HasSection(environmentName) {
-		log.Printf("Specified environment does not exist.\n")
-		os.Exit(1)
+func UseEnv(env string) error {
+	if env == "" {
+		return fmt.Errorf("environment name is required")
+	}
+	cfg, err := utils.LoadIniErr(false)
+	if err != nil {
+		return err
+	}
+	if !cfg.HasSection(env) {
+		return fmt.Errorf("specified environment %q does not exist", env)
 	}
 
 	defaultSection := cfg.Section("DEFAULT")
-	defaultSection.Key("current_environment").SetValue(environmentName)
+	defaultSection.Key("current_environment").SetValue(env)
 
-	utils.SaveIni(cfg)
-	log.Printf("Switched default to '%v'.\n", environmentName)
+	if err := utils.SaveIniErr(cfg); err != nil {
+		return err
+	}
+	log.Printf("Switched default to '%v'.\n", env)
+	return nil
+}
+
+func UseHandler(env string) {
+	if err := UseEnv(env); err != nil {
+		log.Printf("%v\n", err)
+		os.Exit(1)
+	}
 }

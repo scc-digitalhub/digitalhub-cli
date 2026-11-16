@@ -99,6 +99,65 @@ func LoginHandler() error {
 	return nil
 }
 
+// BrowserLoginNonStdin performs the OAuth2 PKCE browser flow without reading
+// from os.Stdin or writing to os.Stdout, making it safe for MCP stdio servers.
+func BrowserLoginNonStdin(timeout time.Duration) (string, error) {
+	utils.CheckUpdateEnvironment()
+	if err := utils.CheckApiLevelErr(keys.ApiLevelKey, keys.LoginMin, keys.LoginMax); err != nil {
+		return "", err
+	}
+
+	verifier, challenge := generatePKCE()
+	state := randomString(32)
+
+	if timeout <= 0 {
+		timeout = 120 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	redirectURI, resultCh, stop, err := startAuthCodeServer(ctx, verifier, state, timeout)
+	if err != nil {
+		return "", fmt.Errorf("failed to start local OAuth callback server: %w", err)
+	}
+	defer stop()
+
+	authURL, err := buildAuthURL(challenge, state, redirectURI)
+	if err != nil {
+		return "", err
+	}
+
+	log.Printf("Opening browser for DigitalHub login: %s\n", authURL)
+	if err := utils.OpenBrowser(authURL); err != nil {
+		log.Printf("Could not open browser automatically (%v). Open this URL to authenticate: %s\n", err, authURL)
+	}
+
+	var res OAuthResult
+	select {
+	case result, ok := <-resultCh:
+		if !ok {
+			return authURL, fmt.Errorf("OAuth callback server stopped before authentication completed; if needed, open %s manually", authURL)
+		}
+		res = result
+	case <-ctx.Done():
+		return authURL, fmt.Errorf("OAuth login timed out waiting for callback; open %s manually and retry", authURL)
+	}
+	if res.Err != nil {
+		return authURL, res.Err
+	}
+
+	credKeys, err := utils.ApplyTokenResponse(res.TokenJSON)
+	if err != nil {
+		return authURL, fmt.Errorf("token parse error: %w", err)
+	}
+	credKeys = append(credKeys, keys.CredentialsList)
+	if err := utils.PersistCurrentEnv(credKeys); err != nil {
+		return authURL, fmt.Errorf("persist error: %w", err)
+	}
+
+	return authURL, nil
+}
+
 // ==========================
 // PAT (NON-INTERACTIVE) FLOW
 // ==========================
@@ -108,7 +167,9 @@ func LoginHandler() error {
 // environments such as CI jobs or containers.
 func PatLoginHandler(pat string) error {
 	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(keys.ApiLevelKey, keys.LoginMin, keys.LoginMax)
+	if err := utils.CheckApiLevelErr(keys.ApiLevelKey, keys.LoginMin, keys.LoginMax); err != nil {
+		return err
+	}
 
 	tokenURL := viper.GetString(keys.OAuth2TokenEndpoint)
 	if tokenURL == "" {
@@ -158,7 +219,10 @@ func PatLoginHandler(pat string) error {
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read token exchange response: %w", err)
+	}
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("token exchange error: %s - %s", resp.Status, string(body))
 	}
@@ -169,7 +233,7 @@ func PatLoginHandler(pat string) error {
 	}
 	credKeys = append(credKeys, keys.CredentialsList)
 	if err := utils.PersistCurrentEnv(credKeys); err != nil {
-		logger.Error(fmt.Sprintf("persist error: %v", err))
+		return fmt.Errorf("persist exchanged credentials: %w", err)
 	}
 
 	logger.Success("Login successful (PAT token exchange)")

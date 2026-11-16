@@ -7,6 +7,7 @@ package utils
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -34,6 +35,9 @@ func SetupViperEnv() {
 func PersistToIni(iniPath, envName string, additionalKeys []string) error {
 	cfg, err := ini.Load(iniPath)
 	if err != nil {
+		if !os.IsNotExist(err) {
+			return fmt.Errorf("read ini file: %w", err)
+		}
 		cfg = ini.Empty()
 		cfg.Section("DEFAULT").Key(keys.CurrentEnvironment).SetValue(envName)
 	}
@@ -129,6 +133,9 @@ func RegisterIniCfgWithViper(optionalEnv ...string) error {
 
 	cfg, err := ini.Load(iniPath)
 	if err != nil {
+		if !os.IsNotExist(err) {
+			return fmt.Errorf("read ini file: %w", err)
+		}
 		logger.Warn("INI not found; Get information from Env variables")
 		envName, bootErr := bootstrapFromEnv(iniPath, optionalEnv...)
 		if bootErr != nil {
@@ -149,7 +156,7 @@ func RegisterIniCfgWithViper(optionalEnv ...string) error {
 
 	// active env: --env > DEFAULT.current_environment > dhcore_name > default
 	env := resolveEnvName(optionalEnv...)
-	if env == "default" {
+	if len(optionalEnv) == 0 || optionalEnv[0] == "" || strings.EqualFold(optionalEnv[0], "null") {
 		if v := cfg.Section("DEFAULT").Key("current_environment").String(); v != "" {
 			env = v
 		}
@@ -160,6 +167,21 @@ func RegisterIniCfgWithViper(optionalEnv ...string) error {
 	}
 	viper.Set(keys.CurrentEnvironment, env)
 	return nil
+}
+
+// ActivateEnvironment discards overrides from the previously active environment.
+func ActivateEnvironment(env string) error {
+	viper.Reset()
+	if env != "" && !strings.EqualFold(env, "null") {
+		cfg, err := ini.Load(GetIniPath())
+		if err == nil && !cfg.HasSection(env) {
+			return fmt.Errorf("environment %q does not exist", env)
+		}
+		if err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("read ini file: %w", err)
+		}
+	}
+	return RegisterIniCfgWithViper(env)
 }
 
 // bootstrapFromEnv creates a new INI by fetching .well-known endpoints when no

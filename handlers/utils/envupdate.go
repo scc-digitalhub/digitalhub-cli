@@ -5,6 +5,7 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -20,6 +21,10 @@ import (
 // - older than TTL                        -> update
 // - otherwise                             -> skip (fresh)
 func CheckUpdateEnvironment() {
+	_ = CheckUpdateEnvironmentContext(context.Background())
+}
+
+func CheckUpdateEnvironmentContext(ctx context.Context) error {
 	const key = keys.UpdatedEnvKey
 
 	endpoint := viper.GetString(keys.DhCoreEndpoint)
@@ -28,8 +33,8 @@ func CheckUpdateEnvironment() {
 	// Partial config: endpoint known but well-known endpoints never fetched.
 	if endpoint != "" && apiLevel == "" {
 		logger.Warn("Config has endpoint but no api_level — bootstrapping from well-known.")
-		updateEnvironment()
-		return
+		updateEnvironment(ctx)
+		return ctx.Err()
 	}
 
 	val := viper.GetString(key)
@@ -38,15 +43,15 @@ func CheckUpdateEnvironment() {
 
 	if !isSet || val == "" {
 		logger.Warn("Update: no timestamp.")
-		updateEnvironment()
-		return
+		updateEnvironment(ctx)
+		return ctx.Err()
 	}
 
 	t, err := time.Parse(time.RFC3339, val)
 	if err != nil {
 		logger.Warn(fmt.Sprintf("Update: invalid timestamp (%v).", err))
-		updateEnvironment()
-		return
+		updateEnvironment(ctx)
+		return ctx.Err()
 	}
 
 	now := time.Now().UTC()
@@ -55,15 +60,16 @@ func CheckUpdateEnvironment() {
 
 	if age >= ttl {
 		logger.Step(fmt.Sprintf("Update: outdated (age %s ≥ TTL %s).", age, ttl))
-		updateEnvironment()
-		return
+		updateEnvironment(ctx)
+		return ctx.Err()
 	}
 
 	logger.Step(fmt.Sprintf("Fresh: age %s < TTL %s.", age, ttl))
+	return ctx.Err()
 }
 
 // Fetch well-known, update Viper, bump timestamp, persist allowlisted keys.
-func updateEnvironment() {
+func updateEnvironment(ctx context.Context) {
 	logger.Info("Updating environment…")
 	baseEndpoint := viper.GetString(keys.DhCoreEndpoint)
 	if baseEndpoint == "" {
@@ -73,7 +79,7 @@ func updateEnvironment() {
 
 	var additionalKeys []string
 
-	cfg, err := FetchConfig(baseEndpoint + "/.well-known/configuration")
+	cfg, err := FetchConfigContext(ctx, baseEndpoint+"/.well-known/configuration")
 	if err != nil {
 		logger.Error(fmt.Sprintf("Config fetch failed: %v", err))
 		return
@@ -83,7 +89,7 @@ func updateEnvironment() {
 		additionalKeys = append(additionalKeys, k)
 	}
 
-	oidc, err := FetchConfig(baseEndpoint + "/.well-known/openid-configuration")
+	oidc, err := FetchConfigContext(ctx, baseEndpoint+"/.well-known/openid-configuration")
 	if err != nil {
 		logger.Error(fmt.Sprintf("OpenID fetch failed: %v", err))
 		return

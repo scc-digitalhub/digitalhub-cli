@@ -7,6 +7,7 @@ package utils
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -50,22 +51,37 @@ func GetIniPath() string {
 }
 
 func LoadIni(createOnMissing bool) *ini.File {
-	cfg, err := ini.Load(GetIniPath())
+	cfg, err := LoadIniErr(createOnMissing)
 	if err != nil {
-		if !createOnMissing {
-			logger.Error(fmt.Sprintf("Failed to read ini file: %v", err))
-			os.Exit(1)
-		}
-		return ini.Empty()
+		logger.Error(fmt.Sprintf("Failed to read ini file: %v", err))
+		os.Exit(1)
 	}
 	return cfg
 }
 
+func LoadIniErr(createOnMissing bool) (*ini.File, error) {
+	cfg, err := ini.Load(GetIniPath())
+	if createOnMissing && os.IsNotExist(err) {
+		return ini.Empty(), nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read ini file: %w", err)
+	}
+	return cfg, nil
+}
+
 func SaveIni(cfg *ini.File) {
-	if err := cfg.SaveTo(GetIniPath()); err != nil {
+	if err := SaveIniErr(cfg); err != nil {
 		logger.Error(fmt.Sprintf("Failed to update ini file: %v", err))
 		os.Exit(1)
 	}
+}
+
+func SaveIniErr(cfg *ini.File) error {
+	if err := cfg.SaveTo(GetIniPath()); err != nil {
+		return fmt.Errorf("update ini file: %w", err)
+	}
+	return nil
 }
 
 func ReflectValue(v interface{}) string {
@@ -106,15 +122,23 @@ func TranslateFormat(format string) string {
 	}
 }
 
-func TranslateEndpoint(resource string) string {
+func ResolveEndpoint(resource string) (string, error) {
+	trimmed := strings.TrimSpace(strings.ToLower(resource))
 	for key, val := range keys.Resources {
-		if key == resource || slices.Contains(val, resource) {
-			return key
+		if key == trimmed || slices.Contains(val, trimmed) {
+			return key, nil
 		}
 	}
-	logger.Error(fmt.Sprintf("Resource '%v' is not supported.", resource))
-	os.Exit(1)
-	return ""
+	return "", fmt.Errorf("resource '%v' is not supported", resource)
+}
+
+func TranslateEndpoint(resource string) string {
+	endpoint, err := ResolveEndpoint(resource)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Resource '%v' is not supported.", resource))
+		os.Exit(1)
+	}
+	return endpoint
 }
 
 func GetFirstIfList(m map[string]interface{}) (map[string]interface{}, error) {
@@ -165,19 +189,17 @@ func PrintCommentForYaml(args ...string) {
 	}
 }
 
-func CheckApiLevel(apiLevelKey string, min, max int) {
+func CheckApiLevelErr(apiLevelKey string, min, max int) error {
 	logger.Info(fmt.Sprintf("Checking API level for %v command...", viper.GetString(apiLevelKey)))
 
 	apiLevelStr := viper.GetString(apiLevelKey)
 	if apiLevelStr == "" {
-		logger.Error("Unable to check compatibility, environment does not specify API level.")
-		os.Exit(1)
+		return errors.New("unable to check compatibility, environment does not specify API level")
 	}
 
 	apiLevel, err := strconv.Atoi(apiLevelStr)
 	if err != nil {
-		logger.Error(fmt.Sprintf("API level %v is not an integer.", apiLevelStr))
-		os.Exit(1)
+		return fmt.Errorf("API level %v is not an integer", apiLevelStr)
 	}
 
 	inRange := true
@@ -195,7 +217,14 @@ func CheckApiLevel(apiLevelKey string, min, max int) {
 		if max != 0 {
 			interval = fmt.Sprintf("%s <= %v", interval, max)
 		}
-		logger.Error(fmt.Sprintf("API level %v is not within the supported interval: %v", apiLevel, interval))
+		return fmt.Errorf("API level %v is not within the supported interval: %v", apiLevel, interval)
+	}
+	return nil
+}
+
+func CheckApiLevel(apiLevelKey string, min, max int) {
+	if err := CheckApiLevelErr(apiLevelKey, min, max); err != nil {
+		logger.Error(err.Error())
 		os.Exit(1)
 	}
 }
@@ -210,13 +239,21 @@ func GetStringValue(m map[string]interface{}, key string) string {
 }
 
 func FetchConfig(configURL string) (map[string]interface{}, error) {
+	return FetchConfigContext(context.Background(), configURL)
+}
+
+func FetchConfigContext(ctx context.Context, configURL string) (map[string]interface{}, error) {
 	// Use debug HTTP client if available, otherwise use default
 	client := GetDebugHTTPClient()
 	if client == nil {
 		client = &http.Client{}
 	}
 
-	resp, err := client.Get(configURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, configURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
