@@ -5,6 +5,7 @@
 package adapter
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -38,7 +39,6 @@ func MetricsHandler(env string, output string, project string, scope string, id 
 
 	baseURL := strings.TrimRight(viper.GetString(keys.DhCoreEndpoint), "/")
 	apiVersion := viper.GetString(keys.DhCoreApiVersion)
-	accessToken := viper.GetString(keys.DhCoreAccessToken)
 
 	var metricsURL string
 	switch scope {
@@ -68,7 +68,7 @@ func MetricsHandler(env string, output string, project string, scope string, id 
 
 	first := true
 	for {
-		body, err := fetchMetrics(httpClient, metricsURL, accessToken)
+		body, err := fetchMetrics(context.Background(), httpClient, metricsURL)
 		if err != nil {
 			return err
 		}
@@ -120,14 +120,12 @@ func MetricsHandler(env string, output string, project string, scope string, id 
 	}
 }
 
-func fetchMetrics(httpClient *http.Client, metricsURL string, accessToken string) ([]byte, error) {
-	req, err := http.NewRequest(http.MethodGet, metricsURL, nil)
+func fetchMetrics(ctx context.Context, httpClient *http.Client, metricsURL string) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, metricsURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	if accessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+accessToken)
-	}
+	utils.ApplyHTTPAuth(req)
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := httpClient.Do(req)
