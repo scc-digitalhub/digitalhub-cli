@@ -16,20 +16,11 @@ import (
 
 	runsvc "github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/services/run"
 
-	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
-
-	"dhcli/handlers/utils"
 	"dhcli/keys"
-
-	"github.com/spf13/viper"
 )
 
 func LogHandler(env string, project string, container string, follow bool, id string) error {
-	endpoint := utils.TranslateEndpoint("run")
-
-	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(keys.ApiLevelKey, keys.LogMin, keys.LogMax)
-	if err := utils.CheckCredentials(); err != nil {
+	if err := prepareEnvironment(context.Background(), env, keys.LogMin, keys.LogMax); err != nil {
 		return err
 	}
 
@@ -38,14 +29,7 @@ func LogHandler(env string, project string, container string, follow bool, id st
 	}
 
 	// Bridge viper -> sdk config
-	cfg := config.Config{
-		Core: config.CoreConfig{
-			BaseURL:     viper.GetString(keys.DhCoreEndpoint),
-			APIVersion:  viper.GetString(keys.DhCoreApiVersion),
-			AccessToken: viper.GetString(keys.DhCoreAccessToken),
-		},
-		HTTPClient: utils.GetDebugHTTPClient(),
-	}
+	cfg := NewCoreConfig()
 
 	ctx := context.Background()
 
@@ -62,7 +46,7 @@ func LogHandler(env string, project string, container string, follow bool, id st
 
 	// Loop requests if following
 	for {
-		containerLog, err := getContainerLogAdapter(ctx, svc, project, endpoint, id, container)
+		containerLog, err := getContainerLogWithFallback(ctx, svc, project, id, container)
 		if err != nil {
 			return err
 		}

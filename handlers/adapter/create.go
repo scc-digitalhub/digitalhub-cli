@@ -7,73 +7,24 @@ package adapter
 import (
 	"context"
 	"log"
-	"os"
-
-	"dhcli/handlers/utils"
-	"dhcli/keys"
-
-	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
-
-	crudsvc "github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/services/crud"
-
-	"github.com/spf13/viper"
 )
 
 func CreateHandler(env string, project string, name string, filePath string, resetID bool, resource string) error {
-	endpoint := utils.TranslateEndpoint(resource)
-
-	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(keys.ApiLevelKey, keys.CreateMin, keys.CreateMax)
-	if err := utils.CheckCredentials(); err != nil {
-		return err
-	}
-
-	if endpoint != "projects" {
-		if project == "" {
-			log.Println("Project is mandatory when performing this operation on resources other than projects.")
-			os.Exit(1)
-		}
-		if filePath == "" {
-			log.Println("Input file not specified.")
-			os.Exit(1)
-		}
-	} else if filePath == "" && name == "" {
-		log.Println("Must provide either an input file or a name when creating a project.")
-		os.Exit(1)
-	}
-
-	// Adapter: viper -> sdk.Config
-	cfg := config.Config{
-		Core: config.CoreConfig{
-			BaseURL:     viper.GetString(keys.DhCoreEndpoint),
-			APIVersion:  viper.GetString(keys.DhCoreApiVersion),
-			AccessToken: viper.GetString(keys.DhCoreAccessToken),
-		},
-		HTTPClient: utils.GetDebugHTTPClient(),
-	}
-
-	// ctx per il CrudService e per la Create
-	ctx := context.Background()
-
-	svc, err := crudsvc.NewCrudService(ctx, cfg)
-	if err != nil {
-		return err
-	}
-
-	req := crudsvc.CreateRequest{
-		ResourceRequest: crudsvc.ResourceRequest{
-			Project:  project,
-			Resource: endpoint,
-		},
+	return CreateWithOptionsHandler(CreateOptions{
+		Env:      env,
+		Project:  project,
 		Name:     name,
 		FilePath: filePath,
 		ResetID:  resetID,
-	}
+		Resource: resource,
+	})
+}
 
-	if err := svc.Create(ctx, req); err != nil {
+func CreateWithOptionsHandler(opts CreateOptions) error {
+	respBody, err := CreateResource(context.Background(), opts)
+	if err != nil {
 		return err
 	}
-
 	log.Println("Created successfully.")
-	return nil
+	return PrintMutationOutput(respBody, opts.Output, "Created successfully.")
 }

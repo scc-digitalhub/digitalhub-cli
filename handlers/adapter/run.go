@@ -6,85 +6,25 @@ package adapter
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"log"
-	"os"
-
-	sdk "github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/services/run"
-
-	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
-
-	"dhcli/handlers/utils"
-	"dhcli/keys"
-
-	"github.com/spf13/viper"
-	"sigs.k8s.io/yaml"
 )
 
 func RunHandler(env string, project string, functionName string, functionId string, filePath string, task string) error {
-	endpoint := utils.TranslateEndpoint("run")
+	return RunWithOptionsHandler(RunOptions{
+		Env:      env,
+		Project:  project,
+		Name:     functionName,
+		ID:       functionId,
+		FilePath: filePath,
+		Task:     task,
+	})
+}
 
-	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(keys.ApiLevelKey, keys.CreateMin, keys.CreateMax)
-	if err := utils.CheckCredentials(); err != nil {
-		return err
-	}
-
-	if project == "" {
-		return errors.New("project not specified")
-	}
-
-	var inputSpec map[string]interface{}
-	if filePath != "" {
-		file, err := os.ReadFile(filePath)
-		if err != nil {
-			return err
-		}
-		jsonBytes, err := yaml.YAMLToJSON(file)
-		if err != nil {
-			return err
-		}
-		var m map[string]interface{}
-		if err := json.Unmarshal(jsonBytes, &m); err != nil {
-			return err
-		}
-		if s, ok := m["spec"].(map[string]interface{}); ok {
-			inputSpec = s
-		} else {
-			inputSpec = map[string]interface{}{}
-		}
-	} else {
-		inputSpec = map[string]interface{}{}
-	}
-
-	cfg := config.Config{
-		Core: config.CoreConfig{
-			BaseURL:     viper.GetString(keys.DhCoreEndpoint),
-			APIVersion:  viper.GetString(keys.DhCoreApiVersion),
-			AccessToken: viper.GetString(keys.DhCoreAccessToken),
-		},
-		HTTPClient: utils.GetDebugHTTPClient(),
-	}
-
-	svc, err := sdk.NewRunService(context.Background(), cfg)
+func RunWithOptionsHandler(opts RunOptions) error {
+	respBody, err := ExecuteRun(context.Background(), opts)
 	if err != nil {
 		return err
 	}
-
-	req := sdk.RunRequest{
-		Project:              project,
-		TaskKind:             task,
-		FunctionID:           functionId,
-		FunctionName:         functionName,
-		InputSpec:            inputSpec,
-		ResolvedRunsEndpoint: endpoint,
-	}
-
-	if err := svc.Run(context.Background(), req); err != nil {
-		return err
-	}
-
 	log.Println("Created successfully.")
-	return nil
+	return PrintMutationOutput(respBody, opts.Output, "Created successfully.")
 }

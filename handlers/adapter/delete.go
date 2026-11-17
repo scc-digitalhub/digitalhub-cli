@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno
+// SPDX-FileCopyrightText: © 2025 DSLab - Fondazione Bruno Kessler
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -6,9 +6,10 @@ package adapter
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
-	"os"
+	"net/url"
 
 	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
 
@@ -16,28 +17,28 @@ import (
 	"dhcli/keys"
 
 	crudsvc "github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/services/crud"
-
-	"github.com/spf13/viper"
 )
 
 func DeleteHandler(env string, project string, name string, confirm bool, cascade bool, resource string, id string) error {
-	endpoint := utils.TranslateEndpoint(resource)
+	return DeleteResource(context.Background(), env, project, name, confirm, cascade, resource, id)
+}
 
-	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(keys.ApiLevelKey, keys.DeleteMin, keys.DeleteMax)
-	if err := utils.CheckCredentials(); err != nil {
+func DeleteResource(ctx context.Context, env string, project string, name string, confirm bool, cascade bool, resource string, id string) error {
+	endpoint, err := utils.ResolveEndpoint(resource)
+	if err != nil {
 		return err
 	}
 
-	// Warning per i project senza cascade (comportamento originale)
+	if err := prepareEnvironment(ctx, env, keys.DeleteMin, keys.DeleteMax); err != nil {
+		return err
+	}
+
 	if endpoint == "projects" && !cascade {
 		log.Println("WARNING: You are deleting a project without the cascade (-c) flag. Resources belonging to the project will not be deleted.")
 	}
 
-	// Validazioni
 	if endpoint != "projects" && project == "" {
-		log.Println("Project is mandatory when performing this operation on resources other than projects.")
-		os.Exit(1)
+		return errors.New("project is mandatory when performing this operation on resources other than projects")
 	}
 
 	confirmationMessage := fmt.Sprintf("Resource %v (%v) will be deleted, proceed? Y/n", id, endpoint)
@@ -45,11 +46,9 @@ func DeleteHandler(env string, project string, name string, confirm bool, cascad
 	delID := id
 	delName := name
 
-	// Caso: ID non fornito
 	if delID == "" {
 		if delName == "" {
-			log.Println("You must specify id or name.")
-			os.Exit(1)
+			return errors.New("you must specify id or name")
 		}
 
 		if endpoint != "projects" {
@@ -62,48 +61,34 @@ func DeleteHandler(env string, project string, name string, confirm bool, cascad
 				"Project '%v' will be deleted, proceed? Y/n",
 				delName,
 			)
-
-			// Comportamento storico: per i projects → ID = name
 			delID = delName
 			delName = ""
 		}
 	}
 
-	// Ask for confirmation
 	if !confirm {
 		utils.WaitForConfirmation(confirmationMessage)
 	}
 
-	// Adapter: viper -> sdk.Config
-	cfg := config.Config{
-		Core: config.CoreConfig{
-			BaseURL:     viper.GetString(keys.DhCoreEndpoint),
-			APIVersion:  viper.GetString(keys.DhCoreApiVersion),
-			AccessToken: viper.GetString(keys.DhCoreAccessToken),
-		},
-		HTTPClient: utils.GetDebugHTTPClient(),
-	}
-
-	ctx := context.Background()
-
-	// Inizializza CrudService
-	crud, err := crudsvc.NewCrudService(ctx, cfg)
+	cfg := NewCoreConfig()
+	crud, err := crudsvc.NewCrudService(ctx, config.Config{
+		Core:       cfg.Core,
+		HTTPClient: cfg.HTTPClient,
+	})
 	if err != nil {
 		return fmt.Errorf("sdk init failed: %w", err)
 	}
 
-	// Request standardizzata
 	req := crudsvc.DeleteRequest{
 		ResourceRequest: crudsvc.ResourceRequest{
 			Project:  project,
 			Resource: endpoint,
 		},
 		ID:      delID,
-		Name:    delName,
+		Name:    url.QueryEscape(delName),
 		Cascade: cascade,
 	}
 
-	// Esegui delete tramite CrudService
 	if err := crud.Delete(ctx, req); err != nil {
 		return err
 	}
