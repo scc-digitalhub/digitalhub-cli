@@ -9,6 +9,94 @@ The executable can be downloaded in the _Releases_ page.
 
 For a full overview of available commands, please check [the documentation](https://scc-digitalhub.github.io/docs/0.11/cli/commands/).
 
+## Commands
+
+Run `dhcli --help` to see the available commands, or `dhcli <command> --help` for
+command-specific usage and flags. The commands below operate on the selected
+environment unless noted otherwise.
+
+| Command | Description |
+| --- | --- |
+| `config` | Show the selected environment's non-secret configuration. Use the provider filter to show only one provider's settings. |
+| `credentials` | Show credentials for the selected environment, optionally filtered by provider. **Output can contain secrets; handle it securely.** |
+| `create <resource>` | Create a resource from a YAML definition. Projects can instead be created with a name; use `--reset-id` when the server must assign a new resource ID. |
+| `delete <resource> [<id>]` | Delete a resource by ID, or use `--name` to target all versions by name. Confirmation is requested unless skipped; project deletion can optionally cascade to related resources. |
+| `download <resource> [<id>]` | Download a resource's S3 content to a file or directory. Select by ID or name, and choose the destination and optional output format. |
+| `events <resource> [id]` | Subscribe to real-time push events for a resource type, optionally scoped to an ID. Project and name filters are applied client-side; press Ctrl+C to disconnect. |
+| `extension <action> <parent-resource> <parent-id> [id]` | Create, update, delete, retrieve, or list extensions attached to a project or resource. Actions that target one extension require its ID; create and update require a YAML file. IDs from YAML are retained unless reset, so reusing another parent's ID may affect that extension. Core replaces the complete extension list, so concurrent updates can overwrite one another. |
+| `get <resource> [<id>]` | Retrieve a resource by ID or name. If no ID is supplied, use `--name` to retrieve the latest version; `--out` selects the output format. |
+| `init [path]` | Initialize a Python virtual environment at `path`; with `--env`, write environment configuration and credentials to `.env`; with `--agent`, install agent templates in the current directory. These modes have different flags and cannot be combined. |
+| `list <resource>` | List resources, optionally filtering by name, kind, or state. `--name` lists all versions matching that name. |
+| `list-env` | List the environments registered in the CLI configuration. |
+| `log <id>` | Read logs for a run. Supply its project; use `--container` to select a container and `--follow` to keep streaming logs. |
+| `login` | Authenticate to an environment using OAuth2 PKCE, or provide a personal access token for a non-interactive login. |
+| `metrics` | Read instance-wide metrics. Use `metrics project [name]` or `metrics run <id>` to scope metrics to a project or run. `--follow` refreshes every 15 seconds. |
+| `port-forward [run-id]` | Start a local HTTP forward to a running service. Resolve the run by ID, function name, or run name; the project is required. |
+| `proxy [run-id]` | Open a browser with authenticated access to a running service. Resolve the run by ID, function name, or run name; the project is required. Unlike port forwarding, browser traffic goes directly to the remote service. |
+| `refresh` | Refresh the access token for the selected environment. |
+| `register <endpoint>` | Register a Core endpoint as an environment. Use `--env` to name/select the environment and `--force` to replace an existing environment with a different endpoint. |
+| `remove <environment>` | Remove a registered environment from the CLI configuration. |
+| `run <task>` | Run a function/task in a project. Identify the function by name or ID, or provide its YAML definition. |
+| `services` | List serving runs in a project. Filter by name, kind, or state; `--name` lists all versions. |
+| `stop <id>` | Stop a run in the specified project. |
+| `update <resource> <id>` | Update a resource from a YAML definition. The ID identifies the resource to update. |
+| `upload <resource> [<id>]` | Upload a file or directory to S3. Provide an ID to update an existing resource; omit it to create a new artifact, for which a name is required. |
+| `use <environment>` | Set the default registered environment used by subsequent commands. |
+
+### Arguments and parameters
+
+In command syntax, `<value>` is required and `[value]` is optional. `resource`
+is the Core resource type; `id` identifies a resource or run. Commands acting on
+resources inside a project generally require `--project` (`-p`), unless the
+resource is a project or the project name is set in the `PROJECT_NAME`
+environment variable.
+`--env` (`-e`) selects a registered environment on commands that support it.
+
+The following command-specific arguments and flags are available:
+
+| Command | Arguments and flags |
+| --- | --- |
+| `config` | `-e, --env`: environment; `-o, --out`: output format (`short`, `json`, or `yaml`); `-p, --provider`: filter settings by provider (for example `dhcore`, `trino`, or `s3`). |
+| `credentials` | `-e, --env`: environment; `-o, --out`: output format (`short`, `json`, or `yaml`); `-p, --provider`: filter credentials by provider. |
+| `create <resource>` | `-e, --env`: environment; `-p, --project`: parent project for non-project resources; `-n, --name`: project name; `-f, --file`: YAML resource definition (required except when creating a project by name); `-r, --reset-id`: remove the YAML ID so Core assigns a new one. |
+| `delete <resource> [<id>]` | `-e, --env`: environment; `-p, --project`: project for non-project resources; `-n, --name`: delete by name, including all versions; `-y, --confirm`: skip confirmation; `-c, --cascade`: also delete related resources when deleting a project. Supply either an ID or a name. |
+| `download <resource> [<id>]` | `-e, --env`: environment; `-p, --project`: project for non-project resources; `-n, --name`: select the latest version by name; `-d, --destination`: output file or directory; `-o, --out`: output format (`short`, `json`, or `yaml`); `-v, --verbose`: show verbose progress/logging. |
+| `events <resource> [id]` | `-e, --env`: environment; `-o, --out`: event format (`short`, `json`, or `yaml`); `-p, --project`: filter events by project; `-n, --name`: filter by resource name. |
+| `extension <action> <parent-resource> <parent-id> [id]` | `action` is `create`, `update`, `delete`, `get`, or `list`. `parent-resource` can be `project`, `artifact`, `dataitem`, `function`, `model`, or `workflow`; `parent-id` is its identifier. Non-project parents require `-p, --project`. `get`, `update`, and `delete` require the final extension `id`. `-e, --env` selects an environment; `-f, --file` supplies the YAML definition for create/update; `-o, --out` formats get/list output (`yaml` by default; `short` or `json` also supported); `-r, --reset-id` removes the YAML ID on create so Core assigns one. Without `--reset-id`, a provided ID is retained. Updates retain the target ID and replace that extension's definition. |
+| `get <resource> [<id>]` | `-e, --env`: environment; `-p, --project`: project for non-project resources; `-n, --name`: retrieve the latest version by name; `-o, --out`: output format (`short`, `json`, or `yaml`). |
+| `init [path]` | `path`: virtual-environment location. `-e, --environment`: registered environment to use; `--pre`: include pre-release packages; `--env`: write configuration and credentials to `.env` instead of creating a virtual environment; `--agent`: install agent templates; `--overwrite`: overwrite/merge existing files for `--env` or `--agent`. `--env` and `--agent` do not accept `path`; `--overwrite` is valid only with those modes. |
+| `list <resource>` | `-e, --env`: environment; `-p, --project`: project for non-project resources; `-o, --out`: output format (`short` by default; `json` or `yaml` also supported); `-n, --name`: list all versions for a name; `-k, --kind` and `-s, --state`: filter by kind and state. |
+| `log <id>` | `id`: run ID; `-e, --env`: environment; `-p, --project`: project; `-c, --container`: container ID; `-f, --follow`: keep streaming/refreshing logs. |
+| `login` | `-e, --env`: environment; `--pat`: personal access token for non-interactive authentication. The token can also be supplied through `DHCORE_PERSONAL_ACCESS_TOKEN` or `DHCORE_PAT`. |
+| `metrics` | `-e, --env`: environment; `-o, --out`: output format (`short`, `json`, or `yaml`); `-f, --follow`: refresh metrics every 15 seconds. |
+| `metrics project [name]` | `name`: project name (optional if provided with `-p`); `-e, --env`: environment; `-p, --project`: project name; `-o, --out`: output format; `-f, --follow`: refresh every 15 seconds. |
+| `metrics run <id>` | `id`: run ID; `-e, --env`: environment; `-p, --project`: project name (required); `-o, --out`: output format; `-f, --follow`: refresh every 15 seconds. |
+| `port-forward [run-id]` | `run-id`: run ID, or identify the run with `-f, --function` or `-n, --name`; one of these selectors is required. `-e, --env`: environment; `-p, --project`: required project; `-l, --local-port`: local listening port (random if omitted). |
+| `proxy [run-id]` | `run-id`: run ID, or identify the run with `-f, --function` or `-n, --name`; one of these selectors is required. `-e, --env`: environment; `-p, --project`: required project. |
+| `refresh` | `-e, --env`: environment whose access token should be refreshed. |
+| `register <endpoint>` | `endpoint`: Core instance URL; `-e, --env`: environment name; `-f, --force`: replace an existing environment if its endpoint differs. |
+| `run <task>` | `task`: task/action to run; `-e, --env`: environment; `-p, --project`: project; `-n, --fn-name`: function name; `-i, --fn-id`: function ID; `-f, --file`: YAML function/resource definition. Use a function name or ID to select the function. |
+| `services` | `-e, --env`: environment; `-p, --project`: project (required); `-o, --out`: output format (`short` by default; `json` or `yaml` also supported); `-n, --name`: list all versions of a service; `-k, --kind` and `-s, --state`: filter by kind and state. |
+| `stop <id>` | `id`: run ID; `-e, --env`: environment; `-p, --project`: project. |
+| `update <resource> <id>` | `resource` and `id`: resource type and target ID; `-e, --env`: environment; `-p, --project`: project for non-project resources; `-f, --file`: YAML definition to apply (required). |
+| `upload <resource> [<id>]` | `resource` and optional `id`: resource type and existing resource ID; `-e, --env`: environment; `-p, --project`: project for non-project resources; `-f, --file`: required file or directory to upload; `-n, --name`: required when creating a new artifact without an ID; `-v, --verbose`: show verbose progress/logging. |
+| `use <environment>` | `environment`: name of the registered environment to make the default. |
+| `remove <environment>` | `environment`: name of the registered environment to remove. |
+| `list-env` | No arguments or command-specific flags. |
+
+For example, list a project's extensions, create an extension for a data item,
+or retrieve one by its ID:
+
+```sh
+dhcli extension list project my-project
+dhcli extension create -p my-project -f extension.yaml dataitem my-dataitem
+dhcli extension get -p my-project dataitem my-dataitem extension-id
+```
+
+Root flags `-v, --verbose` enable verbose output and `--debug` enables HTTP
+debug logging. Use `--help` on any command for the flags applicable to that
+command.
+
 ## Quick start
 
 Download and unpack the corresponding archive from the [GitHub release page](https://github.com/scc-digitalhub/digitalhub-cli/releases). Run the `dhcli` executable.

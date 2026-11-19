@@ -57,12 +57,14 @@ const (
 
 // Resources maps plural resource names to their accepted aliases.
 var Resources = map[string][]string{
-	"artifacts": {"artifact"},
-	"dataitems": {"dataitem"},
-	"functions": {"function", "fn"},
-	"models":    {"model"},
-	"projects":  {"project"},
-	"runs":      {"run"},
-	"workflows": {"workflow"},
-	"logs":      {"log"},
+	"artifacts":       {"artifact"},
+	"dataitems":       {"dataitem"},
+	"functions":       {"function", "fn"},
+	"models":          {"model"},
+	"projects":        {"project"},
+	"runs":            {"run"},
+	"workflows":       {"workflow"},
+	"logs":            {"log"},
+	"extensions":      {"extension"},
+	"containerimages": {"containerimage"},
 }
