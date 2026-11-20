@@ -4,6 +4,7 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -37,6 +38,27 @@ func detectAuthMode() authMode {
 	return authModePublic
 }
 
+// CurrentHTTPAuth returns only the credentials for the selected authentication mode.
+func CurrentHTTPAuth() (token, user, password string) {
+	switch detectAuthMode() {
+	case authModeOAuth2:
+		return viper.GetString(keys.DhCoreAccessToken), "", ""
+	case authModeBasic:
+		return "", viper.GetString(keys.DhCoreUser), viper.GetString(keys.DhCorePassword)
+	default:
+		return "", "", ""
+	}
+}
+
+func ApplyHTTPAuth(req *http.Request) {
+	token, user, password := CurrentHTTPAuth()
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	} else if user != "" {
+		req.SetBasicAuth(user, password)
+	}
+}
+
 // CheckCredentials probes GET /api/auth to validate the current credentials.
 //
 // Three auth modes are supported:
@@ -52,6 +74,10 @@ func detectAuthMode() authMode {
 // Any non-401 response (including network errors) is treated as "proceed" so
 // that transient server issues do not block the caller.
 func CheckCredentials() error {
+	return CheckCredentialsContext(context.Background())
+}
+
+func CheckCredentialsContext(ctx context.Context) error {
 	endpoint := viper.GetString(keys.DhCoreEndpoint)
 	if endpoint == "" {
 		return nil
@@ -66,7 +92,7 @@ func CheckCredentials() error {
 		client = &http.Client{Timeout: 10 * time.Second}
 	}
 
-	req, err := http.NewRequest(http.MethodGet, authURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, authURL, nil)
 	if err != nil {
 		return nil // misconfigured URL; let the real call fail
 	}
@@ -80,7 +106,7 @@ func CheckCredentials() error {
 			if expiresAt, err := time.Parse(time.RFC3339, expiresAtStr); err == nil {
 				if time.Until(expiresAt) < 5*time.Minute {
 					logger.Info("Token already expired or expires soon, refresh ...")
-					return DoRefresh()
+					return DoRefreshContext(ctx)
 				}
 			}
 		}
@@ -95,6 +121,9 @@ func CheckCredentials() error {
 
 	resp, err := client.Do(req)
 	if err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		return nil // network error; let the real call fail
 	}
 	defer resp.Body.Close()
@@ -106,7 +135,7 @@ func CheckCredentials() error {
 
 	switch mode {
 	case authModeOAuth2:
-		return DoRefresh()
+		return DoRefreshContext(ctx)
 	case authModeBasic:
 		return fmt.Errorf("authentication failed: invalid username or password")
 	default: // authModePublic
@@ -114,9 +143,36 @@ func CheckCredentials() error {
 	}
 }
 
+// AuthRequired reports whether the Core auth probe rejects unauthenticated access.
+func AuthRequired(ctx context.Context) (bool, error) {
+	endpoint := strings.TrimRight(viper.GetString(keys.DhCoreEndpoint), "/")
+	if endpoint == "" {
+		return false, fmt.Errorf("DigitalHub Core endpoint is not configured")
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint+"/api/auth", nil)
+	if err != nil {
+		return false, fmt.Errorf("create authentication probe: %w", err)
+	}
+	client := GetDebugHTTPClient()
+	if client == nil {
+		client = &http.Client{Timeout: 10 * time.Second}
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, fmt.Errorf("probe authentication requirement: %w", err)
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, resp.Body)
+	return resp.StatusCode == http.StatusUnauthorized, nil
+}
+
 // DoRefresh performs a refresh_token grant against the OAuth2 token endpoint
 // and persists the resulting tokens to viper and the ini file.
 func DoRefresh() error {
+	return DoRefreshContext(context.Background())
+}
+
+func DoRefreshContext(ctx context.Context) error {
 	logger.Info(fmt.Sprintf("Refreshing credentials for %v ...", viper.GetString(keys.DhCoreEndpoint)))
 
 	refreshToken := viper.GetString(keys.DhCoreRefreshToken)
@@ -156,7 +212,12 @@ func DoRefresh() error {
 		client = &http.Client{Timeout: 15 * time.Second}
 	}
 
-	resp, err := client.Post(tokenURL, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		return fmt.Errorf("create token refresh request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("token refresh request failed: %w", err)
 	}
