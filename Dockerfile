@@ -1,5 +1,5 @@
 # ---------- build stage ----------
-FROM golang:1.25.3-alpine AS builder
+FROM golang:1.26.11-alpine AS builder
 
 RUN apk add --no-cache git
 WORKDIR /src
@@ -17,7 +17,7 @@ RUN mkdir -p /out && \
     go build -trimpath -ldflags="-s -w" -o /out/dhcli ${MAIN_PKG}
 
 # ---------- runtime stage ----------
-FROM alpine:3.20
+FROM alpine:3.24
 
 RUN apk add --no-cache ca-certificates
 
