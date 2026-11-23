@@ -18,6 +18,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"dhcli/keys"
 
@@ -49,23 +50,22 @@ func GetIniPath() string {
 	return iniPath + string(os.PathSeparator) + keys.IniName
 }
 
-func LoadIni(createOnMissing bool) *ini.File {
+func LoadIni(createOnMissing bool) (*ini.File, error) {
 	cfg, err := ini.Load(GetIniPath())
-	if err != nil {
-		if !createOnMissing {
-			logger.Error(fmt.Sprintf("Failed to read ini file: %v", err))
-			os.Exit(1)
-		}
-		return ini.Empty()
+	if createOnMissing && os.IsNotExist(err) {
+		return ini.Empty(), nil
 	}
-	return cfg
+	if err != nil {
+		return nil, fmt.Errorf("read ini file: %w", err)
+	}
+	return cfg, nil
 }
 
-func SaveIni(cfg *ini.File) {
+func SaveIni(cfg *ini.File) error {
 	if err := cfg.SaveTo(GetIniPath()); err != nil {
-		logger.Error(fmt.Sprintf("Failed to update ini file: %v", err))
-		os.Exit(1)
+		return fmt.Errorf("update ini file: %w", err)
 	}
+	return nil
 }
 
 func ReflectValue(v interface{}) string {
@@ -106,15 +106,14 @@ func TranslateFormat(format string) string {
 	}
 }
 
-func TranslateEndpoint(resource string) string {
+func TranslateEndpoint(resource string) (string, error) {
+	trimmed := strings.TrimSpace(strings.ToLower(resource))
 	for key, val := range keys.Resources {
-		if key == resource || slices.Contains(val, resource) {
-			return key
+		if key == trimmed || slices.Contains(val, trimmed) {
+			return key, nil
 		}
 	}
-	logger.Error(fmt.Sprintf("Resource '%v' is not supported.", resource))
-	os.Exit(1)
-	return ""
+	return "", fmt.Errorf("resource '%v' is not supported", resource)
 }
 
 func GetFirstIfList(m map[string]interface{}) (map[string]interface{}, error) {
@@ -128,22 +127,21 @@ func GetFirstIfList(m map[string]interface{}) (map[string]interface{}, error) {
 	return m, nil
 }
 
-func WaitForConfirmation(msg string) {
+func WaitForConfirmation(msg string) (bool, error) {
+	buf := bufio.NewReader(os.Stdin)
 	for {
-		buf := bufio.NewReader(os.Stdin)
 		log.Printf("%s", msg)
 		userInput, err := buf.ReadBytes('\n')
 		if err != nil {
-			log.Printf("Error in reading user input: %v\n", err)
-			os.Exit(1)
+			return false, fmt.Errorf("error in reading user input: %w", err)
 		}
 		yn := strings.TrimSpace(string(userInput))
 		switch strings.ToLower(yn) {
 		case "y", "":
-			return
+			return true, nil
 		case "n":
 			log.Println("Cancelling.")
-			os.Exit(0)
+			return false, nil
 		default:
 			log.Println("Invalid input, must be y or n")
 		}
@@ -165,19 +163,17 @@ func PrintCommentForYaml(args ...string) {
 	}
 }
 
-func CheckApiLevel(apiLevelKey string, min, max int) {
+func CheckApiLevel(apiLevelKey string, min, max int) error {
 	logger.Info(fmt.Sprintf("Checking API level for %v command...", viper.GetString(apiLevelKey)))
 
 	apiLevelStr := viper.GetString(apiLevelKey)
 	if apiLevelStr == "" {
-		logger.Error("Unable to check compatibility, environment does not specify API level.")
-		os.Exit(1)
+		return errors.New("unable to check compatibility, environment does not specify API level")
 	}
 
 	apiLevel, err := strconv.Atoi(apiLevelStr)
 	if err != nil {
-		logger.Error(fmt.Sprintf("API level %v is not an integer.", apiLevelStr))
-		os.Exit(1)
+		return fmt.Errorf("API level %v is not an integer", apiLevelStr)
 	}
 
 	inRange := true
@@ -195,9 +191,9 @@ func CheckApiLevel(apiLevelKey string, min, max int) {
 		if max != 0 {
 			interval = fmt.Sprintf("%s <= %v", interval, max)
 		}
-		logger.Error(fmt.Sprintf("API level %v is not within the supported interval: %v", apiLevel, interval))
-		os.Exit(1)
+		return fmt.Errorf("API level %v is not within the supported interval: %v", apiLevel, interval)
 	}
+	return nil
 }
 
 func GetStringValue(m map[string]interface{}, key string) string {
@@ -213,7 +209,7 @@ func FetchConfig(configURL string) (map[string]interface{}, error) {
 	// Use debug HTTP client if available, otherwise use default
 	client := GetDebugHTTPClient()
 	if client == nil {
-		client = &http.Client{}
+		client = &http.Client{Timeout: 15 * time.Second}
 	}
 
 	resp, err := client.Get(configURL)

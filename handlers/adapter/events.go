@@ -88,13 +88,20 @@ func (s stompLogger) Error(m string)   { s.l.Debug("[STOMP] ERR " + m) }
 // EventsHandler connects to the STOMP broker via WebSocket and streams
 // push-notifications for the given resource (and optionally a specific ID).
 func EventsHandler(env string, output string, project string, name string, resource string, id string) error {
-	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(keys.ApiLevelKey, keys.EventsMin, keys.EventsMax)
+	if err := utils.CheckUpdateEnvironment(); err != nil {
+		return err
+	}
+	if err := utils.CheckApiLevel(keys.ApiLevelKey, keys.EventsMin, keys.EventsMax); err != nil {
+		return err
+	}
 	if err := utils.CheckCredentials(); err != nil {
 		return err
 	}
 
-	endpoint := utils.TranslateEndpoint(resource)
+	endpoint, err := utils.TranslateEndpoint(resource)
+	if err != nil {
+		return err
+	}
 	format := utils.TranslateFormat(output)
 
 	baseURL := viper.GetString(keys.DhCoreEndpoint)

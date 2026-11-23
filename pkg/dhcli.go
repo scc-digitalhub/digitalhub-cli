@@ -23,13 +23,16 @@ var dhcli = &cobra.Command{
 	Short: "dhcli is a tool for managing resource in core platform",
 	Long:  `dhcli is a command-line utility for downloading, uploading, and managing core platform entity`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		// Set logger mode and debug mode based on flags
+		// Set logger mode and debug/trace mode based on flags
 		verboseFlag := cmd.Flags().Lookup("verbose")
 		debugFlag := cmd.Flags().Lookup("debug")
+		traceFlag := cmd.Flags().Lookup("trace")
 
-		// Debug flag enables verbose mode automatically
-		isVerbose := (verboseFlag != nil && verboseFlag.Value.String() == "true") ||
-			(debugFlag != nil && debugFlag.Value.String() == "true")
+		isDebug := debugFlag != nil && debugFlag.Value.String() == "true"
+		isTrace := traceFlag != nil && traceFlag.Value.String() == "true"
+
+		// Debug or trace flag enables verbose mode automatically
+		isVerbose := (verboseFlag != nil && verboseFlag.Value.String() == "true") || isDebug || isTrace
 
 		if isVerbose {
 			utils.GetGlobalLogger().SetMode(utils.ModeVerbose)
@@ -37,8 +40,10 @@ var dhcli = &cobra.Command{
 			utils.GetGlobalLogger().SetMode(utils.ModeQuiet)
 		}
 
-		// Enable debug HTTP transport if flag is set
-		if debugFlag != nil && debugFlag.Value.String() == "true" {
+		// Enable HTTP logging transport if trace or debug flag is set
+		if isTrace {
+			utils.EnableTraceMode()
+		} else if isDebug {
 			utils.EnableDebugMode()
 		}
 
@@ -69,9 +74,10 @@ var dhcli = &cobra.Command{
 }
 
 func init() {
-	// Add persistent verbose flag to root command
+	// Add persistent verbose, debug, and trace flags to root command
 	dhcli.PersistentFlags().BoolP("verbose", "v", false, "enable verbose output")
 	dhcli.PersistentFlags().Bool("debug", false, "enable HTTP debug logging")
+	dhcli.PersistentFlags().Bool("trace", false, "enable full HTTP trace logging (includes headers, query parameters, and bodies)")
 }
 
 func Execute() {

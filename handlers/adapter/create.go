@@ -6,8 +6,8 @@ package adapter
 
 import (
 	"context"
+	"errors"
 	"log"
-	"os"
 
 	"dhcli/handlers/utils"
 	"dhcli/keys"
@@ -20,26 +20,30 @@ import (
 )
 
 func CreateHandler(env string, project string, name string, filePath string, resetID bool, resource string) error {
-	endpoint := utils.TranslateEndpoint(resource)
+	endpoint, err := utils.TranslateEndpoint(resource)
+	if err != nil {
+		return err
+	}
 
-	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(keys.ApiLevelKey, keys.CreateMin, keys.CreateMax)
+	if err := utils.CheckUpdateEnvironment(); err != nil {
+		return err
+	}
+	if err := utils.CheckApiLevel(keys.ApiLevelKey, keys.CreateMin, keys.CreateMax); err != nil {
+		return err
+	}
 	if err := utils.CheckCredentials(); err != nil {
 		return err
 	}
 
 	if endpoint != "projects" {
 		if project == "" {
-			log.Println("Project is mandatory when performing this operation on resources other than projects.")
-			os.Exit(1)
+			return errors.New("project is mandatory when performing this operation on resources other than projects")
 		}
 		if filePath == "" {
-			log.Println("Input file not specified.")
-			os.Exit(1)
+			return errors.New("input file not specified")
 		}
 	} else if filePath == "" && name == "" {
-		log.Println("Must provide either an input file or a name when creating a project.")
-		os.Exit(1)
+		return errors.New("must provide either an input file or a name when creating a project")
 	}
 
 	// Adapter: viper -> sdk.Config

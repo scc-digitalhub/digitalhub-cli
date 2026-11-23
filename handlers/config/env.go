@@ -20,7 +20,9 @@ import (
 var envNamePattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
 func EnvFileHandler(path string, overwrite bool) error {
-	utils.CheckUpdateEnvironment()
+	if err := utils.CheckUpdateEnvironment(); err != nil {
+		return err
+	}
 	if err := utils.CheckCredentials(); err != nil {
 		return err
 	}

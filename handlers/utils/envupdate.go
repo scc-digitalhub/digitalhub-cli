@@ -6,6 +6,7 @@ package utils
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"dhcli/keys"
@@ -19,7 +20,7 @@ import (
 // - invalid timestamp                     -> update
 // - older than TTL                        -> update
 // - otherwise                             -> skip (fresh)
-func CheckUpdateEnvironment() {
+func CheckUpdateEnvironment() error {
 	const key = keys.UpdatedEnvKey
 
 	endpoint := viper.GetString(keys.DhCoreEndpoint)
@@ -28,8 +29,7 @@ func CheckUpdateEnvironment() {
 	// Partial config: endpoint known but well-known endpoints never fetched.
 	if endpoint != "" && apiLevel == "" {
 		logger.Warn("Config has endpoint but no api_level — bootstrapping from well-known.")
-		updateEnvironment()
-		return
+		return updateEnvironment()
 	}
 
 	val := viper.GetString(key)
@@ -38,15 +38,13 @@ func CheckUpdateEnvironment() {
 
 	if !isSet || val == "" {
 		logger.Warn("Update: no timestamp.")
-		updateEnvironment()
-		return
+		return updateEnvironment()
 	}
 
 	t, err := time.Parse(time.RFC3339, val)
 	if err != nil {
 		logger.Warn(fmt.Sprintf("Update: invalid timestamp (%v).", err))
-		updateEnvironment()
-		return
+		return updateEnvironment()
 	}
 
 	now := time.Now().UTC()
@@ -55,28 +53,26 @@ func CheckUpdateEnvironment() {
 
 	if age >= ttl {
 		logger.Step(fmt.Sprintf("Update: outdated (age %s ≥ TTL %s).", age, ttl))
-		updateEnvironment()
-		return
+		return updateEnvironment()
 	}
 
 	logger.Step(fmt.Sprintf("Fresh: age %s < TTL %s.", age, ttl))
+	return nil
 }
 
 // Fetch well-known, update Viper, bump timestamp, persist allowlisted keys.
-func updateEnvironment() {
+func updateEnvironment() error {
 	logger.Info("Updating environment…")
-	baseEndpoint := viper.GetString(keys.DhCoreEndpoint)
+	baseEndpoint := strings.TrimRight(viper.GetString(keys.DhCoreEndpoint), "/")
 	if baseEndpoint == "" {
-		logger.Warn("Skip: dhcore_endpoint is empty.")
-		return
+		return fmt.Errorf("cannot update environment: %s is empty", keys.DhCoreEndpoint)
 	}
 
 	var additionalKeys []string
 
 	cfg, err := FetchConfig(baseEndpoint + "/.well-known/configuration")
 	if err != nil {
-		logger.Error(fmt.Sprintf("Config fetch failed: %v", err))
-		return
+		return fmt.Errorf("config fetch failed: %w", err)
 	}
 	for k, v := range cfg {
 		viper.Set(k, ReflectValue(v))
@@ -85,8 +81,7 @@ func updateEnvironment() {
 
 	oidc, err := FetchConfig(baseEndpoint + "/.well-known/openid-configuration")
 	if err != nil {
-		logger.Error(fmt.Sprintf("OpenID fetch failed: %v", err))
-		return
+		return fmt.Errorf("OpenID config fetch failed: %w", err)
 	}
 	for k, v := range oidc {
 		pk := "oauth2_" + k
@@ -108,6 +103,7 @@ func updateEnvironment() {
 	} else {
 		logger.Info(fmt.Sprintf("Persisted to [%s].", env))
 	}
+	return nil
 }
 
 // UpdateIniSectionFromViper persists the current environment section to the INI.

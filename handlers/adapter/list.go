@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"text/tabwriter"
@@ -26,10 +25,17 @@ import (
 )
 
 func ListResourcesHandler(env string, output string, project string, name string, kind string, state string, resource string) error {
-	endpoint := utils.TranslateEndpoint(resource)
+	endpoint, err := utils.TranslateEndpoint(resource)
+	if err != nil {
+		return err
+	}
 
-	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(keys.ApiLevelKey, keys.ListMin, keys.ListMax)
+	if err := utils.CheckUpdateEnvironment(); err != nil {
+		return err
+	}
+	if err := utils.CheckApiLevel(keys.ApiLevelKey, keys.ListMin, keys.ListMax); err != nil {
+		return err
+	}
 	if err := utils.CheckCredentials(); err != nil {
 		return err
 	}
@@ -87,10 +93,10 @@ func ListResourcesHandler(env string, output string, project string, name string
 	case "short":
 		printShortList(elements)
 	case "json":
-		printJSONList(elements)
+		return printJSONList(elements)
 	case "yaml":
 		utils.PrintCommentForYaml(env, resource, output, project, name, kind, state)
-		printYAMLList(elements)
+		return printYAMLList(elements)
 	default:
 		return fmt.Errorf("unknown format: %s", format)
 	}
@@ -139,20 +145,20 @@ func printShortList(resources []interface{}) {
 	w.Flush()
 }
 
-func printJSONList(resources []interface{}) {
+func printJSONList(resources []interface{}) error {
 	out, err := json.MarshalIndent(resources, "", "    ")
 	if err != nil {
-		log.Printf("Error serializing JSON: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("error serializing JSON: %w", err)
 	}
 	fmt.Println(string(out))
+	return nil
 }
 
-func printYAMLList(resources []interface{}) {
+func printYAMLList(resources []interface{}) error {
 	out, err := yaml.Marshal(resources)
 	if err != nil {
-		log.Printf("Error serializing YAML: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("error serializing YAML: %w", err)
 	}
 	fmt.Println(string(out))
+	return nil
 }

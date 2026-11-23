@@ -5,6 +5,8 @@
 package cmd
 
 import (
+	"log"
+
 	"dhcli/handlers/environment"
 	"dhcli/pkg"
 
@@ -15,7 +17,9 @@ var listEnvCmd = &cobra.Command{
 	Use:   "list-env",
 	Short: "List available environments",
 	Run: func(cmd *cobra.Command, args []string) {
-		environment.ListEnvHandler()
+		if err := environment.ListEnvHandler(); err != nil {
+			log.Fatalf("List environments failed: %v", err)
+		}
 	},
 }
 

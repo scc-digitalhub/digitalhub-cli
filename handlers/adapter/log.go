@@ -25,10 +25,17 @@ import (
 )
 
 func LogHandler(env string, project string, container string, follow bool, id string) error {
-	endpoint := utils.TranslateEndpoint("run")
+	endpoint, err := utils.TranslateEndpoint("run")
+	if err != nil {
+		return err
+	}
 
-	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(keys.ApiLevelKey, keys.LogMin, keys.LogMax)
+	if err := utils.CheckUpdateEnvironment(); err != nil {
+		return err
+	}
+	if err := utils.CheckApiLevel(keys.ApiLevelKey, keys.LogMin, keys.LogMax); err != nil {
+		return err
+	}
 	if err := utils.CheckCredentials(); err != nil {
 		return err
 	}

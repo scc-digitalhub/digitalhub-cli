@@ -6,9 +6,9 @@ package adapter
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/scc-digitalhub/digitalhub-cli-sdk/sdk/config"
 
@@ -21,10 +21,17 @@ import (
 )
 
 func DeleteHandler(env string, project string, name string, confirm bool, cascade bool, resource string, id string) error {
-	endpoint := utils.TranslateEndpoint(resource)
+	endpoint, err := utils.TranslateEndpoint(resource)
+	if err != nil {
+		return err
+	}
 
-	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(keys.ApiLevelKey, keys.DeleteMin, keys.DeleteMax)
+	if err := utils.CheckUpdateEnvironment(); err != nil {
+		return err
+	}
+	if err := utils.CheckApiLevel(keys.ApiLevelKey, keys.DeleteMin, keys.DeleteMax); err != nil {
+		return err
+	}
 	if err := utils.CheckCredentials(); err != nil {
 		return err
 	}
@@ -36,8 +43,7 @@ func DeleteHandler(env string, project string, name string, confirm bool, cascad
 
 	// Validazioni
 	if endpoint != "projects" && project == "" {
-		log.Println("Project is mandatory when performing this operation on resources other than projects.")
-		os.Exit(1)
+		return errors.New("project is mandatory when performing this operation on resources other than projects")
 	}
 
 	confirmationMessage := fmt.Sprintf("Resource %v (%v) will be deleted, proceed? Y/n", id, endpoint)
@@ -48,8 +54,7 @@ func DeleteHandler(env string, project string, name string, confirm bool, cascad
 	// Caso: ID non fornito
 	if delID == "" {
 		if delName == "" {
-			log.Println("You must specify id or name.")
-			os.Exit(1)
+			return errors.New("you must specify id or name")
 		}
 
 		if endpoint != "projects" {
@@ -71,7 +76,13 @@ func DeleteHandler(env string, project string, name string, confirm bool, cascad
 
 	// Ask for confirmation
 	if !confirm {
-		utils.WaitForConfirmation(confirmationMessage)
+		confirmed, err := utils.WaitForConfirmation(confirmationMessage)
+		if err != nil {
+			return err
+		}
+		if !confirmed {
+			return nil
+		}
 	}
 
 	// Adapter: viper -> sdk.Config

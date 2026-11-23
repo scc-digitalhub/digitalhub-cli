@@ -5,19 +5,21 @@
 package environment
 
 import (
+	"fmt"
 	"log"
-	"os"
 
 	"dhcli/handlers/utils"
 )
 
-func RemoveHandler(env string) {
+func RemoveHandler(env string) error {
 	sectionName := env
 
-	cfg := utils.LoadIni(false)
+	cfg, err := utils.LoadIni(false)
+	if err != nil {
+		return err
+	}
 	if !cfg.HasSection(sectionName) {
-		log.Printf("Specified environment does not exist.\n")
-		os.Exit(0)
+		return fmt.Errorf("specified environment %q does not exist", sectionName)
 	}
 
 	cfg.DeleteSection(sectionName)
@@ -27,6 +29,9 @@ func RemoveHandler(env string) {
 		defaultSection.DeleteKey("current_environment")
 	}
 
-	utils.SaveIni(cfg)
+	if err := utils.SaveIni(cfg); err != nil {
+		return err
+	}
 	log.Printf("'%v' has been removed.\n", sectionName)
+	return nil
 }

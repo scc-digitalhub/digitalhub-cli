@@ -265,7 +265,10 @@ func refreshServiceInfo(service *ServiceInfo, project string, runID string) erro
 	}
 
 	// Translate resource name to API endpoint (e.g., "run" -> "runs")
-	endpoint := utils.TranslateEndpoint("run")
+	endpoint, err := utils.TranslateEndpoint("run")
+	if err != nil {
+		return err
+	}
 
 	// Get the run resource with project
 	body, _, err := crud.Get(ctx, crudsvc.GetRequest{

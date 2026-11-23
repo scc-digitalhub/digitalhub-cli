@@ -45,8 +45,12 @@ var logger = utils.GetGlobalLogger()
 // PUBLIC ENTRY POINT
 // ==========================
 func LoginHandler() error {
-	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(keys.ApiLevelKey, keys.LoginMin, keys.LoginMax)
+	if err := utils.CheckUpdateEnvironment(); err != nil {
+		return err
+	}
+	if err := utils.CheckApiLevel(keys.ApiLevelKey, keys.LoginMin, keys.LoginMax); err != nil {
+		return err
+	}
 
 	verifier, challenge := generatePKCE()
 	state := randomString(32)
@@ -79,7 +83,10 @@ func LoginHandler() error {
 	}
 
 	// Wait for result (no select loop hacks)
-	res := <-resultCh
+	res, ok := <-resultCh
+	if !ok {
+		return fmt.Errorf("OAuth callback server stopped before authentication completed")
+	}
 	if res.Err != nil {
 		return res.Err
 	}
@@ -87,12 +94,11 @@ func LoginHandler() error {
 	// Process token response: prefix standard tokens, pass through dynamic credentials.
 	credKeys, err := utils.ApplyTokenResponse(res.TokenJSON)
 	if err != nil {
-		logger.Error(fmt.Sprintf("token parse error: %v", err))
-	} else {
-		credKeys = append(credKeys, keys.CredentialsList)
-		if err := utils.PersistCurrentEnv(credKeys); err != nil {
-			logger.Error(fmt.Sprintf("persist error: %v", err))
-		}
+		return fmt.Errorf("token parse error: %w", err)
+	}
+	credKeys = append(credKeys, keys.CredentialsList)
+	if err := utils.PersistCurrentEnv(credKeys); err != nil {
+		return fmt.Errorf("persist error: %w", err)
 	}
 
 	logger.Success("Login successful")
@@ -107,8 +113,12 @@ func LoginHandler() error {
 // Access Token as the subject token. This is suitable for non-interactive
 // environments such as CI jobs or containers.
 func PatLoginHandler(pat string) error {
-	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(keys.ApiLevelKey, keys.LoginMin, keys.LoginMax)
+	if err := utils.CheckUpdateEnvironment(); err != nil {
+		return err
+	}
+	if err := utils.CheckApiLevel(keys.ApiLevelKey, keys.LoginMin, keys.LoginMax); err != nil {
+		return err
+	}
 
 	tokenURL := viper.GetString(keys.OAuth2TokenEndpoint)
 	if tokenURL == "" {
@@ -158,7 +168,10 @@ func PatLoginHandler(pat string) error {
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read token exchange response: %w", err)
+	}
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("token exchange error: %s - %s", resp.Status, string(body))
 	}
@@ -169,7 +182,7 @@ func PatLoginHandler(pat string) error {
 	}
 	credKeys = append(credKeys, keys.CredentialsList)
 	if err := utils.PersistCurrentEnv(credKeys); err != nil {
-		logger.Error(fmt.Sprintf("persist error: %v", err))
+		return fmt.Errorf("persist exchanged credentials: %w", err)
 	}
 
 	logger.Success("Login successful (PAT token exchange)")
