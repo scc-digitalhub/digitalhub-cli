@@ -67,7 +67,7 @@ func extensionEndpoint(opts ExtensionOptions) (string, error) {
 		}
 	}
 	switch resource {
-	case "artifacts", "dataitems", "functions", "models", "projects", "workflows", "runs":
+	case "artifacts", "dataitems", "functions", "models", "projects", "workflows", "runs", "containerimages":
 	default:
 		return "", fmt.Errorf("unsupported parent resource %q", opts.Parent)
 	}
