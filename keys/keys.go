@@ -63,6 +63,9 @@ var Resources = map[string][]string{
 	"models":    {"model"},
 	"projects":  {"project"},
 	"runs":      {"run"},
+	"secrets":   {"secret"},
+	"tasks":     {"task"},
+	"triggers":  {"trigger"},
 	"workflows": {"workflow"},
 	"logs":      {"log"},
 }
