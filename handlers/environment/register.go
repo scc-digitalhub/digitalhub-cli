@@ -17,14 +17,13 @@ import (
 )
 
 func RegisterHandler(env string, endpoint string, force bool) error {
+	endpoint = strings.TrimRight(endpoint, "/")
 	if endpoint == "" {
 		return fmt.Errorf("endpoint is required")
 	}
-	if !strings.HasSuffix(endpoint, "/") {
-		endpoint += "/"
-	}
+	endpoint += "/"
 
-	cfg, err := utils.LoadIniErr(true)
+	cfg, err := utils.LoadIni(true)
 	if err != nil {
 		return err
 	}
@@ -67,19 +66,22 @@ func RegisterHandler(env string, endpoint string, force bool) error {
 	section := cfg.Section(env)
 	credentials := map[string]string{}
 	if sameEndpoint {
-		credentialKeys := append(utils.SplitCSV(section.Key(keys.CredentialsList).String()),
+		var dynamicCreds []string
+		if key, err := section.GetKey(keys.CredentialsList); err == nil {
+			dynamicCreds = utils.SplitCSV(key.String())
+		}
+		credentialKeys := append(dynamicCreds,
 			keys.CredentialsList, keys.DhCoreAccessToken, keys.DhCoreRefreshToken,
-			keys.DhCoreIdToken, keys.DhCoreExpiresAt, keys.DhCoreUser, keys.DhCorePassword,
+			keys.DhCoreIdToken, keys.DhCoreExpiresAt,
 			"aws_access_key_id", "aws_secret_access_key", "aws_session_token")
 		for _, name := range credentialKeys {
 			if section.HasKey(name) {
 				credentials[name] = section.Key(name).String()
 			}
 		}
-	} else {
-		for _, k := range section.Keys() {
-			section.DeleteKey(k.Name())
-		}
+	}
+	for _, k := range section.Keys() {
+		section.DeleteKey(k.Name())
 	}
 
 	// 4. Reflect config keys
@@ -134,7 +136,7 @@ func RegisterHandler(env string, endpoint string, force bool) error {
 	}
 	defaultSection.NewKey(keys.CurrentEnvironment, env)
 
-	if err := utils.SaveIniErr(cfg); err != nil {
+	if err := utils.SaveIni(cfg); err != nil {
 		return err
 	}
 

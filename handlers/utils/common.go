@@ -7,7 +7,6 @@ package utils
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,6 +18,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"dhcli/keys"
 
@@ -50,16 +50,7 @@ func GetIniPath() string {
 	return iniPath + string(os.PathSeparator) + keys.IniName
 }
 
-func LoadIni(createOnMissing bool) *ini.File {
-	cfg, err := LoadIniErr(createOnMissing)
-	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to read ini file: %v", err))
-		os.Exit(1)
-	}
-	return cfg
-}
-
-func LoadIniErr(createOnMissing bool) (*ini.File, error) {
+func LoadIni(createOnMissing bool) (*ini.File, error) {
 	cfg, err := ini.Load(GetIniPath())
 	if createOnMissing && os.IsNotExist(err) {
 		return ini.Empty(), nil
@@ -70,14 +61,7 @@ func LoadIniErr(createOnMissing bool) (*ini.File, error) {
 	return cfg, nil
 }
 
-func SaveIni(cfg *ini.File) {
-	if err := SaveIniErr(cfg); err != nil {
-		logger.Error(fmt.Sprintf("Failed to update ini file: %v", err))
-		os.Exit(1)
-	}
-}
-
-func SaveIniErr(cfg *ini.File) error {
+func SaveIni(cfg *ini.File) error {
 	if err := cfg.SaveTo(GetIniPath()); err != nil {
 		return fmt.Errorf("update ini file: %w", err)
 	}
@@ -122,7 +106,7 @@ func TranslateFormat(format string) string {
 	}
 }
 
-func ResolveEndpoint(resource string) (string, error) {
+func TranslateEndpoint(resource string) (string, error) {
 	trimmed := strings.TrimSpace(strings.ToLower(resource))
 	for key, val := range keys.Resources {
 		if key == trimmed || slices.Contains(val, trimmed) {
@@ -130,15 +114,6 @@ func ResolveEndpoint(resource string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("resource '%v' is not supported", resource)
-}
-
-func TranslateEndpoint(resource string) string {
-	endpoint, err := ResolveEndpoint(resource)
-	if err != nil {
-		logger.Error(fmt.Sprintf("Resource '%v' is not supported.", resource))
-		os.Exit(1)
-	}
-	return endpoint
 }
 
 func GetFirstIfList(m map[string]interface{}) (map[string]interface{}, error) {
@@ -152,22 +127,21 @@ func GetFirstIfList(m map[string]interface{}) (map[string]interface{}, error) {
 	return m, nil
 }
 
-func WaitForConfirmation(msg string) {
+func WaitForConfirmation(msg string) (bool, error) {
+	buf := bufio.NewReader(os.Stdin)
 	for {
-		buf := bufio.NewReader(os.Stdin)
 		log.Printf("%s", msg)
 		userInput, err := buf.ReadBytes('\n')
 		if err != nil {
-			log.Printf("Error in reading user input: %v\n", err)
-			os.Exit(1)
+			return false, fmt.Errorf("error in reading user input: %w", err)
 		}
 		yn := strings.TrimSpace(string(userInput))
 		switch strings.ToLower(yn) {
 		case "y", "":
-			return
+			return true, nil
 		case "n":
 			log.Println("Cancelling.")
-			os.Exit(0)
+			return false, nil
 		default:
 			log.Println("Invalid input, must be y or n")
 		}
@@ -189,7 +163,7 @@ func PrintCommentForYaml(args ...string) {
 	}
 }
 
-func CheckApiLevelErr(apiLevelKey string, min, max int) error {
+func CheckApiLevel(apiLevelKey string, min, max int) error {
 	logger.Info(fmt.Sprintf("Checking API level for %v command...", viper.GetString(apiLevelKey)))
 
 	apiLevelStr := viper.GetString(apiLevelKey)
@@ -222,13 +196,6 @@ func CheckApiLevelErr(apiLevelKey string, min, max int) error {
 	return nil
 }
 
-func CheckApiLevel(apiLevelKey string, min, max int) {
-	if err := CheckApiLevelErr(apiLevelKey, min, max); err != nil {
-		logger.Error(err.Error())
-		os.Exit(1)
-	}
-}
-
 func GetStringValue(m map[string]interface{}, key string) string {
 	if v, ok := m[key]; ok {
 		if s, ok := v.(string); ok {
@@ -239,21 +206,13 @@ func GetStringValue(m map[string]interface{}, key string) string {
 }
 
 func FetchConfig(configURL string) (map[string]interface{}, error) {
-	return FetchConfigContext(context.Background(), configURL)
-}
-
-func FetchConfigContext(ctx context.Context, configURL string) (map[string]interface{}, error) {
 	// Use debug HTTP client if available, otherwise use default
 	client := GetDebugHTTPClient()
 	if client == nil {
-		client = &http.Client{}
+		client = &http.Client{Timeout: 15 * time.Second}
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, configURL, nil)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := client.Do(req)
+	resp, err := client.Get(configURL)
 	if err != nil {
 		return nil, err
 	}

@@ -22,8 +22,12 @@ func StopHandler(env string, project string, id string) error {
 	endpoint := "runs"
 
 	// Preserve original guards/compat behavior
-	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(keys.ApiLevelKey, keys.StopMin, keys.StopMax)
+	if err := utils.CheckUpdateEnvironment(); err != nil {
+		return err
+	}
+	if err := utils.CheckApiLevel(keys.ApiLevelKey, keys.StopMin, keys.StopMax); err != nil {
+		return err
+	}
 	if err := utils.CheckCredentials(); err != nil {
 		return err
 	}

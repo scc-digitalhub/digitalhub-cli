@@ -45,8 +45,12 @@ var logger = utils.GetGlobalLogger()
 // PUBLIC ENTRY POINT
 // ==========================
 func LoginHandler() error {
-	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(keys.ApiLevelKey, keys.LoginMin, keys.LoginMax)
+	if err := utils.CheckUpdateEnvironment(); err != nil {
+		return err
+	}
+	if err := utils.CheckApiLevel(keys.ApiLevelKey, keys.LoginMin, keys.LoginMax); err != nil {
+		return err
+	}
 
 	verifier, challenge := generatePKCE()
 	state := randomString(32)
@@ -79,7 +83,10 @@ func LoginHandler() error {
 	}
 
 	// Wait for result (no select loop hacks)
-	res := <-resultCh
+	res, ok := <-resultCh
+	if !ok {
+		return fmt.Errorf("OAuth callback server stopped before authentication completed")
+	}
 	if res.Err != nil {
 		return res.Err
 	}
@@ -87,75 +94,15 @@ func LoginHandler() error {
 	// Process token response: prefix standard tokens, pass through dynamic credentials.
 	credKeys, err := utils.ApplyTokenResponse(res.TokenJSON)
 	if err != nil {
-		logger.Error(fmt.Sprintf("token parse error: %v", err))
-	} else {
-		credKeys = append(credKeys, keys.CredentialsList)
-		if err := utils.PersistCurrentEnv(credKeys); err != nil {
-			logger.Error(fmt.Sprintf("persist error: %v", err))
-		}
+		return fmt.Errorf("token parse error: %w", err)
+	}
+	credKeys = append(credKeys, keys.CredentialsList)
+	if err := utils.PersistCurrentEnv(credKeys); err != nil {
+		return fmt.Errorf("persist error: %w", err)
 	}
 
 	logger.Success("Login successful")
 	return nil
-}
-
-// BrowserLoginNonStdin performs the OAuth2 PKCE browser flow without reading
-// from os.Stdin or writing to os.Stdout, making it safe for MCP stdio servers.
-func BrowserLoginNonStdin(timeout time.Duration) (string, error) {
-	utils.CheckUpdateEnvironment()
-	if err := utils.CheckApiLevelErr(keys.ApiLevelKey, keys.LoginMin, keys.LoginMax); err != nil {
-		return "", err
-	}
-
-	verifier, challenge := generatePKCE()
-	state := randomString(32)
-
-	if timeout <= 0 {
-		timeout = 120 * time.Second
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	redirectURI, resultCh, stop, err := startAuthCodeServer(ctx, verifier, state, timeout)
-	if err != nil {
-		return "", fmt.Errorf("failed to start local OAuth callback server: %w", err)
-	}
-	defer stop()
-
-	authURL, err := buildAuthURL(challenge, state, redirectURI)
-	if err != nil {
-		return "", err
-	}
-
-	log.Printf("Opening browser for DigitalHub login: %s\n", authURL)
-	if err := utils.OpenBrowser(authURL); err != nil {
-		log.Printf("Could not open browser automatically (%v). Open this URL to authenticate: %s\n", err, authURL)
-	}
-
-	var res OAuthResult
-	select {
-	case result, ok := <-resultCh:
-		if !ok {
-			return authURL, fmt.Errorf("OAuth callback server stopped before authentication completed; if needed, open %s manually", authURL)
-		}
-		res = result
-	case <-ctx.Done():
-		return authURL, fmt.Errorf("OAuth login timed out waiting for callback; open %s manually and retry", authURL)
-	}
-	if res.Err != nil {
-		return authURL, res.Err
-	}
-
-	credKeys, err := utils.ApplyTokenResponse(res.TokenJSON)
-	if err != nil {
-		return authURL, fmt.Errorf("token parse error: %w", err)
-	}
-	credKeys = append(credKeys, keys.CredentialsList)
-	if err := utils.PersistCurrentEnv(credKeys); err != nil {
-		return authURL, fmt.Errorf("persist error: %w", err)
-	}
-
-	return authURL, nil
 }
 
 // ==========================
@@ -166,8 +113,10 @@ func BrowserLoginNonStdin(timeout time.Duration) (string, error) {
 // Access Token as the subject token. This is suitable for non-interactive
 // environments such as CI jobs or containers.
 func PatLoginHandler(pat string) error {
-	utils.CheckUpdateEnvironment()
-	if err := utils.CheckApiLevelErr(keys.ApiLevelKey, keys.LoginMin, keys.LoginMax); err != nil {
+	if err := utils.CheckUpdateEnvironment(); err != nil {
+		return err
+	}
+	if err := utils.CheckApiLevel(keys.ApiLevelKey, keys.LoginMin, keys.LoginMax); err != nil {
 		return err
 	}
 

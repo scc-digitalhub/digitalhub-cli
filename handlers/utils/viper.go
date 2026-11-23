@@ -169,21 +169,6 @@ func RegisterIniCfgWithViper(optionalEnv ...string) error {
 	return nil
 }
 
-// ActivateEnvironment discards overrides from the previously active environment.
-func ActivateEnvironment(env string) error {
-	viper.Reset()
-	if env != "" && !strings.EqualFold(env, "null") {
-		cfg, err := ini.Load(GetIniPath())
-		if err == nil && !cfg.HasSection(env) {
-			return fmt.Errorf("environment %q does not exist", env)
-		}
-		if err != nil && !os.IsNotExist(err) {
-			return fmt.Errorf("read ini file: %w", err)
-		}
-	}
-	return RegisterIniCfgWithViper(env)
-}
-
 // bootstrapFromEnv creates a new INI by fetching .well-known endpoints when no
 // INI file exists yet but DHCORE_ENDPOINT is available in the environment.
 // AutomaticEnv (set by SetupViperEnv) makes DHCORE_ENDPOINT available to Viper.

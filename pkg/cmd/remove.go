@@ -5,6 +5,8 @@
 package cmd
 
 import (
+	"log"
+
 	"dhcli/handlers/environment"
 	"dhcli/pkg"
 
@@ -16,7 +18,9 @@ var removeCmd = &cobra.Command{
 	Short: "Remove an environment from the configuration",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		environment.RemoveHandler(args[0])
+		if err := environment.RemoveHandler(args[0]); err != nil {
+			log.Fatalf("Remove failed: %v", err)
+		}
 	},
 }
 

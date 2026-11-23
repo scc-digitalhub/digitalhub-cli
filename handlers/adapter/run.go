@@ -23,10 +23,17 @@ import (
 )
 
 func RunHandler(env string, project string, functionName string, functionId string, filePath string, task string) error {
-	endpoint := utils.TranslateEndpoint("run")
+	endpoint, err := utils.TranslateEndpoint("run")
+	if err != nil {
+		return err
+	}
 
-	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(keys.ApiLevelKey, keys.CreateMin, keys.CreateMax)
+	if err := utils.CheckUpdateEnvironment(); err != nil {
+		return err
+	}
+	if err := utils.CheckApiLevel(keys.ApiLevelKey, keys.CreateMin, keys.CreateMax); err != nil {
+		return err
+	}
 	if err := utils.CheckCredentials(); err != nil {
 		return err
 	}

@@ -28,8 +28,12 @@ const metricsFollowInterval = 15 * time.Second
 // project is required for "project" and "run" scopes.
 // id is required for the "run" scope.
 func MetricsHandler(env string, output string, project string, scope string, id string, follow bool) error {
-	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(keys.ApiLevelKey, keys.MetricsMin, keys.MetricsMax)
+	if err := utils.CheckUpdateEnvironment(); err != nil {
+		return err
+	}
+	if err := utils.CheckApiLevel(keys.ApiLevelKey, keys.MetricsMin, keys.MetricsMax); err != nil {
+		return err
+	}
 	if err := utils.CheckCredentials(); err != nil {
 		return err
 	}

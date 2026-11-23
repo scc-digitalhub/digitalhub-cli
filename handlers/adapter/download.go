@@ -26,13 +26,20 @@ import (
 
 func DownloadHandler(env string, destination string, output string, project string, name string, resource string, id string, verbose bool) error {
 
-	utils.CheckUpdateEnvironment()
-	utils.CheckApiLevel(keys.ApiLevelKey, keys.LoginMin, keys.LoginMax)
+	if err := utils.CheckUpdateEnvironment(); err != nil {
+		return err
+	}
+	if err := utils.CheckApiLevel(keys.ApiLevelKey, keys.LoginMin, keys.LoginMax); err != nil {
+		return err
+	}
 	if err := utils.CheckCredentials(); err != nil {
 		return err
 	}
 
-	endpoint := utils.TranslateEndpoint(resource)
+	endpoint, err := utils.TranslateEndpoint(resource)
+	if err != nil {
+		return err
+	}
 	if endpoint != "projects" && project == "" {
 		return errors.New("project is mandatory for non-project resources")
 	}

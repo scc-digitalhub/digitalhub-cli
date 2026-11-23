@@ -10,8 +10,11 @@ import (
 	"dhcli/handlers/utils"
 )
 
-func ListEnvHandler() {
-	cfg := utils.LoadIni(true)
+func ListEnvHandler() error {
+	cfg, err := utils.LoadIni(true)
+	if err != nil {
+		return err
+	}
 
 	currentEnv := cfg.Section("DEFAULT").Key("current_environment").String()
 	if currentEnv != "" {
@@ -29,9 +32,10 @@ func ListEnvHandler() {
 
 	if sectionsString == "" {
 		log.Println("No environments available.")
-		return
+		return nil
 	}
 	sectionsString = sectionsString[:len(sectionsString)-2]
 
 	log.Printf("Available environments: %s\n", sectionsString)
+	return nil
 }

@@ -16,13 +16,17 @@ import (
 )
 
 func ConfigHandler(output string, provider string) error {
-	utils.CheckUpdateEnvironment()
+	if err := utils.CheckUpdateEnvironment(); err != nil {
+		return err
+	}
 	entries := getConfigEntriesByProvider(provider, output)
 	return printEntries(entries, utils.TranslateFormat(output))
 }
 
 func CredentialsHandler(output string, provider string) error {
-	utils.CheckUpdateEnvironment()
+	if err := utils.CheckUpdateEnvironment(); err != nil {
+		return err
+	}
 	if err := utils.CheckCredentials(); err != nil {
 		return err
 	}

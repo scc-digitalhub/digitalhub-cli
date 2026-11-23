@@ -5,6 +5,8 @@
 package cmd
 
 import (
+	"log"
+
 	"dhcli/handlers/environment"
 	"dhcli/pkg"
 
@@ -16,7 +18,9 @@ var useCmd = &cobra.Command{
 	Short: "Sets the default environment",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		environment.UseHandler(args[0])
+		if err := environment.UseHandler(args[0]); err != nil {
+			log.Fatalf("Use failed: %v", err)
+		}
 	},
 }
 
