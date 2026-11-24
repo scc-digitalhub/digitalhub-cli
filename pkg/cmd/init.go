@@ -72,8 +72,8 @@ var initCmd = func() *cobra.Command {
 			if len(args) > 0 {
 				venvPath = args[0]
 			} else {
-				// If no path provided, use current environment name
-				venvPath = viper.GetString(keys.CurrentEnvironment)
+				// If no path provided, use default environment name
+				venvPath = ".venv"
 			}
 
 			// If still empty, default to current directory
@@ -81,7 +81,8 @@ var initCmd = func() *cobra.Command {
 				venvPath = "."
 			}
 
-			if err := environment.InitEnvironmentHandler(venvPath, *preFlag.Value); err != nil {
+			//create in the specified venv path with the current environment name as the venv name
+			if err := environment.InitEnvironmentHandler(venvPath, viper.GetString(keys.CurrentEnvironment), *preFlag.Value); err != nil {
 				log.Fatalf("Init failed: %v", err)
 			}
 		},

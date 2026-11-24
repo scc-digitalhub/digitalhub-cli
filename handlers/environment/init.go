@@ -49,7 +49,7 @@ func InitAgentWorkspaceHandler(overwrite bool) error {
 // InitEnvironmentHandler initializes a Python virtual environment at the given path
 // and installs dependencies. If the path already contains a valid venv, it just installs
 // dependencies. If not, it creates a new venv first.
-func InitEnvironmentHandler(venvPath string, includePre bool) error {
+func InitEnvironmentHandler(venvPath string, venvName string, includePre bool) error {
 	// Normalize path
 	absPath, err := filepath.Abs(venvPath)
 	if err != nil {
@@ -67,6 +67,13 @@ func InitEnvironmentHandler(venvPath string, includePre bool) error {
 		return fmt.Errorf("unsupported Python version (need >= 3.9): %s", strings.TrimSpace(string(out)))
 	}
 
+	// Get API version
+	apiVer := viper.GetString("dhcore_version")
+	parts := strings.SplitN(apiVer, ".", 3)
+	if len(parts) > 2 {
+		apiVer = parts[0] + "." + parts[1]
+	}
+
 	uvExe := findUV()
 	if uvExe != "" {
 		log.Printf("uv found at %s, using uv for venv and package management", uvExe)
@@ -78,9 +85,15 @@ func InitEnvironmentHandler(venvPath string, includePre bool) error {
 
 	if venvExists {
 		log.Printf("Found existing venv at %s", absPath)
+		// Confirmation prompt
+		yes := promptYesNo(fmt.Sprintf("Newest patch version of digitalhub %v will be installed, continue? Y/n", apiVer))
+		if !yes {
+			log.Println("Installation cancelled by user.")
+			return nil
+		}
 	} else {
 		log.Printf("Creating new venv at %s", absPath)
-		if err := createVenv(absPath, uvExe); err != nil {
+		if err := createVenv(absPath, venvName, uvExe); err != nil {
 			return fmt.Errorf("failed to create venv: %w", err)
 		}
 	}
@@ -90,20 +103,6 @@ func InitEnvironmentHandler(venvPath string, includePre bool) error {
 		if err := ensurePip(pythonExe); err != nil {
 			return fmt.Errorf("pip not available in venv: %w", err)
 		}
-	}
-
-	// Get API version
-	apiVer := viper.GetString("dhcore_version")
-	parts := strings.SplitN(apiVer, ".", 3)
-	if len(parts) > 2 {
-		apiVer = parts[0] + "." + parts[1]
-	}
-
-	// Confirmation prompt
-	yes := promptYesNo(fmt.Sprintf("Newest patch version of digitalhub %v will be installed, continue? Y/n", apiVer))
-	if !yes {
-		log.Println("Installation cancelled by user.")
-		return nil
 	}
 
 	// Build pip command
@@ -160,7 +159,7 @@ func isValidVenv(path string) bool {
 
 // createVenv creates a new Python virtual environment at the given path.
 // If uvExe is non-empty, uv is used instead of python3 -m venv.
-func createVenv(path string, uvExe string) error {
+func createVenv(path string, name string, uvExe string) error {
 	// Check if path already exists
 	if info, err := os.Stat(path); err == nil {
 		// Path exists - check if it's a valid venv
@@ -184,9 +183,10 @@ func createVenv(path string, uvExe string) error {
 	var cmd *exec.Cmd
 	if uvExe != "" {
 		// uv venv respects the active python3 via --python
-		cmd = exec.Command(uvExe, "venv", "--python", "python3", path)
+		// --seed installs pip inside the venv so downstream pip commands still work
+		cmd = exec.Command(uvExe, "venv", "--seed", "--python", "python3", "--prompt", name, path)
 	} else {
-		cmd = exec.Command("python3", "-m", "venv", path)
+		cmd = exec.Command("python3", "-m", "venv", "--prompt", name, path)
 	}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = &stderr
@@ -279,7 +279,7 @@ func promptYesNo(prompt string) bool {
 }
 
 func packageList() []string {
-	return []string{"digitalhub[full]", "digitalhub-runtime-python"}
+	return []string{"digitalhub[full]", "digitalhub-runtime-python", "digitalhub-runtime-container", "digitalhub-runtime-modelserve"}
 }
 
 // venvInstallHint returns an OS-appropriate install hint for the venv module.
