@@ -58,13 +58,15 @@ const (
 // Resources maps plural resource names to their accepted aliases.
 var Resources = map[string][]string{
 	"artifacts":       {"artifact"},
+	"containerimages": {"containerimage"},
 	"dataitems":       {"dataitem"},
+	"extensions":      {"extension"},
 	"functions":       {"function", "fn"},
 	"models":          {"model"},
 	"projects":        {"project"},
 	"runs":            {"run"},
-	"workflows":       {"workflow"},
-	"logs":            {"log"},
-	"extensions":      {"extension"},
-	"containerimages": {"containerimage"},
+	//secret is disabled because it has a custom API, needs the resource handler
+	// "secrets":         {"secret"},
+	"triggers":  {"trigger"},
+	"workflows": {"workflow"},
 }
