@@ -119,5 +119,5 @@ or `.env` already exists, pass `dhcli init --env-file --overwrite` to merge and 
    This fetches the active Core's version and installs the latest templates from the CLI repository (falling back to embedded templates if offline) with knowledge references pinned to the matching `major.minor` docs branch (without creating a Python virtual environment). Identical agent files are left unchanged; differing files are reported as errors unless `--overwrite` is passed.
 3. _(Optional)_ If you need a local Python virtual environment with `digitalhub[full]` matching the connected Core server's minor version (for example, to run SDK gap fallbacks or author interactive notebooks):
    ```bash
-   echo y | dhcli init ./.venv
+   echo y | dhcli init --venv ./.venv
    ```

@@ -19,7 +19,7 @@ Use this procedural workflow whenever chaining multiple DigitalHub Functions int
 ## 1. Pre-Flight Checklist
 - [ ] Target `<project>` exists (`dhcli get projects <project> -o json`).
 - [ ] All upstream Functions called by the DAG are already registered and in `READY` state (`dhcli list functions -p <project>`).
-- [ ] Local virtual environment initialized via `echo y | dhcli init ./.venv` and activated.
+- [ ] Local virtual environment initialized via `echo y | dhcli init --venv ./.venv` and activated.
 
 ---
 

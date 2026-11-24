@@ -9,47 +9,21 @@ import (
 	"bytes"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
-
-	"dhcli/keys"
 
 	"github.com/spf13/viper"
 )
 
-// InitAgentWorkspaceHandler fetches the connected Core version and installs
-// the latest agent templates (falling back to embedded templates if offline)
-// in the current working directory.
-func InitAgentWorkspaceHandler(overwrite bool) error {
-	root, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("resolve agent workspace: %w", err)
-	}
-	agent, err := prepareAgentWorkspace(
-		&http.Client{Timeout: 30 * time.Second},
-		viper.GetString(keys.DhCoreEndpoint), root, overwrite,
-	)
-	if err != nil {
-		return fmt.Errorf("prepare agent workspace: %w", err)
-	}
-	if err := agent.install(); err != nil {
-		return fmt.Errorf("install agent workspace: %w", err)
-	}
-	fmt.Printf("Agent templates source: %s\n", agent.templateSource)
-	log.Printf("Agent workspace installed in %s (Core %s), knowledge pinned to %s/knowledge", agent.root, agent.version, agent.docsURL)
-	return nil
-}
-
 // InitEnvironmentHandler initializes a Python virtual environment at the given path
 // and installs dependencies. If the path already contains a valid venv, it just installs
-// dependencies. If not, it creates a new venv first.
-func InitEnvironmentHandler(venvPath string, venvName string, includePre bool) error {
+// dependencies. If not, it creates a new venv first. Overwrite updates packages
+// in place without prompting when the venv already exists.
+func InitEnvironmentHandler(venvPath string, venvName string, includePre bool, overwrite bool) error {
 	// Normalize path
 	absPath, err := filepath.Abs(venvPath)
 	if err != nil {
@@ -85,9 +59,7 @@ func InitEnvironmentHandler(venvPath string, venvName string, includePre bool) e
 
 	if venvExists {
 		log.Printf("Found existing venv at %s", absPath)
-		// Confirmation prompt
-		yes := promptYesNo(fmt.Sprintf("Newest patch version of digitalhub %v will be installed, continue? Y/n", apiVer))
-		if !yes {
+		if !overwrite && !promptYesNo(fmt.Sprintf("Newest patch version of digitalhub %v will be installed, continue? Y/n", apiVer)) {
 			log.Println("Installation cancelled by user.")
 			return nil
 		}
@@ -120,12 +92,18 @@ func InitEnvironmentHandler(venvPath string, venvName string, includePre bool) e
 		var cmd *exec.Cmd
 		if uvExe != "" {
 			uvArgs := []string{"pip", "install", "--python", pythonExe, pkg + pipSpec}
+			if overwrite {
+				uvArgs = append(uvArgs, "--upgrade")
+			}
 			if includePre {
 				uvArgs = append(uvArgs, "--pre")
 			}
 			cmd = exec.Command(uvExe, uvArgs...)
 		} else {
 			pipArgs := []string{"-m", "pip", "install", pkg + pipSpec}
+			if overwrite {
+				pipArgs = append(pipArgs, "--upgrade")
+			}
 			if includePre {
 				pipArgs = append(pipArgs, "--pre")
 			}

@@ -25,7 +25,7 @@ environment unless noted otherwise.
 | `events <resource> [id]` | Subscribe to real-time push events for a resource type, optionally scoped to an ID. Project and name filters are applied client-side; press Ctrl+C to disconnect. |
 | `extension <action> <parent-resource> <parent-id> [id]` | Create, update, delete, retrieve, or list extensions attached to a project or resource. Actions that target one extension require its ID; create and update require a YAML file. IDs from YAML are retained unless reset, so reusing another parent's ID may affect that extension. Core replaces the complete extension list, so concurrent updates can overwrite one another. |
 | `get <resource> [<id>]` | Retrieve a resource by ID or name. If no ID is supplied, use `--name` to retrieve the latest version; `--out` selects the output format. |
-| `init [path]` | Initialize a Python virtual environment at `path`; with `--env-file`, write environment configuration and credentials to `.env`; with `--agent`, install agent templates in the current directory. These modes have different flags and cannot be combined. |
+| `init [path]` | Initialize a Python virtual environment, write `.env`, install agent templates, and write a local `.dhcore.ini`, in that order. Use `--venv`, `--env-file`, `--agent`, and/or `--config` to select only specific steps. |
 | `list <resource>` | List resources, optionally filtering by name, kind, or state. `--name` lists all versions matching that name. |
 | `list-env` | List the environments registered in the CLI configuration. |
 | `log <id>` | Read logs for a run. Supply its project; use `--container` to select a container and `--follow` to keep streaming logs. |
@@ -64,7 +64,7 @@ The following command-specific arguments and flags are available:
 | `events <resource> [id]` | `-e, --env`: environment; `-o, --out`: event format (`short`, `json`, or `yaml`); `-p, --project`: filter events by project; `-n, --name`: filter by resource name. |
 | `extension <action> <parent-resource> <parent-id> [id]` | `action` is `create`, `update`, `delete`, `get`, or `list`. `parent-resource` can be `project`, `artifact`, `dataitem`, `function`, `model`, or `workflow`; `parent-id` is its identifier. Non-project parents require `-p, --project`. `get`, `update`, and `delete` require the final extension `id`. `-e, --env` selects an environment; `-f, --file` supplies the YAML definition for create/update; `-o, --out` formats get/list output (`yaml` by default; `short` or `json` also supported); `-r, --reset-id` removes the YAML ID on create so Core assigns one. Without `--reset-id`, a provided ID is retained. Updates retain the target ID and replace that extension's definition. |
 | `get <resource> [<id>]` | `-e, --env`: environment; `-p, --project`: project for non-project resources; `-n, --name`: retrieve the latest version by name; `-o, --out`: output format (`short`, `json`, or `yaml`). |
-| `init [path]` | `path`: virtual-environment location. `-e, --env`: registered environment to use; `--environment`: alternative environment selector, which overrides `--env` if both are provided; `--pre`: include pre-release packages; `--env-file`: write configuration and credentials to `.env` instead of creating a virtual environment; `--agent`: install agent templates; `--overwrite`: overwrite/merge existing files for `--env-file` or `--agent`. `--env-file` and `--agent` do not accept `path`; `--overwrite` is valid only with those modes. The former `init --env` export flag has been renamed to `--env-file`. |
+| `init [path]` | `path`: virtual-environment location (default `.venv`), valid when the venv step is selected. `-e, --env`: registered environment to use; `--environment`: alternative environment selector, which overrides `--env` if both are provided. `--venv`, `--env-file`, `--agent`, and `--config` select the steps to run; without any of them all four run. `--pre` includes pre-release packages and requires the venv step. `--overwrite` updates an existing venv without prompting and overwrites/merges existing files for the selected steps. `--skip-gitignore` skips the final `.gitignore` update. The former `init --env` export flag has been renamed to `--env-file`. |
 | `list <resource>` | `-e, --env`: environment; `-p, --project`: project for non-project resources; `-o, --out`: output format (`short` by default; `json` or `yaml` also supported); `-n, --name`: list all versions for a name; `-k, --kind` and `-s, --state`: filter by kind and state. |
 | `log <id>` | `id`: run ID; `-e, --env`: environment; `-p, --project`: project; `-c, --container`: container ID; `-f, --follow`: keep streaming/refreshing logs. |
 | `login` | `-e, --env`: environment; `--pat`: personal access token for non-interactive authentication. The token can also be supplied through `DHCORE_PERSONAL_ACCESS_TOKEN` or `DHCORE_PAT`. |
@@ -171,7 +171,22 @@ GitHub is unreachable), only missing template files are created and existing fil
 even with `--overwrite` so an offline run never downgrades newer remote templates to older
 embedded versions. Symlink destinations are rejected. Failed writes attempt to roll back files
 and directories created or modified by that installation; any rollback errors are reported.
-Without `--agent`, `dhcli init [path]` retains its existing Python-environment initialization behavior.
+Without any step-selection flags, `dhcli init [path]` initializes the venv, `.env`, agent
+templates, and local `.dhcore.ini` in that order. Use `dhcli init --venv [path]` for only the Python environment, or combine
+selection flags such as `dhcli init --env-file --agent` to run only those steps. The command stops
+on the first error; completed steps are not rolled back.
+An existing venv is reused after confirmation; `--overwrite` skips the prompt and upgrades the
+selected DigitalHub packages in place without recreating the environment. Dependencies may also change.
+Use `dhcli init --config` to write only the currently selected environment to `.dhcore.ini` in
+the current directory. The file may contain credentials, is owner-readable only, and should not be
+committed. An existing `.dhcore.ini` is replaced entirely only with `--overwrite`, removing any
+other environments in that file. `DH_CONFIG`, if set, takes precedence over the local file.
+As the final step, `init` creates or updates `.gitignore` with the output paths of the selected
+steps. Agent initialization adds `AGENTS.md`, `CLAUDE.md`, and `.agents/skills/`; unrelated paths
+are not added. A venv
+outside the current directory cannot be ignored by this `.gitignore` and is reported for manual
+handling. If a step fails, `.gitignore` is not updated. Use `--skip-gitignore` to leave it
+untouched. Ignore rules do not remove files already tracked by Git.
 
 Maintain the router and skills in [`templates/`](templates/); `go:embed` includes them in every
 CLI build and release without external asset files. Publish release-specific knowledge under

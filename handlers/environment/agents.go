@@ -9,14 +9,19 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
+	"dhcli/keys"
 	"dhcli/templates"
+
+	"github.com/spf13/viper"
 )
 
 const agentDocsBase = "https://raw.githubusercontent.com/scc-digitalhub/docs"
@@ -31,6 +36,29 @@ type agentWorkspace struct {
 	templateSource templates.SourceInfo
 	overwrite      bool
 	files          map[string]string
+}
+
+// InitAgentWorkspaceHandler fetches the connected Core version and installs
+// the latest agent templates (falling back to embedded templates if offline)
+// in the current working directory.
+func InitAgentWorkspaceHandler(overwrite bool) error {
+	root, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("resolve agent workspace: %w", err)
+	}
+	agent, err := prepareAgentWorkspace(
+		&http.Client{Timeout: 30 * time.Second},
+		viper.GetString(keys.DhCoreEndpoint), root, overwrite,
+	)
+	if err != nil {
+		return fmt.Errorf("prepare agent workspace: %w", err)
+	}
+	if err := agent.install(); err != nil {
+		return fmt.Errorf("install agent workspace: %w", err)
+	}
+	fmt.Printf("Agent templates source: %s\n", agent.templateSource)
+	log.Printf("Agent workspace installed in %s (Core %s), knowledge pinned to %s/knowledge", agent.root, agent.version, agent.docsURL)
+	return nil
 }
 
 func docsBranch(version string) (string, error) {
