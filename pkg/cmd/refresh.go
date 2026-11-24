@@ -9,15 +9,11 @@ import (
 
 	"dhcli/handlers/auth"
 	"dhcli/pkg"
-	"dhcli/pkg/flags"
 
 	"github.com/spf13/cobra"
 )
 
 var refreshCmd = func() *cobra.Command {
-	// Declare local env flag
-	envFlag := flags.NewStringFlag("env", "e", "environment", "")
-
 	cmd := &cobra.Command{
 		Use:   "refresh",
 		Short: "Refresh access token",
@@ -28,9 +24,6 @@ var refreshCmd = func() *cobra.Command {
 			}
 		},
 	}
-
-	// Add local env flag
-	flags.AddFlag(cmd, &envFlag)
 
 	return cmd
 }()

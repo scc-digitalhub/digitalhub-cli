@@ -81,14 +81,14 @@ dhcli list projects
 If local tools need platform configuration and credentials, generate a private `.env`:
 
 ```bash
-dhcli init --env
+dhcli init --env-file
 set -a && source .env && set +a
 ```
 
-Use `dhcli init --env --environment <env-name>` (or `-e <env-name>`) to export a specific
+Use `dhcli init --env-file --env <env-name>` (or `-e <env-name>`) to export a specific
 registered environment. Keep `.env` out of version
 control and do not display its contents, since it includes credentials. When credentials expire
-or `.env` already exists, pass `dhcli init --env --overwrite` to merge and update it in place
+or `.env` already exists, pass `dhcli init --env-file --overwrite` to merge and update it in place
 (existing custom variables are preserved; comments and formatting are normalized).
 
 ### Step 5: Create or Verify the Target Project

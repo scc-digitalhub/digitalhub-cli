@@ -17,7 +17,6 @@ import (
 )
 
 var updateCmd = func() *cobra.Command {
-	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	projectFlag := flags.NewStringFlag("project", "p", "Mandatory for resources other than projects", "")
 	fileFlag := flags.NewStringFlag("file", "f", "path to the YAML file containing the resource data to be updated; mandatory", "")
 
@@ -28,7 +27,7 @@ var updateCmd = func() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			project := utils.ResolveProject(*projectFlag.Value)
 			err := adapter.UpdateHandler(
-				*envFlag.Value,
+				pkg.Environment,
 				project,
 				*fileFlag.Value,
 				args[0],
@@ -40,7 +39,6 @@ var updateCmd = func() *cobra.Command {
 		},
 	}
 
-	flags.AddFlag(cmd, &envFlag)
 	flags.AddFlag(cmd, &projectFlag)
 	flags.AddFlag(cmd, &fileFlag)
 

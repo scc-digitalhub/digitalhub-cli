@@ -17,7 +17,6 @@ import (
 
 var loginCmd = func() *cobra.Command {
 	// Declare local flags
-	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	patFlag := flags.NewStringFlag("pat", "", "personal access token (non-interactive flow)", "")
 
 	cmd := &cobra.Command{
@@ -47,7 +46,6 @@ var loginCmd = func() *cobra.Command {
 	}
 
 	// Add local flags
-	flags.AddFlag(cmd, &envFlag)
 	flags.AddFlag(cmd, &patFlag)
 
 	return cmd

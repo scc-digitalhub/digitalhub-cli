@@ -19,7 +19,6 @@ import (
 
 var deleteCmd = func() *cobra.Command {
 	// Declare flags locally with proper initialization
-	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	projectFlag := flags.NewStringFlag("project", "p", "Mandatory for resources other than projects", "")
 	nameFlag := flags.NewStringFlag("name", "n", "Alternative to id, will delete all versions of resource", "")
 	confirmFlag := flags.NewBoolFlag("confirm", "y", "Skips the deletion confirmation prompt", false)
@@ -42,7 +41,7 @@ var deleteCmd = func() *cobra.Command {
 
 			project := utils.ResolveProject(*projectFlag.Value)
 			err := adapter.DeleteHandler(
-				*envFlag.Value,
+				pkg.Environment,
 				project,
 				*nameFlag.Value,
 				*confirmFlag.Value,
@@ -58,7 +57,6 @@ var deleteCmd = func() *cobra.Command {
 	}
 
 	// Add flags to cmd
-	flags.AddFlag(cmd, &envFlag)
 	flags.AddFlag(cmd, &projectFlag)
 	flags.AddFlag(cmd, &nameFlag)
 	flags.AddFlag(cmd, &confirmFlag)

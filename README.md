@@ -25,7 +25,7 @@ environment unless noted otherwise.
 | `events <resource> [id]` | Subscribe to real-time push events for a resource type, optionally scoped to an ID. Project and name filters are applied client-side; press Ctrl+C to disconnect. |
 | `extension <action> <parent-resource> <parent-id> [id]` | Create, update, delete, retrieve, or list extensions attached to a project or resource. Actions that target one extension require its ID; create and update require a YAML file. IDs from YAML are retained unless reset, so reusing another parent's ID may affect that extension. Core replaces the complete extension list, so concurrent updates can overwrite one another. |
 | `get <resource> [<id>]` | Retrieve a resource by ID or name. If no ID is supplied, use `--name` to retrieve the latest version; `--out` selects the output format. |
-| `init [path]` | Initialize a Python virtual environment at `path`; with `--env`, write environment configuration and credentials to `.env`; with `--agent`, install agent templates in the current directory. These modes have different flags and cannot be combined. |
+| `init [path]` | Initialize a Python virtual environment at `path`; with `--env-file`, write environment configuration and credentials to `.env`; with `--agent`, install agent templates in the current directory. These modes have different flags and cannot be combined. |
 | `list <resource>` | List resources, optionally filtering by name, kind, or state. `--name` lists all versions matching that name. |
 | `list-env` | List the environments registered in the CLI configuration. |
 | `log <id>` | Read logs for a run. Supply its project; use `--container` to select a container and `--follow` to keep streaming logs. |
@@ -50,7 +50,7 @@ is the Core resource type; `id` identifies a resource or run. Commands acting on
 resources inside a project generally require `--project` (`-p`), unless the
 resource is a project or the project name is set in the `PROJECT_NAME`
 environment variable.
-`--env` (`-e`) selects a registered environment on commands that support it.
+The global `--env` (`-e`) flag selects a registered environment.
 
 The following command-specific arguments and flags are available:
 
@@ -64,7 +64,7 @@ The following command-specific arguments and flags are available:
 | `events <resource> [id]` | `-e, --env`: environment; `-o, --out`: event format (`short`, `json`, or `yaml`); `-p, --project`: filter events by project; `-n, --name`: filter by resource name. |
 | `extension <action> <parent-resource> <parent-id> [id]` | `action` is `create`, `update`, `delete`, `get`, or `list`. `parent-resource` can be `project`, `artifact`, `dataitem`, `function`, `model`, or `workflow`; `parent-id` is its identifier. Non-project parents require `-p, --project`. `get`, `update`, and `delete` require the final extension `id`. `-e, --env` selects an environment; `-f, --file` supplies the YAML definition for create/update; `-o, --out` formats get/list output (`yaml` by default; `short` or `json` also supported); `-r, --reset-id` removes the YAML ID on create so Core assigns one. Without `--reset-id`, a provided ID is retained. Updates retain the target ID and replace that extension's definition. |
 | `get <resource> [<id>]` | `-e, --env`: environment; `-p, --project`: project for non-project resources; `-n, --name`: retrieve the latest version by name; `-o, --out`: output format (`short`, `json`, or `yaml`). |
-| `init [path]` | `path`: virtual-environment location. `-e, --environment`: registered environment to use; `--pre`: include pre-release packages; `--env`: write configuration and credentials to `.env` instead of creating a virtual environment; `--agent`: install agent templates; `--overwrite`: overwrite/merge existing files for `--env` or `--agent`. `--env` and `--agent` do not accept `path`; `--overwrite` is valid only with those modes. |
+| `init [path]` | `path`: virtual-environment location. `-e, --env`: registered environment to use; `--environment`: alternative environment selector, which overrides `--env` if both are provided; `--pre`: include pre-release packages; `--env-file`: write configuration and credentials to `.env` instead of creating a virtual environment; `--agent`: install agent templates; `--overwrite`: overwrite/merge existing files for `--env-file` or `--agent`. `--env-file` and `--agent` do not accept `path`; `--overwrite` is valid only with those modes. The former `init --env` export flag has been renamed to `--env-file`. |
 | `list <resource>` | `-e, --env`: environment; `-p, --project`: project for non-project resources; `-o, --out`: output format (`short` by default; `json` or `yaml` also supported); `-n, --name`: list all versions for a name; `-k, --kind` and `-s, --state`: filter by kind and state. |
 | `log <id>` | `id`: run ID; `-e, --env`: environment; `-p, --project`: project; `-c, --container`: container ID; `-f, --follow`: keep streaming/refreshing logs. |
 | `login` | `-e, --env`: environment; `--pat`: personal access token for non-interactive authentication. The token can also be supplied through `DHCORE_PERSONAL_ACCESS_TOKEN` or `DHCORE_PAT`. |

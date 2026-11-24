@@ -17,6 +17,7 @@ import (
 )
 
 var version string
+var Environment string
 
 var dhcli = &cobra.Command{
 	Use:   "dhcli",
@@ -47,7 +48,7 @@ var dhcli = &cobra.Command{
 		if envFlag != nil && envFlag.Value.Type() == "string" && envFlag.Value.String() != "" {
 			env = envFlag.Value.String()
 		}
-		if environmentFlag := cmd.Flags().Lookup("environment"); environmentFlag != nil {
+		if environmentFlag := cmd.Flags().Lookup("environment"); environmentFlag != nil && environmentFlag.Changed {
 			env = environmentFlag.Value.String()
 		}
 
@@ -72,6 +73,7 @@ func init() {
 	// Add persistent verbose flag to root command
 	dhcli.PersistentFlags().BoolP("verbose", "v", false, "enable verbose output")
 	dhcli.PersistentFlags().Bool("debug", false, "enable HTTP debug logging")
+	dhcli.PersistentFlags().StringVarP(&Environment, "env", "e", "", "environment")
 }
 
 func Execute() {

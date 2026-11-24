@@ -24,7 +24,6 @@ import (
 )
 
 var portForwardCmd = func() *cobra.Command {
-	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	projectFlag := flags.NewStringFlag("project", "p", "Mandatory", "")
 	localPortFlag := flags.NewStringFlag("local-port", "l", "Local port for listening (default: random)", "")
 	functionFlag := flags.NewStringFlag("function", "f", "Function name; if provided, the most recent RUNNING run for that function is used instead of a run ID", "")
@@ -41,7 +40,7 @@ var portForwardCmd = func() *cobra.Command {
 				log.Fatalf("Project flag is mandatory (use --project flag or set PROJECT_NAME env variable)")
 			}
 
-			if err := utils.RegisterIniCfgWithViper(*envFlag.Value); err != nil {
+			if err := utils.RegisterIniCfgWithViper(pkg.Environment); err != nil {
 				log.Fatalf("Failed to load configuration: %v", err)
 			}
 
@@ -98,7 +97,6 @@ var portForwardCmd = func() *cobra.Command {
 		},
 	}
 
-	flags.AddFlag(cmd, &envFlag)
 	flags.AddFlag(cmd, &projectFlag)
 	flags.AddFlag(cmd, &localPortFlag)
 	flags.AddFlag(cmd, &functionFlag)

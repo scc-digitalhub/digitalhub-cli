@@ -18,7 +18,6 @@ import (
 
 var servicesCmd = func() *cobra.Command {
 	// Declare local flags using generic constructors
-	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	outFlag := flags.NewStringFlag("out", "o", "output format (short, json, yaml)", "short")
 	projectFlag := flags.NewStringFlag("project", "p", "Mandatory for listing services", "")
 	nameFlag := flags.NewStringFlag("name", "n", "If specified, all versions of the service will be listed", "")
@@ -33,7 +32,7 @@ var servicesCmd = func() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			project := utils.ResolveProject(*projectFlag.Value)
 			if err := adapter.ListServicesHandler(
-				*envFlag.Value,
+				pkg.Environment,
 				*outFlag.Value,
 				project,
 				*nameFlag.Value,
@@ -46,7 +45,6 @@ var servicesCmd = func() *cobra.Command {
 	}
 
 	// Add common flags
-	flags.AddFlag(cmd, &envFlag)
 	flags.AddFlag(cmd, &outFlag)
 	flags.AddFlag(cmd, &projectFlag)
 	flags.AddFlag(cmd, &nameFlag)

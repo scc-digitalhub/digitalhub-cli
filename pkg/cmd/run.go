@@ -17,7 +17,6 @@ import (
 )
 
 var runCmd = func() *cobra.Command {
-	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	projectFlag := flags.NewStringFlag("project", "p", "Mandatory", "")
 	fnNameFlag := flags.NewStringFlag("fn-name", "n", "name of the function to run, alternative to Id", "")
 	fnIDFlag := flags.NewStringFlag("fn-id", "i", "Id of the function to run, alternative to name", "")
@@ -30,7 +29,7 @@ var runCmd = func() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			project := utils.ResolveProject(*projectFlag.Value)
 			err := adapter.RunHandler(
-				*envFlag.Value,
+				pkg.Environment,
 				project,
 				*fnNameFlag.Value,
 				*fnIDFlag.Value,
@@ -43,7 +42,6 @@ var runCmd = func() *cobra.Command {
 		},
 	}
 
-	flags.AddFlag(cmd, &envFlag)
 	flags.AddFlag(cmd, &projectFlag)
 	flags.AddFlag(cmd, &fnNameFlag)
 	flags.AddFlag(cmd, &fnIDFlag)

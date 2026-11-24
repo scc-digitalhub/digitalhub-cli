@@ -17,7 +17,6 @@ import (
 )
 
 var metricsCmd = func() *cobra.Command {
-	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	outFlag := flags.NewStringFlag("out", "o", "output format (short, json, yaml)", "")
 	followFlag := flags.NewBoolFlag("follow", "f", "Continuously refresh metrics every 15 seconds", false)
 
@@ -28,7 +27,7 @@ var metricsCmd = func() *cobra.Command {
 		Args:  cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			err := adapter.MetricsHandler(
-				*envFlag.Value,
+				pkg.Environment,
 				*outFlag.Value,
 				"",
 				"instance",
@@ -41,7 +40,6 @@ var metricsCmd = func() *cobra.Command {
 		},
 	}
 
-	flags.AddFlag(cmd, &envFlag)
 	flags.AddFlag(cmd, &outFlag)
 	flags.AddFlag(cmd, &followFlag)
 
@@ -49,7 +47,6 @@ var metricsCmd = func() *cobra.Command {
 }()
 
 var metricsProjectCmd = func() *cobra.Command {
-	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	outFlag := flags.NewStringFlag("out", "o", "output format (short, json, yaml)", "")
 	projectFlag := flags.NewStringFlag("project", "p", "Project name", "")
 	followFlag := flags.NewBoolFlag("follow", "f", "Continuously refresh metrics every 15 seconds", false)
@@ -65,7 +62,7 @@ var metricsProjectCmd = func() *cobra.Command {
 			}
 			project = utils.ResolveProject(project)
 			err := adapter.MetricsHandler(
-				*envFlag.Value,
+				pkg.Environment,
 				*outFlag.Value,
 				project,
 				"project",
@@ -78,7 +75,6 @@ var metricsProjectCmd = func() *cobra.Command {
 		},
 	}
 
-	flags.AddFlag(cmd, &envFlag)
 	flags.AddFlag(cmd, &outFlag)
 	flags.AddFlag(cmd, &projectFlag)
 	flags.AddFlag(cmd, &followFlag)
@@ -87,7 +83,6 @@ var metricsProjectCmd = func() *cobra.Command {
 }()
 
 var metricsRunCmd = func() *cobra.Command {
-	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	outFlag := flags.NewStringFlag("out", "o", "output format (short, json, yaml)", "")
 	projectFlag := flags.NewStringFlag("project", "p", "Project name (required)", "")
 	followFlag := flags.NewBoolFlag("follow", "f", "Continuously refresh metrics every 15 seconds", false)
@@ -99,7 +94,7 @@ var metricsRunCmd = func() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			project := utils.ResolveProject(*projectFlag.Value)
 			err := adapter.MetricsHandler(
-				*envFlag.Value,
+				pkg.Environment,
 				*outFlag.Value,
 				project,
 				"run",
@@ -112,7 +107,6 @@ var metricsRunCmd = func() *cobra.Command {
 		},
 	}
 
-	flags.AddFlag(cmd, &envFlag)
 	flags.AddFlag(cmd, &outFlag)
 	flags.AddFlag(cmd, &projectFlag)
 	flags.AddFlag(cmd, &followFlag)

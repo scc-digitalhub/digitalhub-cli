@@ -19,7 +19,6 @@ import (
 
 var getCmd = func() *cobra.Command {
 	// Local flag declarations
-	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	outFlag := flags.NewStringFlag("out", "o", "output format (short, json, yaml)", "")
 	projectFlag := flags.NewStringFlag("project", "p", "Mandatory for resources other than projects", "")
 	nameFlag := flags.NewStringFlag("name", "n", "Alternative to id, will retrieve latest version", "")
@@ -41,7 +40,7 @@ var getCmd = func() *cobra.Command {
 
 			project := utils.ResolveProject(*projectFlag.Value)
 			err := adapter.GetHandler(
-				*envFlag.Value,
+				pkg.Environment,
 				*outFlag.Value,
 				project,
 				*nameFlag.Value,
@@ -54,7 +53,6 @@ var getCmd = func() *cobra.Command {
 		},
 	}
 
-	flags.AddFlag(cmd, &envFlag)
 	flags.AddFlag(cmd, &outFlag)
 	flags.AddFlag(cmd, &projectFlag)
 	flags.AddFlag(cmd, &nameFlag)

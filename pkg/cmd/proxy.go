@@ -21,7 +21,6 @@ import (
 )
 
 var proxyCmd = func() *cobra.Command {
-	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	projectFlag := flags.NewStringFlag("project", "p", "Mandatory", "")
 	functionFlag := flags.NewStringFlag("function", "f", "Function name; if provided, the most recent RUNNING run for that function is used instead of a run ID", "")
 	nameFlag := flags.NewStringFlag("name", "n", "Run name; if provided, the most recent RUNNING run with that name is used instead of a run ID", "")
@@ -44,7 +43,7 @@ is intended for browser access (WebSockets, SSE, cookies all work naturally).`,
 				log.Fatalf("Project flag is mandatory (use --project flag or set PROJECT_NAME env variable)")
 			}
 
-			if err := utils.RegisterIniCfgWithViper(*envFlag.Value); err != nil {
+			if err := utils.RegisterIniCfgWithViper(pkg.Environment); err != nil {
 				log.Fatalf("Failed to load configuration: %v", err)
 			}
 
@@ -85,7 +84,6 @@ is intended for browser access (WebSockets, SSE, cookies all work naturally).`,
 		},
 	}
 
-	flags.AddFlag(cmd, &envFlag)
 	flags.AddFlag(cmd, &projectFlag)
 	flags.AddFlag(cmd, &functionFlag)
 	flags.AddFlag(cmd, &nameFlag)

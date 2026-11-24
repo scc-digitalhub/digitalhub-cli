@@ -14,7 +14,6 @@ import (
 )
 
 var registerCmd = func() *cobra.Command {
-	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	forceFlag := flags.NewBoolFlag("force", "f", "override existing environment with different endpoint", false)
 
 	cmd := &cobra.Command{
@@ -24,13 +23,12 @@ var registerCmd = func() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			endpoint := args[0]
 
-			if err := environment.RegisterHandler(*envFlag.Value, endpoint, *forceFlag.Value); err != nil {
+			if err := environment.RegisterHandler(pkg.Environment, endpoint, *forceFlag.Value); err != nil {
 				log.Fatalf("Registration failed: %v", err)
 			}
 		},
 	}
 
-	flags.AddFlag(cmd, &envFlag)
 	flags.AddFlag(cmd, &forceFlag)
 
 	return cmd

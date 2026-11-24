@@ -17,10 +17,7 @@ import (
 )
 
 var createCmd = func() *cobra.Command {
-
 	// Declare cmd all flags
-
-	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	projectFlag := flags.NewStringFlag("project", "p", "Mandatory for resources other than projects", "")
 	nameFlag := flags.NewStringFlag("name", "n", "Projects may be created with name alone", "")
 	resetIdFlag := flags.NewBoolFlag("reset-id", "r", "If set, removes the id field from the file to ensure the server assigns a new one", false)
@@ -33,7 +30,7 @@ var createCmd = func() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			project := utils.ResolveProject(*projectFlag.Value)
 			err := adapter.CreateHandler(
-				*envFlag.Value,
+				pkg.Environment,
 				project,
 				*nameFlag.Value,
 				*fileFlag.Value,
@@ -47,7 +44,6 @@ var createCmd = func() *cobra.Command {
 	}
 
 	// Add all flags
-	flags.AddFlag(cmd, &envFlag)
 	flags.AddFlag(cmd, &projectFlag)
 	flags.AddFlag(cmd, &nameFlag)
 	flags.AddFlag(cmd, &resetIdFlag)

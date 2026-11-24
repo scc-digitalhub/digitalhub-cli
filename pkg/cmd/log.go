@@ -17,7 +17,6 @@ import (
 )
 
 var logCmd = func() *cobra.Command {
-	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	projectFlag := flags.NewStringFlag("project", "p", "Mandatory", "")
 	containerFlag := flags.NewStringFlag("container", "c", "Container ID", "")
 	followFlag := flags.NewBoolFlag("follow", "f", "Attach console and continue to refresh logs", false)
@@ -29,7 +28,7 @@ var logCmd = func() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			project := utils.ResolveProject(*projectFlag.Value)
 			err := adapter.LogHandler(
-				*envFlag.Value,
+				pkg.Environment,
 				project,
 				*containerFlag.Value,
 				*followFlag.Value,
@@ -42,7 +41,6 @@ var logCmd = func() *cobra.Command {
 		},
 	}
 
-	flags.AddFlag(cmd, &envFlag)
 	flags.AddFlag(cmd, &projectFlag)
 	flags.AddFlag(cmd, &containerFlag)
 	flags.AddFlag(cmd, &followFlag)

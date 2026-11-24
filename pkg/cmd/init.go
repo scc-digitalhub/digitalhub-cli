@@ -9,7 +9,6 @@ import (
 
 	"dhcli/handlers/config"
 	"dhcli/handlers/environment"
-	"dhcli/handlers/utils"
 	"dhcli/keys"
 	"dhcli/pkg"
 	"dhcli/pkg/flags"
@@ -20,29 +19,24 @@ import (
 
 var initCmd = func() *cobra.Command {
 	// Local flag declarations
-	environmentFlag := flags.NewStringFlag("environment", "e", "Registered environment to use", "")
-	envFlag := flags.NewBoolFlag("env", "", "Write configuration and credentials to a local .env file without creating a Python venv", false)
+	environmentFlag := flags.NewStringFlag("environment", "", "Registered environment to use (overrides --env)", "")
+	envFileFlag := flags.NewBoolFlag("env-file", "", "Write configuration and credentials to a local .env file", false)
 	preFlag := flags.NewBoolFlag("pre", "", "Include pre-release versions when installing", false)
 	agentFlag := flags.NewBoolFlag("agent", "", "Install latest agent templates (or embedded fallback) with knowledge links matching the connected Core version", false)
-	overwriteFlag := flags.NewBoolFlag("overwrite", "", "Overwrite existing files when used with --env or --agent", false)
+	overwriteFlag := flags.NewBoolFlag("overwrite", "", "Overwrite existing files", false)
 
 	cmd := &cobra.Command{
 		Use:   "init [path]",
 		Short: "Initialize a Python virtual environment, write a .env file or install agent templates",
-		Long:  "Creates or activates a Python virtual environment at the specified path (or current environment name) and installs dependencies. If no path is provided, uses the current environment name. If the path already contains a valid venv, dependencies are installed without recreating it. With --agent, fetches the current Core version and installs the latest AGENTS.md, CLAUDE.md and .agents/skills templates from the CLI repository (falling back to embedded templates if offline) in the current working directory, with remote knowledge links pinned to the matching major.minor docs branch. Identical agent files are left unchanged; differing files are not overwritten unless --overwrite is passed (and are preserved when using the embedded fallback so offline runs never downgrade newer files). With --env, writes configuration and refreshed credentials into .env in the current working directory without creating a Python venv. If .env already exists, pass --overwrite to merge and update it in place (existing custom variables are preserved unless replaced by exported values; formatting and comments are normalized). The file is written with owner-only permissions. Use --environment NAME or -e NAME to select a registered environment.",
+		Long:  "Creates or activates a Python virtual environment at the specified path (or current environment name) and installs dependencies. If no path is provided, uses the current environment name. If the path already contains a valid venv, dependencies are installed without recreating it. With --agent, fetches the current Core version and installs the latest AGENTS.md, CLAUDE.md and .agents/skills templates from the CLI repository (falling back to embedded templates if offline) in the current working directory, with remote knowledge links pinned to the matching major.minor docs branch. Identical agent files are left unchanged; differing files are not overwritten unless --overwrite is passed (and are preserved when using the embedded fallback so offline runs never downgrade newer files). With --env-file, writes configuration and refreshed credentials into .env in the current working directory without creating a Python venv. If .env already exists, pass --overwrite to merge and update it in place (existing custom variables are preserved unless replaced by exported values; formatting and comments are normalized). The file is written with owner-only permissions. Use --env NAME or -e NAME to select a registered environment.",
 		Args:  cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			// Load configuration to access current environment
-			if err := utils.RegisterIniCfgWithViper(*environmentFlag.Value); err != nil {
-				log.Fatalf("Failed to load configuration: %v", err)
-			}
-
-			if *envFlag.Value {
+			if *envFileFlag.Value {
 				if len(args) > 0 {
-					log.Fatalf("Init failed: --env does not accept a [path] argument (.env is written in the current working directory)")
+					log.Fatalf("Init failed: --env-file does not accept a [path] argument (.env is written in the current working directory)")
 				}
 				if *agentFlag.Value || *preFlag.Value {
-					log.Fatalf("Init failed: --env cannot be combined with --agent or --pre")
+					log.Fatalf("Init failed: --env-file cannot be combined with --agent or --pre")
 				}
 				if err := config.EnvFileHandler(".env", *overwriteFlag.Value); err != nil {
 					log.Fatalf("Init failed: %v", err)
@@ -65,7 +59,7 @@ var initCmd = func() *cobra.Command {
 			}
 
 			if *overwriteFlag.Value {
-				log.Fatalf("Init failed: --overwrite can only be used with --env or --agent")
+				log.Fatalf("Init failed: --overwrite can only be used with --env-file or --agent")
 			}
 
 			venvPath := ""
@@ -89,7 +83,7 @@ var initCmd = func() *cobra.Command {
 	}
 
 	flags.AddFlag(cmd, &environmentFlag)
-	flags.AddFlag(cmd, &envFlag)
+	flags.AddFlag(cmd, &envFileFlag)
 	flags.AddFlag(cmd, &preFlag)
 	flags.AddFlag(cmd, &agentFlag)
 	flags.AddFlag(cmd, &overwriteFlag)

@@ -17,7 +17,6 @@ import (
 )
 
 var stopCmd = func() *cobra.Command {
-	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	projectFlag := flags.NewStringFlag("project", "p", "Mandatory", "")
 
 	cmd := &cobra.Command{
@@ -27,7 +26,7 @@ var stopCmd = func() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			project := utils.ResolveProject(*projectFlag.Value)
 			err := adapter.StopHandler(
-				*envFlag.Value,
+				pkg.Environment,
 				project,
 				args[0],
 			)
@@ -37,7 +36,6 @@ var stopCmd = func() *cobra.Command {
 		},
 	}
 
-	flags.AddFlag(cmd, &envFlag)
 	flags.AddFlag(cmd, &projectFlag)
 
 	return cmd

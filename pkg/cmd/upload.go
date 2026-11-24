@@ -18,7 +18,6 @@ import (
 )
 
 var uploadCmd = func() *cobra.Command {
-	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	projectFlag := flags.NewStringFlag("project", "p", "Mandatory for resources other than projects", "")
 	nameFlag := flags.NewStringFlag("name", "n", "Mandatory when creating a new artifact", "")
 	inputFlag := flags.NewStringFlag("file", "f", "Input filename or directory; mandatory", "")
@@ -42,7 +41,7 @@ var uploadCmd = func() *cobra.Command {
 
 			project := utils.ResolveProject(*projectFlag.Value)
 			err := adapter.UploadHandler(
-				*envFlag.Value,
+				pkg.Environment,
 				*inputFlag.Value,
 				project,
 				args[0],
@@ -56,7 +55,6 @@ var uploadCmd = func() *cobra.Command {
 		},
 	}
 
-	flags.AddFlag(cmd, &envFlag)
 	flags.AddFlag(cmd, &projectFlag)
 	flags.AddFlag(cmd, &nameFlag)
 	flags.AddFlag(cmd, &inputFlag)

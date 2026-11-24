@@ -16,7 +16,6 @@ import (
 )
 
 var eventsCmd = func() *cobra.Command {
-	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	outFlag := flags.NewStringFlag("out", "o", "output format (short, json, yaml)", "")
 	projectFlag := flags.NewStringFlag("project", "p", "Project name (filters events client-side)", "")
 	nameFlag := flags.NewStringFlag("name", "n", "Resource name (filters events client-side)", "")
@@ -46,7 +45,7 @@ Press Ctrl+C to disconnect.`,
 			project := utils.ResolveProject(*projectFlag.Value)
 
 			if err := adapter.EventsHandler(
-				*envFlag.Value,
+				pkg.Environment,
 				*outFlag.Value,
 				project,
 				*nameFlag.Value,
@@ -58,7 +57,6 @@ Press Ctrl+C to disconnect.`,
 		},
 	}
 
-	flags.AddFlag(cmd, &envFlag)
 	flags.AddFlag(cmd, &outFlag)
 	flags.AddFlag(cmd, &projectFlag)
 	flags.AddFlag(cmd, &nameFlag)

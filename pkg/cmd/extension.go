@@ -14,7 +14,7 @@ import (
 )
 
 func newExtensionCommand() *cobra.Command {
-	var env, project, file, output string
+	var project, file, output string
 	var resetID bool
 	cmd := &cobra.Command{
 		Use:   "extension <create|update|delete|get|list> <parent-resource> <parent-id> [id]",
@@ -51,7 +51,6 @@ required. For get, update, and delete, the final id is the extension's id.`,
 			return adapter.ExtensionHandler(cmd.Context(), cmd.OutOrStdout(), opts)
 		},
 	}
-	cmd.Flags().StringVarP(&env, "env", "e", "", "environment")
 	cmd.Flags().StringVarP(&project, "project", "p", "", "project (required for non-project parents)")
 	cmd.Flags().StringVarP(&file, "file", "f", "", "YAML extension definition for create or update")
 	cmd.Flags().StringVarP(&output, "out", "o", "yaml", "output format for get or list (short, json, yaml)")

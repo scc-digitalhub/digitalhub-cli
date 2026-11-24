@@ -19,7 +19,6 @@ import (
 
 var downloadCmd = func() *cobra.Command {
 	// Declare flags locally
-	envFlag := flags.NewStringFlag("env", "e", "environment", "")
 	projectFlag := flags.NewStringFlag("project", "p", "Mandatory for resources other than projects", "")
 	nameFlag := flags.NewStringFlag("name", "n", "Alternative to id, will download latest version", "")
 	destinationFlag := flags.NewStringFlag("destination", "d", "output filename or directory", "")
@@ -44,7 +43,7 @@ var downloadCmd = func() *cobra.Command {
 
 			project := utils.ResolveProject(*projectFlag.Value)
 			if err := adapter.DownloadHandler(
-				*envFlag.Value,
+				pkg.Environment,
 				*destinationFlag.Value,
 				*outFlag.Value,
 				project,
@@ -59,7 +58,6 @@ var downloadCmd = func() *cobra.Command {
 	}
 
 	// Add flags
-	flags.AddFlag(cmd, &envFlag)
 	flags.AddFlag(cmd, &projectFlag)
 	flags.AddFlag(cmd, &nameFlag)
 	flags.AddFlag(cmd, &outFlag)
