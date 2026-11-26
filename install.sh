@@ -11,29 +11,31 @@ printf '%s\n' \
   '' >&2
 
 REPOSITORY="scc-digitalhub/digitalhub-cli"
-VERSION="latest"
+# Usage: curl ... | sh            (latest)
+#        curl ... | sh -s 0.15.2  (specific version)
 INSTALL_DIR="${DHCLI_INSTALL_DIR:-$HOME/.local/bin}"
-UPDATE="false"
-VERSION_SET="false"
 
-for ARG in "$@"; do
-  case "$ARG" in
-    --update) UPDATE="true" ;;
-    --*) echo "Unknown option: $ARG" >&2; exit 2 ;;
-    *)
-      if [ "$VERSION_SET" = "true" ]; then
-        echo "Only one version may be specified" >&2
-        exit 2
-      fi
-      VERSION="$ARG"
-      VERSION_SET="true"
-      ;;
-  esac
-done
+case "$#" in
+  0) VERSION="latest" ;;
+  1) VERSION="$1" ;;
+  *) echo "Usage: install.sh [version]" >&2; exit 2 ;;
+esac
+case "$VERSION" in
+  -*) echo "Unknown option: $VERSION. Usage: install.sh [version]" >&2; exit 2 ;;
+esac
 
-if [ -f "$INSTALL_DIR/dhcli" ] && [ "$UPDATE" != "true" ]; then
-  echo "dhcli already exists at $INSTALL_DIR/dhcli. Use --update to replace it." >&2
-  exit 1
+if [ -f "$INSTALL_DIR/dhcli" ]; then
+  # When piped (curl ... | sh), stdin is the script itself, so ask on the terminal.
+  # Without a terminal (CI), replace the existing binary.
+  if (exec </dev/tty) 2>/dev/null; then
+    printf 'dhcli already exists at %s. Replace it? [Y/n] ' "$INSTALL_DIR/dhcli" >/dev/tty
+    ANSWER=""
+    read -r ANSWER </dev/tty || true
+    case "$ANSWER" in
+      "" | [yY] | [yY][eE][sS]) ;;
+      *) echo "Aborted. dhcli was not changed." >&2; exit 0 ;;
+    esac
+  fi
 fi
 
 case "$(uname -s)" in
